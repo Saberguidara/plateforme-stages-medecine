@@ -1,0 +1,70 @@
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      
+      <div class="text-center mb-4">
+        <h2 class="text-primary">Faculté de Médecine de Sfax</h2>
+        <p class="lead">Récupération des fiches de validation de stage</p>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <form class="card-body d-flex gap-2" (ngSubmit)="chercher()">
+          <input name="cin" type="text" class="form-control" placeholder="Entrez votre CIN (8 chiffres)" [(ngModel)]="cinRecherche">
+          <button type="submit" class="btn btn-primary">Rechercher</button>
+        </form>
+      </div>
+
+      @if (messageErreur) {
+        <div class="alert alert-danger">
+          {{ messageErreur }}
+        </div>
+      }
+
+      @if (donneesResident) {
+        <div class="card shadow-sm">
+          <div class="card-header bg-success text-white">
+            <h4 class="mb-0">Dossier de : {{ donneesResident.nom_prenom }}</h4>
+            <small>Spécialité : {{ donneesResident.specialite }}</small>
+          </div>
+          <div class="card-body">
+            
+            @if (donneesResident.fiches.length === 0) {
+              <p class="text-muted">Aucune fiche disponible pour le moment.</p>
+            } @else {
+              <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Période</th>
+                      <th>Année</th>
+                      <th>Service</th>
+                      <th>Hôpital</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (fiche of donneesResident.fiches; track fiche.id) {
+                      <tr>
+                        <td><strong>{{ fiche.periode }}</strong></td>
+                        <td>{{ fiche.annee }}</td>
+                        <td>{{ fiche.service || 'Non assigné' }}</td>
+                        <td>{{ fiche.hopital || 'Non assigné' }}</td>
+                        <td>
+                          <a href="javascript:void(0)" class="btn btn-sm btn-outline-danger" (click)="telechargerPDF(fiche, donneesResident)">
+                          📄 Télécharger PDF
+                          </a>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+          </div>
+        </div>
+      }
+
+    </div>
+  </div>
+</div>
