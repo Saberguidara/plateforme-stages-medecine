@@ -1,18 +1,17 @@
 <div class="container mt-5">
   <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-md-10">
       
-      <div class="text-center mb-4">
-        <h2 class="text-primary">Faculté de Médecine de Sfax</h2>
-        <p class="lead">Récupération des fiches de validation de stage</p>
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="text-primary mb-0">Faculté de Médecine de Sfax</h2>
+          <p class="lead text-muted mb-0">Espace Résident : Mes Fiches de Stage</p>
+        </div>
+        <button class="btn btn-outline-danger" (click)="logout()">Déconnexion</button>
       </div>
 
-      <div class="card shadow-sm mb-4">
-        <form class="card-body d-flex gap-2" (ngSubmit)="chercher()">
-          <input name="cin" type="text" class="form-control" placeholder="Entrez votre CIN (8 chiffres)" [(ngModel)]="cinRecherche">
-          <button type="submit" class="btn btn-primary">Rechercher</button>
-        </form>
-      </div>
+      <!-- L'encart de recherche (Optionnel, utile si l'admin utilise cette page mais caché au résident) -->
+      <!-- <div class="card shadow-sm mb-4"> ... </div> -->
 
       @if (messageErreur) {
         <div class="alert alert-danger">
@@ -22,24 +21,29 @@
 
       @if (donneesResident) {
         <div class="card shadow-sm">
-          <div class="card-header bg-success text-white">
-            <h4 class="mb-0">Dossier de : {{ donneesResident.nom_prenom }}</h4>
-            <small>Spécialité : {{ donneesResident.specialite }}</small>
+          <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <div>
+              <h4 class="mb-0">Dossier de : {{ donneesResident.nom_prenom }}</h4>
+              <small>Spécialité : {{ donneesResident.specialite }} (Niveau: {{ donneesResident.niveau }})</small>
+            </div>
           </div>
           <div class="card-body">
             
             @if (donneesResident.fiches.length === 0) {
-              <p class="text-muted">Aucune fiche disponible pour le moment.</p>
+              <div class="text-center p-5 text-muted">
+                <i class="fs-1 bi-file-earmark-x mb-3"></i>
+                <p>Aucune fiche de validation de stage n'est disponible pour le moment.</p>
+              </div>
             } @else {
               <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover table-striped align-middle">
                   <thead class="table-light">
                     <tr>
                       <th>Période</th>
                       <th>Année</th>
                       <th>Service</th>
                       <th>Hôpital</th>
-                      <th>Action</th>
+                      <th class="text-end">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -49,10 +53,10 @@
                         <td>{{ fiche.annee }}</td>
                         <td>{{ fiche.service || 'Non assigné' }}</td>
                         <td>{{ fiche.hopital || 'Non assigné' }}</td>
-                        <td>
-                          <a href="javascript:void(0)" class="btn btn-sm btn-outline-danger" (click)="telechargerPDF(fiche, donneesResident)">
-                          📄 Télécharger PDF
-                          </a>
+                        <td class="text-end">
+                          <button class="btn btn-sm btn-outline-primary" (click)="telechargerPDF(fiche, donneesResident)">
+                            <i class="bi-file-pdf"></i> Détailler & Télécharger PDF
+                          </button>
                         </td>
                       </tr>
                     }
@@ -62,6 +66,11 @@
             }
 
           </div>
+        </div>
+      } @else if (!messageErreur && !donneesResident) {
+        <div class="text-center mt-5">
+           <div class="spinner-border text-primary" role="status"></div>
+           <p class="mt-2 text-muted">Chargement de votre dossier...</p>
         </div>
       }
 

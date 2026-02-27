@@ -1,9 +1,10 @@
-import { Component, DestroyRef, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, DestroyRef, ChangeDetectorRef, inject, OnInit } from '@angular/core';
 import { ApiService } from '../services/api';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-resident-search',
@@ -12,41 +13,46 @@ import { HttpClient } from '@angular/common/http';
   templateUrl: './resident-search.html',
   styleUrls: ['./resident-search.css']
 })
-export class ResidentSearchComponent {
+export class ResidentSearchComponent implements OnInit {
   cinRecherche: string = '';
   donneesResident: any = null;
   messageErreur: string = '';
-  
+
   private destroyRef = inject(DestroyRef);
   private cdr = inject(ChangeDetectorRef);
   private http = inject(HttpClient);
+  private router = inject(Router);
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService) { }
+
+  ngOnInit() {
+    const savedCin = localStorage.getItem('resident_cin');
+    if (savedCin) {
+      this.cinRecherche = savedCin;
+      this.chercher();
+    }
+  }
+
+  logout() {
+    localStorage.removeItem('resident_token');
+    localStorage.removeItem('resident_cin');
+    this.router.navigate(['/login']);
+  }
 
   chercher() {
     this.messageErreur = '';
     this.donneesResident = null;
 
-    if (!this.cinRecherche) {
-      console.log('[ResidentSearch] CIN is empty');
-      return;
-    }
+    if (!this.cinRecherche) return;
 
-    const searchStart = performance.now();
-    console.log('[ResidentSearch] Searching for CIN:', this.cinRecherche);
-    
     this.apiService.getResidentByCin(this.cinRecherche)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data) => {
-          const searchEnd = performance.now();
-          console.log(`[ResidentSearch] Found resident in ${searchEnd - searchStart}ms:`, data);
           this.donneesResident = data;
           this.cdr.markForCheck();
         },
         error: (err) => {
-          const searchEnd = performance.now();
-          console.error(`[ResidentSearch] Error after ${searchEnd - searchStart}ms:`, err);
           if (err.status === 404) {
             this.messageErreur = "Aucun résident trouvé avec ce CIN.";
           } else {
@@ -56,24 +62,25 @@ export class ResidentSearchComponent {
         }
       });
   }
-telechargerPDF(fiche: any, event: Event) {
-    event.preventDefault();
-    
-    // On prépare le colis pour le Backend
+
+  telechargerPDF(fiche: any, resident: any) {
+    if (fiche instanceof Event) {
+      fiche.preventDefault();
+      // the original code passed event to signature but the template called with telechargerPDF(fiche, donneesResident) ?
+      // Wait, let's fix the signature to match the template. I'll just use the old signature logic if needed.
+    }
     const payload = {
-      resident: this.donneesResident,
+      resident: resident,
       fiche: fiche
     };
 
-    // On fait l'appel HTTP en précisant qu'on attend un fichier (blob) en retour
     this.http.post('http://localhost:3000/api/generate-pdf', payload, { responseType: 'blob' })
       .subscribe({
         next: (blob: Blob) => {
-          // Téléchargement propre du fichier reçu
           const urlFichier = window.URL.createObjectURL(blob);
           const lien = document.createElement('a');
           lien.href = urlFichier;
-          lien.download = `Fiche_${this.donneesResident.cin}_${fiche.periode}.pdf`;
+          lien.download = `Fiche_${resident.cin}_${fiche.periode}.pdf`;
           lien.click();
           window.URL.revokeObjectURL(urlFichier);
         },

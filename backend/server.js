@@ -74,43 +74,15 @@ db.getConnection((err, connection) => {
 });
 
 // ==========================================
-// ROUTE : Authentification Admin (retourne JWT token)
+// ROUTES AUTHENTIFICATION (Admin + Résidents OTP)
 // ==========================================
-app.post('/api/admin/login', (req, res) => {
-    const { login, password } = req.body;
-    console.log('[LOGIN] Tentative de connexion:', login);
+const authRoutes = require('./routes/auth.routes');
+app.use('/api/auth', authRoutes);
 
-    const sql = `SELECT * FROM administrateurs WHERE login = ? AND mot_de_passe = ?`;
-    db.query(sql, [login, password], (err, results) => {
-        if (err) return res.status(500).json({ error: "Erreur serveur" });
-        
-        if (results.length > 0) {
-            // Connexion réussie: retourner un token JWT simple
-            const token = 'jwt_' + Date.now() + '_admin';
-            console.log('[LOGIN] ✅ Connexion réussie, token émis:', token);
-            res.json({ success: true, token: token });
-        } else {
-            console.log('[LOGIN] ❌ Identifiants incorrects');
-            res.status(401).json({ success: false, message: "Identifiants incorrects" });
-        }
-    });
-});
-
-// Valider un token JWT (simple check que c'est le format qu'on a émis)
-function isValidAdminToken(token) {
-    return token && typeof token === 'string' && token.startsWith('jwt_') && token.includes('_admin');
-}
-
-// Middleware pour protéger les routes admin côté serveur
-function requireAdmin(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Missing authorization header' });
-    }
-    const token = authHeader.substring(7);
-    if (isValidAdminToken(token)) return next();
-    return res.status(401).json({ error: 'Invalid token' });
-}
+// Helper function and middleware are now exported in middlewares/auth.middleware.js but kept here for backward compatibility with import/pdf routes until full refactor.
+const authMiddleware = require('./middlewares/auth.middleware');
+const requireAdmin = authMiddleware.requireAdmin;
+const requireResident = authMiddleware.requireResident;
 // ==========================================
 // ROUTE : Importation Excel (Double Format)
 // ==========================================
@@ -118,8 +90,8 @@ function requireAdmin(req, res, next) {
 app.post('/api/admin/import', requireAdmin, upload.single('fichierExcel'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: "Aucun fichier reçu." });
 
-    const anneeSelectionnee = parseInt(req.body.annee); 
-    const semestreChoisi = req.body.semestre; 
+    const anneeSelectionnee = parseInt(req.body.annee);
+    const semestreChoisi = req.body.semestre;
     const typeSpecialite = req.body.typeSpecialite; // 'standard' ou 'famille'
 
     try {
@@ -167,7 +139,7 @@ app.post('/api/admin/import', requireAdmin, upload.single('fichierExcel'), async
 
             // 1. RECHERCHE DU RÉSIDENT
             const [residents] = await dbPromise.query('SELECT id, niveau FROM residents WHERE cin = ?', [cin]);
-            
+
             if (residents.length > 0) {
                 // Le résident existe
                 residentId = residents[0].id;
@@ -177,7 +149,7 @@ app.post('/api/admin/import', requireAdmin, upload.single('fichierExcel'), async
                 }
             } else {
                 // Création du résident
-                const promotion = anneeSelectionnee - (niveauExcel || 1) + 1; 
+                const promotion = anneeSelectionnee - (niveauExcel || 1) + 1;
                 const [resultInsertRes] = await dbPromise.query(
                     'INSERT INTO residents (cin, nom_prenom, specialite, faculte_origine, promotion, niveau) VALUES (?, ?, ?, ?, ?, ?)',
                     [cin, nomPrenom || 'Non renseigné', specialite || 'Non renseignée', faculteOrigine || 'Inconnue', promotion, niveauExcel || 1]
@@ -218,12 +190,12 @@ app.get('/api/residents/:cin', async (req, res) => {
 
     try {
         const dbPromise = db.promise();
-        
+
         // 1. On cherche le résident
         const residentStart = Date.now();
         const [residents] = await dbPromise.query('SELECT id, cin, nom_prenom, specialite, faculte_origine, niveau FROM residents WHERE cin = ?', [cin]);
         console.log(`[PERF] Recherche résident: ${Date.now() - residentStart}ms`);
-        
+
         if (residents.length === 0) {
             return res.status(404).json({ message: "Résident introuvable" });
         }
@@ -258,10 +230,10 @@ app.get('/api/residents/:cin', async (req, res) => {
 // ==========================================
 app.put('/api/admin/fiches/:id', requireAdmin, (req, res) => {
     const ficheId = req.params.id;
-    const { periode, service, hopital, url_pdf } = req.body; 
+    const { periode, service, hopital, url_pdf } = req.body;
 
     const sql = `UPDATE formulaires_stage SET periode = ?, service = ?, hopital = ?, url_pdf = ? WHERE id = ?`;
-    
+
     db.query(sql, [periode, service, hopital, url_pdf, ficheId], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: "La fiche a été mise à jour avec succès !" });
@@ -271,6 +243,8 @@ app.put('/api/admin/fiches/:id', requireAdmin, (req, res) => {
 // ==========================================
 // ROUTE : Génération de PDF via Puppeteer (HTML vers PDF)
 // ==========================================
+const { generateFicheHtml } = require('./services/pdf.service');
+
 app.post('/api/generate-pdf', async (req, res) => {
     const { resident, fiche } = req.body;
 
@@ -279,84 +253,17 @@ app.post('/api/generate-pdf', async (req, res) => {
         const browser = await puppeteer.launch({ headless: true });
         const page = await browser.newPage();
 
-        // 2. Création du modèle HTML (C'est ici que tu mettras ton design)
-        const htmlContent = `
-            <!DOCTYPE html>
-            <html lang="fr">
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    body { font-family: 'Arial', sans-serif; padding: 40px; color: #333; }
-                    .header { text-align: center; margin-bottom: 30px; }
-                    .header h1 { font-size: 18px; margin: 0; }
-                    .header h2 { font-size: 14px; font-weight: normal; margin: 5px 0; }
-                    .title { text-align: center; font-size: 20px; text-decoration: underline; margin-bottom: 30px; font-weight: bold; }
-                    .info-box { border: 1px solid #000; padding: 15px; margin-bottom: 20px; }
-                    .info-box p { margin: 5px 0; font-size: 14px; }
-                    .table-eval { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                    .table-eval th, .table-eval td { border: 1px solid #000; padding: 8px; text-align: center; font-size: 12px; }
-                    .table-eval th { background-color: #f2f2f2; }
-                    .footer { margin-top: 50px; text-align: right; font-weight: bold; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>République Tunisienne</h1>
-                    <h2>Ministère de l'Enseignement Supérieur et de la Recherche Scientifique</h2>
-                    <h2>Université de Sfax - Faculté de Médecine</h2>
-                </div>
-
-                <div class="title">FICHE DE VALIDATION DE STAGE</div>
-
-                <div class="info-box">
-                    <p><strong>Nom et Prénom :</strong> ${resident.nom_prenom}</p>
-                    <p><strong>CIN :</strong> ${resident.cin}</p>
-                    <p><strong>Spécialité :</strong> ${resident.specialite}</p>
-                    <p><strong>Année / Niveau :</strong> ${fiche.annee}</p>
-                    <p><strong>Période :</strong> ${fiche.periode}</p>
-                    <hr>
-                    <p><strong>Hôpital d'affectation :</strong> ${fiche.hopital}</p>
-                    <p><strong>Service :</strong> ${fiche.service}</p>
-                </div>
-
-                <table class="table-eval">
-                    <tr>
-                        <th rowspan="2">CRITÈRES</th>
-                        <th colspan="5">ÉVALUATION</th>
-                    </tr>
-                    <tr>
-                        <th>Excellent</th><th>Très bon</th><th>Bon</th><th>Satisfaisant</th><th>Insuffisant</th>
-                    </tr>
-                    <tr>
-                        <td style="text-align: left;">Connaissances cliniques</td>
-                        <td></td><td></td><td></td><td></td><td></td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: left;">Compétence et efficacité</td>
-                        <td></td><td></td><td></td><td></td><td></td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: left;">Discipline et ponctualité</td>
-                        <td></td><td></td><td></td><td></td><td></td>
-                    </tr>
-                </table>
-
-                <div class="footer">
-                    <p>Date : ........................................</p>
-                    <p>Cachet et Signature du Chef de Service</p>
-                </div>
-            </body>
-            </html>
-        `;
+        // 2. Création du modèle HTML généré par le service dédié
+        const htmlContent = generateFicheHtml(resident, fiche);
 
         // 3. Injection du HTML dans la page
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
         // 4. Génération du PDF
-        const pdfBuffer = await page.pdf({ 
+        const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '20px', bottom: '20px' }
+            margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
         });
 
         await browser.close();
@@ -386,7 +293,7 @@ app.post('/api/admin/upload/:ficheId', requireAdmin, upload.single('file'), asyn
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
     try {
-        const filename = `${Date.now()}_${req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g,'_')}`;
+        const filename = `${Date.now()}_${req.file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_')}`;
         const outPath = path.join(uploadsDir, filename);
         // Save buffer to disk
         fs.writeFileSync(outPath, req.file.buffer);
