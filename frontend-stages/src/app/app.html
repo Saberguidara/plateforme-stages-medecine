@@ -1,5 +1,5 @@
 <div class="app-container">
-    <header class="app-header">
+    <header class="app-header" *ngIf="!isLoginPage()">
         <div class="header-layout">
             <img src="logo.png" alt="Logo de la faculté" class="header-logo">
             <div class="header-text">
@@ -11,7 +11,7 @@
     <div class="main-content">
         <router-outlet></router-outlet>
     </div>
-    <footer class="app-footer">
+    <footer class="app-footer" *ngIf="!isLoginPage()">
         &copy; Saber GUIDARA - Faculté de Médecine de Sfax - 2026
     </footer>
 </div>

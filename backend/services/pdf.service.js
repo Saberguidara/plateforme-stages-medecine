@@ -1,10 +1,27 @@
+// SEC-4 : Toutes les valeurs injectées dans le HTML sont échappées (XSS/SSRF prevention)
 const { faculteLogo } = require('../utils/logos');
+
+/**
+ * Échappe les caractères spéciaux HTML pour prévenir les injections XSS
+ * dans le PDF généré par Puppeteer. — SEC-4
+ */
+function escapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
 function getPeriodeInfos(periode, annee, niveau) {
     if (!annee) annee = new Date().getFullYear();
     if (!niveau) niveau = 1;
 
-    let absSemestre = (niveau - 1) * 2;
+    let absSemestre = 0;
+    if (!isNaN(niveau)) {
+        absSemestre = (niveau - 1) * 2;
+    }
     let dateRange = '';
     let semestreLabel = '';
 
@@ -44,7 +61,24 @@ function getPeriodeInfos(periode, annee, niveau) {
 function generateFicheHtml(resident, fiche) {
     const infos = getPeriodeInfos(fiche.periode, fiche.annee, resident.niveau);
     const niveau = resident.niveau || 1;
-    const anneeTexte = niveau == 1 ? '1ère Année' : niveau + 'ème Année';
+
+    let anneeTexte = '';
+    if (niveau === 'Rattrapage') {
+        anneeTexte = 'Stage de rattrapage';
+    } else if (niveau === 'Revalidation') {
+        anneeTexte = 'Stage de revalidation';
+    } else {
+        anneeTexte = niveau == 1 ? '1ère Année' : niveau + 'ème Année';
+    }
+
+    // Échappement de toutes les valeurs dynamiques — SEC-4
+    const safeNom = escapeHtml(resident.nom_prenom);
+    const safeSpec = escapeHtml(resident.specialite);
+    const safeHopital = escapeHtml(fiche.hopital);
+    const safeService = escapeHtml(fiche.service);
+    const safeDateRange = escapeHtml(infos.dateRange);
+    const safeSemLabel = escapeHtml(infos.semestreLabel);
+    const safeAnnee = escapeHtml(anneeTexte);
 
     return `
     <!DOCTYPE html>
@@ -126,28 +160,28 @@ function generateFicheHtml(resident, fiche) {
         </div>
 
         <div class="hopital-service">
-            Hôpital : <span style="text-transform: uppercase;">${fiche.hopital || ''}</span><br>
-            Service : <span style="text-transform: uppercase;">${fiche.service || ''}</span>
+            Hôpital : <span style="text-transform: uppercase;">${safeHopital}</span><br>
+            Service : <span style="text-transform: uppercase;">${safeService}</span>
         </div>
 
         <table class="info-table" style="table-layout: fixed;">
             <tr>
                 <td style="width: 17%;"><strong>Nom et Prénom :</strong></td>
-                <td style="width: 38%;"><strong>${resident.nom_prenom || ''}</strong></td>
+                <td style="width: 38%;"><strong>${safeNom}</strong></td>
                 <td style="width: 15%;"><strong>Spécialité :</strong></td>
-                <td style="width: 30%;"><strong>${resident.specialite || ''}</strong></td>
+                <td style="width: 30%;"><strong>${safeSpec}</strong></td>
             </tr>
             <tr>
                 <td><strong>Année :</strong></td>
-                <td><strong>${anneeTexte}</strong></td>
+                <td><strong>${safeAnnee}</strong></td>
                 <td></td>
                 <td></td>
             </tr>
             <tr>
                 <td><strong>Période :</strong></td>
-                <td><strong>${infos.dateRange}</strong></td>
+                <td><strong>${safeDateRange}</strong></td>
                 <td><strong>Semestre :</strong></td>
-                <td><strong>${infos.semestreLabel}</strong></td>
+                <td><strong>${safeSemLabel}</strong></td>
             </tr>
         </table>
 

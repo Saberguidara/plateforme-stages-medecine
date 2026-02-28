@@ -1,28 +1,56 @@
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-5">
-      <div class="card shadow border-danger">
-        <div class="card-header bg-danger text-white text-center">
-          <h4>🔒 Accès Sécurisé - Scolarité</h4>
+<div class="auth-page-wrapper">
+  <div class="auth-floating-card">
+    <!-- Panneau Gauche : Arrière-plan flou + Logo -->
+    <div class="split-left">
+      <div class="overlay"></div>
+      <div class="overlay-tint"></div>
+      <div class="left-content">
+        <div class="logo-transparent-wrapper mb-2">
+          <img src="logo.png" alt="Logo Faculté" class="split-logo-animated">
         </div>
-        <div class="card-body p-4">
-          <form (ngSubmit)="seConnecter()">
-            <div *ngIf="messageErreur" class="alert alert-warning">{{ messageErreur }}</div>
+        <div class="welcome-text-container">
+          <p class="welcome-overline-animated">Bienvenue sur la</p>
+          <h1 class="welcome-title-animated">
+            <span class="line-1">Plateforme</span>
+            <span class="line-2">de Stages</span>
+          </h1>
+          <p class="welcome-subtitle-animated">Faculté de Médecine de Sfax</p>
+        </div>
+      </div>
+    </div>
 
-            <div class="mb-3">
-              <label class="form-label">Identifiant</label>
-              <input name="login" type="text" class="form-control" [(ngModel)]="loginSaisi">
-            </div>
+    <!-- Panneau Droit : Formulaire -->
+    <div class="split-right">
+      <div class="login-form-container">
+        <div class="abstract-login-wrapper">
+          <div class="text-center pt-4 pb-4">
+            <h2 class="abstract-title">ADMINISTRATION</h2>
+            <p class="abstract-subtitle">Accès sécurisé Scolarité</p>
+          </div>
 
-            <div class="mb-4">
-              <label class="form-label">Mot de passe</label>
-              <input name="password" type="password" class="form-control" [(ngModel)]="motDePasseSaisi">
-            </div>
+          <div class="px-4 pb-4">
+            <form (ngSubmit)="seConnecter()" class="fade-in mt-2">
+              <div *ngIf="messageErreur"
+                class="alert alert-danger mb-5 border-0 bg-danger bg-opacity-10 text-danger fade-in text-center">
+                {{ messageErreur }}
+              </div>
 
-            <button type="submit" class="btn btn-danger w-100">Se connecter</button>
-          </form>
+              <div class="flat-input-group mb-5">
+                <input name="login" type="text" class="flat-input" id="flatLogin" placeholder=" "
+                  [(ngModel)]="loginSaisi" (keyup.enter)="seConnecter()">
+                <label for="flatLogin" class="flat-label">Identifiant</label>
+              </div>
+
+              <div class="flat-input-group mb-5">
+                <input name="password" type="password" class="flat-input" id="flatPassword" placeholder=" "
+                  [(ngModel)]="motDePasseSaisi" (keyup.enter)="seConnecter()">
+                <label for="flatPassword" class="flat-label">Mot de passe</label>
+              </div>
+
+              <button type="submit" class="pill-btn-orange w-100 mt-4 interactive-btn">SE CONNECTER</button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>

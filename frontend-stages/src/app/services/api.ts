@@ -1,47 +1,58 @@
+// ARCH-2 : apiUrl centralisée dans environment.ts
+// Auth : le authInterceptor dans app.config.ts injecte automatiquement le token JWT
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) { }
 
-  // Méthode pour interroger le backend
+  // ===== Résidents =====
+
   getResidentByCin(cin: string): Observable<any> {
-    const reqStart = performance.now();
-    console.log(`[API] Fetching resident with CIN: ${cin}`);
-    
-    return this.http.get(`${this.apiUrl}/residents/${cin}`).pipe(
-      tap(data => {
-        const reqEnd = performance.now();
-        console.log(`[API] HTTP response received in ${reqEnd - reqStart}ms`);
-      })
-    );
+    return this.http.get(`${this.apiUrl}/residents/${cin}`);
   }
-  
-  // Méthode pour mettre à jour une fiche (Espace Admin)
+
+  createResident(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/admin/residents`, data);
+  }
+
+  updateResident(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/admin/residents/${id}`, data);
+  }
+
+  // ===== Fiches / Stages =====
+
   updateFiche(idFiche: number, donnees: any): Observable<any> {
     return this.http.put(`${this.apiUrl}/admin/fiches/${idFiche}`, donnees);
   }
 
-  // Return absolute URL for files stored in backend /uploads
-  getFileUrl(filename: string) {
-    if (!filename) return null;
-    // if already an absolute URL, return as-is
-    if (/^https?:\/\//i.test(filename)) return filename;
-    // Use the safer API endpoint which returns clearer errors and can be protected later
-    return `http://localhost:3000/api/files/${encodeURIComponent(filename)}`;
+  createFiche(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/admin/fiches`, data);
   }
 
-  // Download file as Blob
+  // ===== Référentiels =====
+
+  getSpecialites(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/admin/specialites`);
+  }
+
+  // ===== Fichiers =====
+
+  getFileUrl(filename: string) {
+    if (!filename) return null;
+    if (/^https?:\/\//i.test(filename)) return filename;
+    return `${this.apiUrl}/files/${encodeURIComponent(filename)}`;
+  }
+
   downloadFile(filenameOrUrl: string) {
     const url = this.getFileUrl(filenameOrUrl) || filenameOrUrl;
-    // Angular typing for responseType blob requires casting
     return this.http.get(url, { responseType: 'blob' as 'json' }) as Observable<Blob>;
   }
 }
