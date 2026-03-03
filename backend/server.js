@@ -1,7 +1,5 @@
-// SEC-8 : dotenv doit être chargé EN PREMIER, avant tout autre require
 require('dotenv').config();
 
-// SEC-8 : Validation des variables critiques au démarrage — le serveur refuse de démarrer sans elles
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.startsWith('REMPLACER')) {
     console.error('❌ FATAL: JWT_SECRET non défini ou non configuré dans .env. Serveur arrêté.');
     process.exit(1);
@@ -14,31 +12,21 @@ const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
-const rateLimit = require('express-rate-limit'); // SEC-6
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 
-// ==========================================
-// ARCH-1 : Pool MySQL UNIQUE depuis config/db.js (plus de pool dupliqué)
-// ==========================================
-const db = require('./config/db'); // export = pool.promise()
+const db = require('./config/db');
 
-// ==========================================
-// BUG-2 : Limite de taille des fichiers (10 Mo max)
-// ==========================================
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// ==========================================
-// SEC-5 : CORS restreint à la liste blanche d'origines
-// ==========================================
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:4200').split(',').map(o => o.trim());
 
 app.use(cors({
     origin: (origin, cb) => {
-        // Autoriser les requêtes sans origin (Postman, mobile apps)
         if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
         cb(new Error(`CORS: origine non autorisée — ${origin}`));
     },
@@ -47,9 +35,6 @@ app.use(cors({
 
 app.use(express.json());
 
-// ==========================================
-// Servir les fichiers uploadés
-// ==========================================
 const uploadsDir = path.join(__dirname, 'uploads');
 app.use('/uploads', (req, res, next) => {
     const origin = req.headers.origin;
@@ -60,9 +45,6 @@ app.use('/uploads', (req, res, next) => {
     next();
 }, express.static(uploadsDir));
 
-// ==========================================
-// Téléchargement de fichier sécurisé
-// ==========================================
 app.get('/api/files/:name', (req, res) => {
     const name = req.params.name;
     if (!name) return res.status(400).json({ error: 'Filename required' });
@@ -81,21 +63,10 @@ app.get('/api/files/:name', (req, res) => {
 });
 
 // ==========================================
-// ROUTES AUTHENTIFICATION
+// Authentification
 // ==========================================
 const authRoutes = require('./routes/auth.routes');
 app.use('/api/auth', authRoutes);
-
-// ==========================================
-// UX-7 : Documentation Swagger — http://localhost:3000/api/docs
-// ==========================================
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./swagger.config');
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    customSiteTitle: 'Plateforme Stages — API Docs',
-    customCss: '.swagger-ui .topbar { background-color: #f47b45; }',
-    swaggerOptions: { persistAuthorization: true }
-}));
 
 const authMiddleware = require('./middlewares/auth.middleware');
 const requireAdmin = authMiddleware.requireAdmin;
@@ -103,7 +74,7 @@ const requireResident = authMiddleware.requireResident;
 const requireAnyAuth = authMiddleware.requireAnyAuth;
 
 // ==========================================
-// PERF-1 : Instance Puppeteer RÉUTILISÉE (plus d'un lancement par requête)
+// Génération PDF — Puppeteer
 // ==========================================
 let browserInstance;
 async function getBrowser() {
@@ -113,9 +84,6 @@ async function getBrowser() {
     return browserInstance;
 }
 
-// ==========================================
-// SEC-6 : Rate limiter pour la génération PDF (10 req/min max)
-// ==========================================
 const pdfLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 10,
@@ -125,12 +93,11 @@ const pdfLimiter = rateLimit({
 });
 
 // ==========================================
-// ROUTE : Import Excel (Admin)
+// Import Excel (Admin)
 // ==========================================
 app.post('/api/admin/import', requireAdmin, upload.single('fichierExcel'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: "Aucun fichier reçu." });
 
-    // BUG-4 : Validation de l'année
     const anneeSelectionnee = parseInt(req.body.annee);
     if (isNaN(anneeSelectionnee) || anneeSelectionnee < 2000 || anneeSelectionnee > 2100) {
         return res.status(400).json({ message: "Année invalide (doit être entre 2000 et 2100)." });
@@ -192,7 +159,6 @@ app.post('/api/admin/import', requireAdmin, upload.single('fichierExcel'), async
                 residentsCrees++;
             }
 
-            // BUG-3 : INSERT IGNORE pour éviter les doublons si réimport
             if (typeSpecialite === 'famille' && service2 && hopital2) {
                 let periodeA = semestreChoisi === 'S1' ? 'T1' : 'T3';
                 let periodeB = semestreChoisi === 'S1' ? 'T2' : 'T4';
@@ -208,19 +174,17 @@ app.post('/api/admin/import', requireAdmin, upload.single('fichierExcel'), async
         res.json({ message: `Succès : ${residentsCrees} nouveaux résidents et ${lignesInserees} fiches générés.` });
 
     } catch (error) {
-        console.error("--- ERREUR LORS DE L'IMPORT ---", error);
+        console.error("Erreur lors de l'import :", error);
         res.status(500).json({ message: "Erreur serveur : Vérifiez les entêtes de votre fichier Excel." });
     }
 });
 
 // ==========================================
-// ROUTE : Recherche d'un résident et ses stages
-// SEC-9 : Protégée — admin voit tout, résident voit seulement son dossier
+// Recherche d'un résident et ses stages
 // ==========================================
 app.get('/api/residents/:cin', requireAnyAuth, async (req, res) => {
     const cin = req.params.cin;
 
-    // Un résident ne peut consulter que son propre dossier
     if (req.authUser.role === 'resident' && req.authUser.cin !== cin) {
         return res.status(403).json({ error: 'Accès non autorisé à ce dossier.' });
     }
@@ -237,7 +201,6 @@ app.get('/api/residents/:cin', requireAnyAuth, async (req, res) => {
 
         const resident = residents[0];
 
-        // PERF-3 : SELECT explicite, plus de SELECT *
         const [fiches] = await db.query(
             'SELECT id, periode, annee, service, hopital, url_pdf FROM formulaires_stage WHERE resident_id = ? ORDER BY annee DESC, periode ASC',
             [resident.id]
@@ -252,7 +215,7 @@ app.get('/api/residents/:cin', requireAnyAuth, async (req, res) => {
 });
 
 // ==========================================
-// ROUTE ADMIN : Modification d'une fiche (+ annee)
+// Modifier une fiche
 // ==========================================
 app.put('/api/admin/fiches/:id', requireAdmin, async (req, res) => {
     const ficheId = req.params.id;
@@ -270,7 +233,7 @@ app.put('/api/admin/fiches/:id', requireAdmin, async (req, res) => {
 });
 
 // ==========================================
-// ROUTE ADMIN : Liste des spécialités distinctes
+// Liste des spécialités distinctes
 // ==========================================
 app.get('/api/admin/specialites', requireAdmin, async (req, res) => {
     try {
@@ -285,7 +248,7 @@ app.get('/api/admin/specialites', requireAdmin, async (req, res) => {
 });
 
 // ==========================================
-// ROUTE ADMIN : Créer un nouveau résident
+// Créer un nouveau résident
 // ==========================================
 app.post('/api/admin/residents', requireAdmin, async (req, res) => {
     const { cin, nom_prenom, specialite, faculte_origine, niveau } = req.body;
@@ -295,7 +258,6 @@ app.post('/api/admin/residents', requireAdmin, async (req, res) => {
     }
 
     try {
-        // Vérifier unicité CIN
         const [existing] = await db.query('SELECT id FROM residents WHERE cin = ?', [cin]);
         if (existing.length > 0) {
             return res.status(409).json({ message: "Un résident avec ce CIN existe déjà." });
@@ -303,7 +265,7 @@ app.post('/api/admin/residents', requireAdmin, async (req, res) => {
 
         const [result] = await db.query(
             'INSERT INTO residents (cin, nom_prenom, specialite, faculte_origine, niveau) VALUES (?, ?, ?, ?, ?)',
-            [cin.trim(), nom_prenom.trim(), specialite || '', faculte_origine || '', niveau || 1]
+            [cin.trim(), nom_prenom.trim(), specialite || '', faculte_origine || 'FMSfax', niveau || 1]
         );
 
         res.json({ success: true, id: result.insertId, message: "Résident créé avec succès." });
@@ -314,26 +276,25 @@ app.post('/api/admin/residents', requireAdmin, async (req, res) => {
 });
 
 // ==========================================
-// ROUTE ADMIN : Modifier un résident (nom, CIN, niveau)
+// Modifier un résident
 // ==========================================
 app.put('/api/admin/residents/:id', requireAdmin, async (req, res) => {
     const residentId = req.params.id;
-    const { cin, nom_prenom, niveau } = req.body;
+    const { cin, nom_prenom, niveau, faculte_origine } = req.body;
 
     if (!cin || !nom_prenom) {
         return res.status(400).json({ message: "CIN et Nom/Prénom sont obligatoires." });
     }
 
     try {
-        // Vérifier unicité CIN (sauf pour ce résident)
         const [existing] = await db.query('SELECT id FROM residents WHERE cin = ? AND id != ?', [cin, residentId]);
         if (existing.length > 0) {
             return res.status(409).json({ message: "Un autre résident possède déjà ce CIN." });
         }
 
         await db.query(
-            'UPDATE residents SET cin = ?, nom_prenom = ?, niveau = ? WHERE id = ?',
-            [cin.trim(), nom_prenom.trim(), niveau || 1, residentId]
+            'UPDATE residents SET cin = ?, nom_prenom = ?, niveau = ?, faculte_origine = ? WHERE id = ?',
+            [cin.trim(), nom_prenom.trim(), niveau || 1, faculte_origine || 'FMSfax', residentId]
         );
 
         res.json({ success: true, message: "Résident mis à jour avec succès." });
@@ -344,7 +305,7 @@ app.put('/api/admin/residents/:id', requireAdmin, async (req, res) => {
 });
 
 // ==========================================
-// ROUTE ADMIN : Ajouter un stage (fiche) pour un résident
+// Ajouter une fiche pour un résident
 // ==========================================
 app.post('/api/admin/fiches', requireAdmin, async (req, res) => {
     const { resident_id, periode, annee, service, hopital } = req.body;
@@ -367,7 +328,62 @@ app.post('/api/admin/fiches', requireAdmin, async (req, res) => {
 });
 
 // ==========================================
-// ROUTE : Génération PDF — SEC-4 (protégée) + SEC-6 (rate-limited) + PERF-1 (browser réutilisé)
+// Liste de tous les résidents
+// ==========================================
+app.get('/api/admin/residents', requireAdmin, async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT r.id, r.cin, r.nom_prenom, r.specialite, r.faculte_origine, r.niveau,
+                   COUNT(f.id) AS nb_fiches
+            FROM residents r
+            LEFT JOIN formulaires_stage f ON f.resident_id = r.id
+            GROUP BY r.id
+            ORDER BY r.nom_prenom ASC
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error('Get all residents error:', err);
+        res.status(500).json({ error: "Erreur lors de la récupération des résidents" });
+    }
+});
+
+// ==========================================
+// Supprimer un résident et ses fiches
+// ==========================================
+app.delete('/api/admin/residents/:id', requireAdmin, async (req, res) => {
+    const residentId = req.params.id;
+    try {
+        await db.query('DELETE FROM formulaires_stage WHERE resident_id = ?', [residentId]);
+        const [result] = await db.query('DELETE FROM residents WHERE id = ?', [residentId]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Résident introuvable." });
+        }
+        res.json({ success: true, message: "Résident et ses fiches supprimés." });
+    } catch (err) {
+        console.error('Delete resident error:', err);
+        res.status(500).json({ error: "Erreur lors de la suppression" });
+    }
+});
+
+// ==========================================
+// Supprimer une fiche
+// ==========================================
+app.delete('/api/admin/fiches/:id', requireAdmin, async (req, res) => {
+    const ficheId = req.params.id;
+    try {
+        const [result] = await db.query('DELETE FROM formulaires_stage WHERE id = ?', [ficheId]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Fiche introuvable." });
+        }
+        res.json({ success: true, message: "Fiche supprimée." });
+    } catch (err) {
+        console.error('Delete fiche error:', err);
+        res.status(500).json({ error: "Erreur lors de la suppression" });
+    }
+});
+
+// ==========================================
+// Génération PDF
 // ==========================================
 const { generateFicheHtml } = require('./services/pdf.service');
 
@@ -387,7 +403,7 @@ app.post('/api/generate-pdf', requireAnyAuth, pdfLimiter, async (req, res) => {
             margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
         });
 
-        await page.close(); // Fermer l'onglet, pas le navigateur (PERF-1)
+        await page.close();
 
         res.set({
             'Content-Type': 'application/pdf',
@@ -403,10 +419,9 @@ app.post('/api/generate-pdf', requireAnyAuth, pdfLimiter, async (req, res) => {
 });
 
 // ==========================================
-// ARCH-4 : Gestionnaire d'erreurs global
+// Gestionnaire d'erreurs global
 // ==========================================
 app.use((err, req, res, next) => {
-    // Erreur CORS
     if (err.message && err.message.startsWith('CORS:')) {
         return res.status(403).json({ error: err.message });
     }
@@ -414,9 +429,6 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Erreur interne du serveur' });
 });
 
-// ==========================================
-// ARCH-5 : app.listen() en DERNIER (après toutes les routes)
-// ==========================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`✅ Serveur Backend sur http://localhost:${PORT}`);

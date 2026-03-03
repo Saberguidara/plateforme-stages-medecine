@@ -6,6 +6,10 @@ import { ResidentLoginComponent } from './resident-login/resident-login';
 import { ResidentSearchComponent } from './resident-search/resident-search';
 import { AdminDashboard } from './admin-dashboard/admin-dashboard';
 import { AdminLogin } from './admin-login/admin-login';
+import { AdminImport } from './admin-import/admin-import';
+import { AdminData } from './admin-data/admin-data';
+import { AdminSearch } from './admin-search/admin-search';
+import { AdminAdd } from './admin-add/admin-add';
 
 export const adminGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
@@ -31,5 +35,9 @@ export const routes: Routes = [
   { path: 'mes-stages', component: ResidentSearchComponent, canActivate: [residentGuard] },
   { path: 'admin', component: AdminLogin },
   { path: 'admin/dashboard', component: AdminDashboard, canActivate: [adminGuard] },
+  { path: 'admin/dashboard/import', component: AdminImport, canActivate: [adminGuard] },
+  { path: 'admin/dashboard/data', component: AdminData, canActivate: [adminGuard] },
+  { path: 'admin/dashboard/search', component: AdminSearch, canActivate: [adminGuard] },
+  { path: 'admin/dashboard/add', component: AdminAdd, canActivate: [adminGuard] },
   { path: '**', redirectTo: 'login' }
 ];

@@ -1,0 +1,171 @@
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+            <div class="admin-page-header">
+                <h2 class="admin-page-title">🔍 Rechercher un résident</h2>
+                <button type="button" class="btn-back" (click)="retour()">← Retour</button>
+            </div>
+
+            <div class="card dashboard-card mb-4">
+                <form class="card-body d-flex gap-2" (ngSubmit)="chercherResident()">
+                    <input type="text" class="form-control elegant-input" placeholder="CIN du résident" name="cinAdmin"
+                        [(ngModel)]="cinRecherche" (keyup.enter)="chercherResident()">
+                    <button type="submit" class="btn pill-btn-dark">Rechercher</button>
+                </form>
+            </div>
+
+            @if (messageErreur) { <div class="alert alert-warning">{{ messageErreur }}</div> }
+            @if (messageSucces) { <div class="alert alert-success">{{ messageSucces }}</div> }
+
+            @if (donneesResident) {
+            <div class="card dashboard-card mb-4">
+                <div class="card-header dashboard-card-header-dark">
+                    <h5 class="mb-0">Dossier en édition : {{ donneesResident.nom_prenom }} ({{
+                        donneesResident.specialite }})</h5>
+                </div>
+                <div class="card-body">
+
+                    <!-- SECTION A : Informations Résident -->
+                    <div class="p-3 mb-4 rounded" style="background-color: #fef6f0; border: 1px solid #f47b4533;">
+                        <h6 class="mb-3" style="color: #f47b45; font-weight: 700;">👤 Informations Résident</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small">Nom et Prénom</label>
+                                <input type="text" class="form-control elegant-input"
+                                    [(ngModel)]="editResident.nom_prenom">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted small">CIN / N° Passeport</label>
+                                <input type="text" class="form-control elegant-input" [(ngModel)]="editResident.cin">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted small">Faculté d'origine</label>
+                                <select class="form-select elegant-input" [(ngModel)]="editResident.faculte_origine">
+                                    @for (fac of facultes; track fac) {
+                                    <option [value]="fac">{{ fac }}</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label text-muted small">Niveau d'étude</label>
+                                <select class="form-select elegant-input" [(ngModel)]="editResident.niveau">
+                                    <option [ngValue]="1">1ère Année</option>
+                                    <option [ngValue]="2">2ème Année</option>
+                                    <option [ngValue]="3">3ème Année</option>
+                                    <option [ngValue]="4">4ème Année</option>
+                                    <option [ngValue]="5">5ème Année</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-end">
+                            <button type="button" class="btn pill-btn-dark btn-sm" (click)="mettreAJourResident()">
+                                💾 Mettre à jour le résident
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SECTION B : Tableau des fiches -->
+                    @if (donneesResident.fiches.length === 0) {
+                    <p class="text-muted">Aucune fiche pour ce résident.</p>
+                    } @else {
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Période</th>
+                                    <th>Année</th>
+                                    <th>Service</th>
+                                    <th>Hôpital</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (fiche of donneesResident.fiches; track fiche.id) {
+                                <tr>
+                                    <td><input type="text" class="form-control" [(ngModel)]="fiche.periode"></td>
+                                    <td><input type="number" class="form-control" [(ngModel)]="fiche.annee"
+                                            style="width: 100px;"></td>
+                                    <td><input type="text" class="form-control" [(ngModel)]="fiche.service"></td>
+                                    <td><input type="text" class="form-control" [(ngModel)]="fiche.hopital"></td>
+                                    <td class="d-grid gap-2">
+                                        <button type="button" class="btn pill-btn-orange btn-sm"
+                                            (click)="sauvegarderFiche(fiche)">
+                                            💾 Mettre à jour
+                                        </button>
+                                        <button type="button" class="btn btn-outline-dark btn-sm rounded-pill mt-1"
+                                            [disabled]="!(fiche.url_pdf || fiche.url)" (click)="telechargerPDF(fiche)">
+                                            📄 Télécharger
+                                        </button>
+                                    </td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+
+                    <!-- SECTION C : Ajouter un stage -->
+                    <div class="p-3 mt-4 rounded" style="background-color: #f0f7fe; border: 1px solid #3b82f633;">
+                        <h6 class="mb-3" style="color: #3b82f6; font-weight: 700;">➕ Ajouter un stage</h6>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label text-muted small">Période</label>
+                                <select class="form-select" [(ngModel)]="nouveauStage.periode">
+                                    @for (p of periodes; track p) {
+                                    <option [value]="p">{{ p }}</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label text-muted small">Année</label>
+                                <input type="number" class="form-control" [(ngModel)]="nouveauStage.annee">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted small">Hôpital</label>
+                                <input type="text" class="form-control" [(ngModel)]="nouveauStage.hopital">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small">Service</label>
+                                <input type="text" class="form-control" [(ngModel)]="nouveauStage.service">
+                            </div>
+                        </div>
+                        <div class="mt-3 d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill"
+                                (click)="apercuNouveauStage()" [disabled]="isGeneratingPdf">
+                                @if (isGeneratingPdf) {
+                                <span class="spinner-border spinner-border-sm me-1"></span> Aperçu...
+                                } @else {
+                                👁 Aperçu
+                                }
+                            </button>
+                            <button type="button" class="btn pill-btn-orange btn-sm" (click)="validerNouveauStage()"
+                                [disabled]="isAddingStage">
+                                @if (isAddingStage) {
+                                <span class="spinner-border spinner-border-sm me-1"></span> Enregistrement...
+                                } @else {
+                                ✅ Valider et enregistrer
+                                }
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Boutons post-ajout -->
+                    @if (stageAjoute) {
+                    <div class="d-flex justify-content-center gap-3 mt-4 mb-2">
+                        <button type="button" class="btn pill-btn-orange" (click)="ajouterAutreStage()">
+                            ➕ Ajouter un autre stage
+                        </button>
+                        <button type="button" class="btn pill-btn-outline-dark" (click)="rechercherAutreResident()">
+                            🔍 Rechercher un autre résident
+                        </button>
+                    </div>
+                    }
+
+                </div>
+            </div>
+            }
+
+        </div>
+    </div>
+</div>

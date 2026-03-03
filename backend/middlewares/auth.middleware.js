@@ -1,4 +1,3 @@
-// SEC-2 : requireAdmin vérifie un vrai JWT signé (plus de token fantoche)
 const jwt = require('jsonwebtoken');
 
 exports.requireAdmin = (req, res, next) => {
@@ -34,8 +33,6 @@ exports.requireResident = (req, res, next) => {
     }
 };
 
-// SEC-9 : Accepte n'importe quel rôle valide (admin ou résident)
-// Utilisé pour les routes accessibles aux deux, avec vérification fine dans la route
 exports.requireAnyAuth = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -44,7 +41,7 @@ exports.requireAnyAuth = (req, res, next) => {
     const token = authHeader.substring(7);
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.authUser = decoded; // { id, role, cin? (resident seulement) }
+        req.authUser = decoded;
         next();
     } catch (err) {
         return res.status(401).json({ error: 'Token invalide ou expiré' });

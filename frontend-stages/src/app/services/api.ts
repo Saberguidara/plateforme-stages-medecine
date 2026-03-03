@@ -1,5 +1,3 @@
-// ARCH-2 : apiUrl centralisée dans environment.ts
-// Auth : le authInterceptor dans app.config.ts injecte automatiquement le token JWT
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -19,12 +17,20 @@ export class ApiService {
     return this.http.get(`${this.apiUrl}/residents/${cin}`);
   }
 
+  getAllResidents(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/admin/residents`);
+  }
+
   createResident(data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/admin/residents`, data);
   }
 
   updateResident(id: number, data: any): Observable<any> {
     return this.http.put(`${this.apiUrl}/admin/residents/${id}`, data);
+  }
+
+  deleteResident(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/admin/residents/${id}`);
   }
 
   // ===== Fiches / Stages =====
@@ -35,6 +41,10 @@ export class ApiService {
 
   createFiche(data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/admin/fiches`, data);
+  }
+
+  deleteFiche(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/admin/fiches/${id}`);
   }
 
   // ===== Référentiels =====

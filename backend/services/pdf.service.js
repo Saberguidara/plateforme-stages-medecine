@@ -1,10 +1,5 @@
-// SEC-4 : Toutes les valeurs injectées dans le HTML sont échappées (XSS/SSRF prevention)
 const { faculteLogo } = require('../utils/logos');
 
-/**
- * Échappe les caractères spéciaux HTML pour prévenir les injections XSS
- * dans le PDF généré par Puppeteer. — SEC-4
- */
 function escapeHtml(str) {
     return String(str || '')
         .replace(/&/g, '&amp;')
@@ -44,11 +39,11 @@ function getPeriodeInfos(periode, annee, niveau) {
             break;
         case 'T3':
             dateRange = `Du 1er Juillet ${annee} au 30 Septembre ${annee}`;
-            semestreLabel = `${absSemestre + 2} Trimestre 1`;
+            semestreLabel = `${absSemestre + 2} Trimestre 3`;
             break;
         case 'T4':
             dateRange = `Du 1er Octobre ${annee} au 31 Décembre ${annee}`;
-            semestreLabel = `${absSemestre + 2} Trimestre 2`;
+            semestreLabel = `${absSemestre + 2} Trimestre 4`;
             break;
         default:
             dateRange = periode || 'Non spécifiée';
@@ -71,7 +66,7 @@ function generateFicheHtml(resident, fiche) {
         anneeTexte = niveau == 1 ? '1ère Année' : niveau + 'ème Année';
     }
 
-    // Échappement de toutes les valeurs dynamiques — SEC-4
+    // Échappement des valeurs dynamiques
     const safeNom = escapeHtml(resident.nom_prenom);
     const safeSpec = escapeHtml(resident.specialite);
     const safeHopital = escapeHtml(fiche.hopital);
@@ -164,23 +159,23 @@ function generateFicheHtml(resident, fiche) {
             Service : <span style="text-transform: uppercase;">${safeService}</span>
         </div>
 
-        <table class="info-table" style="table-layout: fixed;">
+        <table class="info-table" style="table-layout: fixed; width: 100%;">
             <tr>
-                <td style="width: 17%;"><strong>Nom et Prénom :</strong></td>
-                <td style="width: 38%;"><strong>${safeNom}</strong></td>
-                <td style="width: 15%;"><strong>Spécialité :</strong></td>
-                <td style="width: 30%;"><strong>${safeSpec}</strong></td>
+                <td style="width: 19%; white-space: nowrap;"><strong>Nom et Prénom :</strong></td>
+                <td style="width: 44%;"><strong>${safeNom}</strong></td>
+                <td style="width: 11%; white-space: nowrap;"><strong>Spécialité :</strong></td>
+                <td style="width: 26%;"><strong>${safeSpec}</strong></td>
             </tr>
             <tr>
-                <td><strong>Année :</strong></td>
+                <td style="white-space: nowrap;"><strong>Année :</strong></td>
                 <td><strong>${safeAnnee}</strong></td>
                 <td></td>
                 <td></td>
             </tr>
             <tr>
-                <td><strong>Période :</strong></td>
+                <td style="white-space: nowrap;"><strong>Période :</strong></td>
                 <td><strong>${safeDateRange}</strong></td>
-                <td><strong>Semestre :</strong></td>
+                <td style="white-space: nowrap;"><strong>Semestre :</strong></td>
                 <td><strong>${safeSemLabel}</strong></td>
             </tr>
         </table>

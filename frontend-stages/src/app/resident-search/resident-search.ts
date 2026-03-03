@@ -30,10 +30,7 @@ export class ResidentSearchComponent implements OnInit {
 
   ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
-    const token = localStorage.getItem('resident_token');
     const savedCin = localStorage.getItem('resident_cin');
-    console.log('[MES-STAGES] ngOnInit — token:', token ? token.substring(0, 40) + '...' : 'AUCUN');
-    console.log('[MES-STAGES] ngOnInit — cin:', savedCin);
     if (savedCin) {
       this.cinRecherche = savedCin;
       this.chercher();
@@ -56,6 +53,21 @@ export class ResidentSearchComponent implements OnInit {
     return `${n}ème Année`;
   }
 
+  getAnneeResidanat(periode: string): string {
+    if (!periode) return '-';
+
+    const match = periode.match(/\d+/);
+    if (match) {
+      const num = parseInt(match[0], 10);
+      const annee = Math.ceil(num / 2);
+      return annee === 1 ? '1ère année' : `${annee}ème année`;
+    }
+
+    if (periode.toLowerCase().includes('rattrapage')) return 'Rattrapage';
+    if (periode.toLowerCase().includes('revalidation')) return 'Revalidation';
+    return '-';
+  }
+
   chercher() {
     this.messageErreur = '';
     this.donneesResident = null;
@@ -65,6 +77,21 @@ export class ResidentSearchComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data) => {
+          if (data && data.fiches) {
+            data.fiches.sort((a: any, b: any) => {
+              const getVal = (p: string) => {
+                if (!p) return 999;
+                const m = p.match(/\d+/);
+                if (m) return parseInt(m[0], 10);
+                if (p.toLowerCase().includes('rattrapage')) return 100;
+                if (p.toLowerCase().includes('revalidation')) return 101;
+                return 999;
+              };
+              const vA = getVal(a.periode);
+              const vB = getVal(b.periode);
+              return vA - vB;
+            });
+          }
           this.donneesResident = data;
           this.cdr.markForCheck();
         },
