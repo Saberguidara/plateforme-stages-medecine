@@ -13,13 +13,21 @@ const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
 const rateLimit = require('express-rate-limit');
+const logger = require('./utils/logger');
 
 const app = express();
 
 const db = require('./config/db');
 
+const tempDir = path.join(__dirname, 'temp_uploads');
+if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir);
+}
 const upload = multer({
-    storage: multer.memoryStorage(),
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => cb(null, tempDir),
+        filename: (req, file, cb) => cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname))
+    }),
     limits: { fileSize: 10 * 1024 * 1024 }
 });
 
@@ -52,7 +60,7 @@ app.get('/api/files/:name', (req, res) => {
     const safeName = path.normalize(name).replace(/^\.+[\\/]/, '');
     const filePath = path.join(uploadsDir, safeName);
 
-    if (!filePath.startsWith(uploadsDir)) {
+    if (path.dirname(filePath) !== uploadsDir) {
         return res.status(400).json({ error: 'Invalid filename' });
     }
 
@@ -107,75 +115,124 @@ app.post('/api/admin/import', requireAdmin, upload.single('fichierExcel'), async
     const typeSpecialite = req.body.typeSpecialite;
 
     try {
-        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+        const workbook = xlsx.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
         const lignesExcel = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
         let lignesInserees = 0;
         let residentsCrees = 0;
 
-        for (const ligne of lignesExcel) {
-            let cin, nomPrenom, specialite, faculteOrigine, hopital1, service1, hopital2, service2, niveauExcel;
+        const connection = await db.getConnection();
+        await connection.beginTransaction();
 
-            if (typeSpecialite === 'standard') {
-                cin = String(ligne['CIN']).trim();
-                nomPrenom = ligne['NOM ET PPRENOM'] || ligne['NOM ET PRENOM'];
-                specialite = ligne['SP.'];
-                faculteOrigine = ligne['FAC D\'ORIGINE'];
-                hopital1 = ligne['HOPITAL'];
-                service1 = ligne['SERVICE'];
-                hopital2 = null;
-                service2 = null;
-                niveauExcel = parseInt(ligne['ANNEE']);
-            } else {
-                cin = String(ligne['CIN']).trim();
-                nomPrenom = ligne['Nom et prénom'];
-                specialite = ligne['Spécialité'];
-                faculteOrigine = ligne['Faculté d\'origine'];
-                hopital1 = ligne['Hopital 1'] || ligne['Hôpital 1'];
-                service1 = ligne['Service 1'];
-                hopital2 = ligne['Hopital 2'] || ligne['Hôpital 2'];
-                service2 = ligne['Service 2'];
-                niveauExcel = parseInt(ligne['Année']) || parseInt(ligne['Annee']);
-            }
+        try {
+            const validData = [];
+            const cinsSet = new Set();
+            for (const ligne of lignesExcel) {
+                let cin, nomPrenom, specialite, faculteOrigine, hopital1, service1, hopital2, service2, niveauExcel;
 
-            if (!cin || cin === 'undefined' || cin === 'null') continue;
-
-            let residentId;
-            const [residents] = await db.query('SELECT id, niveau FROM residents WHERE cin = ?', [cin]);
-
-            if (residents.length > 0) {
-                residentId = residents[0].id;
-                if (niveauExcel && residents[0].niveau !== niveauExcel) {
-                    await db.query('UPDATE residents SET niveau = ? WHERE id = ?', [niveauExcel, residentId]);
+                if (typeSpecialite === 'standard') {
+                    cin = String(ligne['CIN']).trim();
+                    nomPrenom = ligne['NOM ET PPRENOM'] || ligne['NOM ET PRENOM'];
+                    specialite = ligne['SP.'];
+                    faculteOrigine = ligne['FAC D\'ORIGINE'];
+                    hopital1 = ligne['HOPITAL'];
+                    service1 = ligne['SERVICE'];
+                    hopital2 = null;
+                    service2 = null;
+                    niveauExcel = parseInt(ligne['ANNEE']);
+                } else {
+                    cin = String(ligne['CIN']).trim();
+                    nomPrenom = ligne['Nom et prénom'];
+                    specialite = ligne['Spécialité'];
+                    faculteOrigine = ligne['Faculté d\'origine'];
+                    hopital1 = ligne['Hopital 1'] || ligne['Hôpital 1'];
+                    service1 = ligne['Service 1'];
+                    hopital2 = ligne['Hopital 2'] || ligne['Hôpital 2'];
+                    service2 = ligne['Service 2'];
+                    niveauExcel = parseInt(ligne['Année']) || parseInt(ligne['Annee']);
                 }
-            } else {
-                const promotion = anneeSelectionnee - (niveauExcel || 1) + 1;
-                const [resultInsertRes] = await db.query(
-                    'INSERT INTO residents (cin, nom_prenom, specialite, faculte_origine, promotion, niveau) VALUES (?, ?, ?, ?, ?, ?)',
-                    [cin, nomPrenom || 'Non renseigné', specialite || 'Non renseignée', faculteOrigine || 'Inconnue', promotion, niveauExcel || 1]
-                );
-                residentId = resultInsertRes.insertId;
-                residentsCrees++;
+
+                if (!cin || cin === 'undefined' || cin === 'null') continue;
+                cinsSet.add(cin);
+                validData.push({ cin, nomPrenom, specialite, faculteOrigine, hopital1, service1, hopital2, service2, niveauExcel });
             }
 
-            if (typeSpecialite === 'famille' && service2 && hopital2) {
-                let periodeA = semestreChoisi === 'S1' ? 'T1' : 'T3';
-                let periodeB = semestreChoisi === 'S1' ? 'T2' : 'T4';
-                await db.query('INSERT IGNORE INTO formulaires_stage (resident_id, periode, annee, service, hopital, url_pdf) VALUES (?, ?, ?, ?, ?, ?)', [residentId, periodeA, anneeSelectionnee, service1, hopital1, '']);
-                await db.query('INSERT IGNORE INTO formulaires_stage (resident_id, periode, annee, service, hopital, url_pdf) VALUES (?, ?, ?, ?, ?, ?)', [residentId, periodeB, anneeSelectionnee, service2, hopital2, '']);
-                lignesInserees += 2;
-            } else if (service1 && hopital1) {
-                await db.query('INSERT IGNORE INTO formulaires_stage (resident_id, periode, annee, service, hopital, url_pdf) VALUES (?, ?, ?, ?, ?, ?)', [residentId, semestreChoisi, anneeSelectionnee, service1, hopital1, '']);
-                lignesInserees += 1;
+            if (validData.length > 0) {
+                const cinsArray = Array.from(cinsSet);
+                const [existingResidentsRows] = await connection.query('SELECT id, cin, niveau FROM residents WHERE cin IN (?) FOR UPDATE', [cinsArray]);
+                const existingMap = new Map();
+                for (const r of existingResidentsRows) existingMap.set(r.cin, r);
+
+                const newResidents = [];
+                const residentsToUpdateNiveau = [];
+                for (const data of validData) {
+                    if (existingMap.has(data.cin)) {
+                        const r = existingMap.get(data.cin);
+                        if (data.niveauExcel && r.niveau !== data.niveauExcel) {
+                            residentsToUpdateNiveau.push([data.niveauExcel, r.id]);
+                            r.niveau = data.niveauExcel;
+                        }
+                    } else {
+                        if (!newResidents.find(r => r[0] === data.cin)) {
+                            const promotion = anneeSelectionnee - (data.niveauExcel || 1) + 1;
+                            newResidents.push([data.cin, data.nomPrenom || 'Non renseigné', data.specialite || 'Non renseignée', data.faculteOrigine || 'Inconnue', promotion, data.niveauExcel || 1]);
+                        }
+                    }
+                }
+
+                if (residentsToUpdateNiveau.length > 0) {
+                    await Promise.all(residentsToUpdateNiveau.map(u => connection.query('UPDATE residents SET niveau = ? WHERE id = ?', u)));
+                }
+
+                if (newResidents.length > 0) {
+                    await connection.query('INSERT INTO residents (cin, nom_prenom, specialite, faculte_origine, promotion, niveau) VALUES ?', [newResidents]);
+                    residentsCrees += newResidents.length;
+
+                    const newCins = newResidents.map(r => r[0]);
+                    const [insertedRows] = await connection.query('SELECT id, cin FROM residents WHERE cin IN (?)', [newCins]);
+                    for (const r of insertedRows) existingMap.set(r.cin, { id: r.id });
+                }
+
+                const newStages = [];
+                for (const data of validData) {
+                    const residentId = existingMap.get(data.cin).id;
+                    if (typeSpecialite === 'famille' && data.service2 && data.hopital2) {
+                        let periodeA = semestreChoisi === 'S1' ? 'T1' : 'T3';
+                        let periodeB = semestreChoisi === 'S1' ? 'T2' : 'T4';
+                        newStages.push([residentId, periodeA, anneeSelectionnee, data.service1, data.hopital1, '']);
+                        newStages.push([residentId, periodeB, anneeSelectionnee, data.service2, data.hopital2, '']);
+                    } else if (data.service1 && data.hopital1) {
+                        newStages.push([residentId, semestreChoisi, anneeSelectionnee, data.service1, data.hopital1, '']);
+                    }
+                }
+
+                if (newStages.length > 0) {
+                    await connection.query('INSERT IGNORE INTO formulaires_stage (resident_id, periode, annee, service, hopital, url_pdf) VALUES ?', [newStages]);
+                    lignesInserees += newStages.length;
+                }
             }
+
+            await connection.commit();
+            connection.release();
+
+            res.json({ message: `Succès : ${residentsCrees} nouveaux résidents et ${lignesInserees} fiches générés.` });
+
+        } catch (error) {
+            if (typeof connection !== 'undefined') {
+                await connection.rollback();
+                connection.release();
+            }
+            throw error;
         }
-
-        res.json({ message: `Succès : ${residentsCrees} nouveaux résidents et ${lignesInserees} fiches générés.` });
 
     } catch (error) {
         console.error("Erreur lors de l'import :", error);
         res.status(500).json({ message: "Erreur serveur : Vérifiez les entêtes de votre fichier Excel." });
+    } finally {
+        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+            fs.unlink(req.file.path, () => { });
+        }
     }
 });
 
@@ -387,9 +444,56 @@ app.delete('/api/admin/fiches/:id', requireAdmin, async (req, res) => {
 // ==========================================
 const { generateFicheHtml } = require('./services/pdf.service');
 
+const DOMPurify = require('dompurify');
+const { JSDOM } = require('jsdom');
+const window = new JSDOM('').window;
+const purify = DOMPurify(window);
+
+class Semaphore {
+    constructor(max) {
+        this.max = max;
+        this.count = 0;
+        this.queue = [];
+    }
+
+    async acquire() {
+        if (this.count < this.max) {
+            this.count++;
+            return;
+        }
+        return new Promise(resolve => this.queue.push(resolve));
+    }
+
+    release() {
+        if (this.queue.length > 0) {
+            const resolve = this.queue.shift();
+            resolve();
+        } else {
+            this.count--;
+        }
+    }
+}
+const pdfSemaphore = new Semaphore(3); // Limit to 3 concurrent pdf generations
+
+function sanitizeObj(obj) {
+    if (typeof obj === 'string') return purify.sanitize(obj);
+    if (typeof obj === 'object' && obj !== null) {
+        let newObj = Array.isArray(obj) ? [] : {};
+        for (let key in obj) {
+            newObj[key] = sanitizeObj(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+}
+
 app.post('/api/generate-pdf', requireAnyAuth, pdfLimiter, async (req, res) => {
-    const { resident, fiche } = req.body;
+    let { resident, fiche } = req.body;
+    resident = sanitizeObj(resident);
+    fiche = sanitizeObj(fiche);
     let page;
+
+    await pdfSemaphore.acquire();
     try {
         const browser = await getBrowser();
         page = await browser.newPage();
@@ -415,6 +519,8 @@ app.post('/api/generate-pdf', requireAnyAuth, pdfLimiter, async (req, res) => {
         if (page) await page.close().catch(() => { });
         console.error("Erreur Puppeteer :", error);
         res.status(500).json({ message: "Erreur lors de la génération du PDF" });
+    } finally {
+        pdfSemaphore.release();
     }
 });
 
@@ -425,11 +531,11 @@ app.use((err, req, res, next) => {
     if (err.message && err.message.startsWith('CORS:')) {
         return res.status(403).json({ error: err.message });
     }
-    console.error('Unhandled error:', err.stack);
+    logger.error('Unhandled error: ' + err.stack);
     res.status(500).json({ error: 'Erreur interne du serveur' });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`✅ Serveur Backend sur http://localhost:${PORT}`);
+    logger.info(`✅ Serveur Backend sur http://localhost:${PORT}`);
 });

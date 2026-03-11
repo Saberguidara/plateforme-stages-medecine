@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-admin-login',
@@ -22,7 +23,7 @@ export class AdminLogin {
     this.messageErreur = '';
     const identifiants = { login: this.loginSaisi, password: this.motDePasseSaisi };
 
-    this.http.post<any>('http://localhost:3000/api/auth/admin/login', identifiants).subscribe({
+    this.http.post<any>(`${environment.apiUrl}/auth/admin/login`, identifiants).subscribe({
       next: (reponse) => {
         setTimeout(() => {
           if (reponse.success && reponse.token) {

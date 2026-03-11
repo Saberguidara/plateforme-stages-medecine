@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
 const db = require('../config/db');
+const logger = require('../utils/logger');
 
 const transporter = nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
@@ -39,7 +40,7 @@ exports.adminLogin = async (req, res) => {
 
         res.json({ success: true, token });
     } catch (err) {
-        console.error('Admin login error:', err);
+        logger.error('Admin login error: ' + err);
         res.status(500).json({ error: "Erreur serveur" });
     }
 };
@@ -89,8 +90,8 @@ exports.requestOTP = async (req, res) => {
         await db.query('UPDATE residents SET otp_code = ?, otp_expires_at = ? WHERE id = ?', [otpCode, expiresAt, resident.id]);
 
         if (!process.env.BREVO_USER || process.env.BREVO_USER.startsWith('REMPLACER')) {
-            console.log(`[DEV] Code OTP pour ${email} (CIN: ${cin}) : ${otpCode}`);
-            return res.json({ success: true, message: "Mode Dev: Regardez la console Node.js pour le code OTP." });
+            // No longer logging the OTP in production logs for security.
+            return res.json({ success: true, message: "Mode Dev: Check database for OTP or configure BREVO_USER properly." });
         }
 
         transporter.sendMail({
@@ -103,13 +104,13 @@ exports.requestOTP = async (req, res) => {
                 <h2 style="color: blue; letter-spacing: 5px;">${otpCode}</h2>
                 <p>Ce code expire dans 10 minutes. Ne le partagez avec personne.</p>
             `
-        }).then(() => console.log("Email envoyé avec succès."))
-            .catch(e => console.error("Erreur d'envoi email :", e));
+        }).then(() => logger.info("Email envoyé avec succès."))
+            .catch(e => logger.error("Erreur d'envoi email :", e));
 
         return res.json({ success: true, message: "Code OTP envoyé par email." });
 
     } catch (err) {
-        console.error("Erreur OTP :", err);
+        logger.error("Erreur OTP : " + err);
         res.status(500).json({ success: false, message: "Erreur serveur." });
     }
 };
@@ -140,7 +141,7 @@ exports.verifyOTP = async (req, res) => {
 
         res.json({ success: true, token });
     } catch (err) {
-        console.error(err);
+        logger.error("Erreur serveur lors de la vérification OTP : " + err);
         res.status(500).json({ success: false, message: "Erreur serveur lors de la vérification OTP" });
     }
 };
