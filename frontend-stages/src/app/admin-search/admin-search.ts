@@ -152,7 +152,8 @@ export class AdminSearch implements OnInit {
             resident: {
                 nom_prenom: this.donneesResident.nom_prenom,
                 specialite: this.donneesResident.specialite,
-                niveau: this.donneesResident.niveau
+                niveau: this.donneesResident.niveau,
+                promotion: this.donneesResident.promotion
             },
             fiche: {
                 periode: this.nouveauStage.periode,

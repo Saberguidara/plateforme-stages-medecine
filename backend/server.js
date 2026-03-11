@@ -248,7 +248,7 @@ app.get('/api/residents/:cin', requireAnyAuth, async (req, res) => {
 
     try {
         const [residents] = await db.query(
-            'SELECT id, cin, nom_prenom, specialite, faculte_origine, niveau FROM residents WHERE cin = ?',
+            'SELECT id, cin, nom_prenom, specialite, faculte_origine, niveau, promotion FROM residents WHERE cin = ?',
             [cin]
         );
 
@@ -259,7 +259,9 @@ app.get('/api/residents/:cin', requireAnyAuth, async (req, res) => {
         const resident = residents[0];
 
         const [fiches] = await db.query(
-            'SELECT id, periode, annee, service, hopital, url_pdf FROM formulaires_stage WHERE resident_id = ? ORDER BY annee DESC, periode ASC',
+            `SELECT id, periode, annee, service, hopital, url_pdf FROM formulaires_stage
+             WHERE resident_id = ?
+             ORDER BY annee ASC, FIELD(periode,'T1','T2','S1','T3','T4','S2','R1','R2',periode)`,
             [resident.id]
         );
 

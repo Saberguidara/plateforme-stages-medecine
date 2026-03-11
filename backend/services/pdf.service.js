@@ -54,8 +54,18 @@ function getPeriodeInfos(periode, annee, niveau) {
 }
 
 function generateFicheHtml(resident, fiche) {
-    const infos = getPeriodeInfos(fiche.periode, fiche.annee, resident.niveau);
-    const niveau = resident.niveau || 1;
+    // Calcul dynamique du niveau d'étude selon l'année de la fiche et la promotion du résident
+    let niveau = resident.niveau || 1;
+    if (resident.promotion && fiche.annee) {
+        const annee = parseInt(fiche.annee);
+        const promotion = parseInt(resident.promotion);
+        if (!isNaN(annee) && !isNaN(promotion) && promotion > 0) {
+            const calculated = annee - promotion + 1;
+            if (calculated > 0) niveau = calculated;
+        }
+    }
+
+    const infos = getPeriodeInfos(fiche.periode, fiche.annee, niveau);
 
     let anneeTexte = '';
     if (niveau === 'Rattrapage') {

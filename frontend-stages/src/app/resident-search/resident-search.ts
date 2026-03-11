@@ -53,19 +53,17 @@ export class ResidentSearchComponent implements OnInit {
     return `${n}ème Année`;
   }
 
-  getAnneeResidanat(periode: string): string {
-    if (!periode) return '-';
-
-    const match = periode.match(/\d+/);
-    if (match) {
-      const num = parseInt(match[0], 10);
-      const annee = Math.ceil(num / 2);
-      return annee === 1 ? '1ère année' : `${annee}ème année`;
+  getAnneeResidanat(fiche: any, resident: any): string {
+    const annee = parseInt(fiche.annee);
+    const promotion = parseInt(resident.promotion);
+    if (!annee || !promotion || isNaN(annee) || isNaN(promotion)) {
+      // Fallback sur le niveau statique du résident
+      return this.niveauLabel(resident.niveau);
     }
-
-    if (periode.toLowerCase().includes('rattrapage')) return 'Rattrapage';
-    if (periode.toLowerCase().includes('revalidation')) return 'Revalidation';
-    return '-';
+    const n = annee - promotion + 1;
+    if (n <= 0) return '-';
+    if (n === 1) return '1ère année';
+    return `${n}ème année`;
   }
 
   chercher() {
@@ -78,18 +76,14 @@ export class ResidentSearchComponent implements OnInit {
       .subscribe({
         next: (data) => {
           if (data && data.fiches) {
+            const periodeOrder: Record<string, number> = { T1: 1, T2: 2, S1: 3, T3: 4, T4: 5, S2: 6, R1: 7, R2: 8 };
             data.fiches.sort((a: any, b: any) => {
-              const getVal = (p: string) => {
-                if (!p) return 999;
-                const m = p.match(/\d+/);
-                if (m) return parseInt(m[0], 10);
-                if (p.toLowerCase().includes('rattrapage')) return 100;
-                if (p.toLowerCase().includes('revalidation')) return 101;
-                return 999;
-              };
-              const vA = getVal(a.periode);
-              const vB = getVal(b.periode);
-              return vA - vB;
+              const anneeA = parseInt(a.annee) || 0;
+              const anneeB = parseInt(b.annee) || 0;
+              if (anneeA !== anneeB) return anneeA - anneeB;
+              const orderA = periodeOrder[a.periode] ?? 99;
+              const orderB = periodeOrder[b.periode] ?? 99;
+              return orderA - orderB;
             });
           }
           this.donneesResident = data;
