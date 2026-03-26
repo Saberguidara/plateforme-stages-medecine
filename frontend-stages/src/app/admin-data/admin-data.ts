@@ -18,12 +18,22 @@ export class AdminData implements OnInit {
     private platformId = inject(PLATFORM_ID);
 
     residents: any[] = [];
-    filteredResidents: any[] = [];
     specialites: string[] = [];
     facultes: string[] = ['FMSfax', 'FMSousse', 'FMMonastir', 'FMTunis', 'Autre'];
 
     searchText: string = '';
     filterSpecialite: string = '';
+    filterPromo: string = '';
+    promos: number[] = [];
+    
+    sortCol: string = '';
+    sortDesc: boolean = false;
+
+    page: number = 1;
+    limit: number = 20;
+    total: number = 0;
+    Math = Math;
+
     expandedId: number | null = null;
     expandedFiches: any[] = [];
     editingResident: any = null;
@@ -41,15 +51,20 @@ export class AdminData implements OnInit {
             next: (data) => { this.specialites = data; this.cdr.markForCheck(); },
             error: () => { }
         });
+        this.apiService.getPromotions().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+            next: (data) => { this.promos = data; this.cdr.markForCheck(); },
+            error: () => { }
+        });
     }
 
-    charger() {
-        this.apiService.getAllResidents()
+    charger(resetPage = false) {
+        if (resetPage) this.page = 1;
+        this.apiService.getAllResidents(this.page, this.limit, this.searchText, this.filterSpecialite, this.filterPromo, this.sortCol, this.sortDesc)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: (data) => {
-                    this.residents = data;
-                    this.appliquerFiltres();
+                next: (res) => {
+                    this.residents = res.data;
+                    this.total = res.total;
                     this.cdr.markForCheck();
                 },
                 error: () => {
@@ -60,18 +75,31 @@ export class AdminData implements OnInit {
     }
 
     appliquerFiltres() {
-        let result = [...this.residents];
-        if (this.searchText.trim()) {
-            const q = this.searchText.toLowerCase();
-            result = result.filter(r =>
-                r.cin?.toLowerCase().includes(q) ||
-                r.nom_prenom?.toLowerCase().includes(q)
-            );
+        this.charger(true); // Always reset page to 1 when filters change
+    }
+
+    sortBy(col: string) {
+        if (this.sortCol === col) {
+            this.sortDesc = !this.sortDesc;
+        } else {
+            this.sortCol = col;
+            this.sortDesc = false;
         }
-        if (this.filterSpecialite) {
-            result = result.filter(r => r.specialite === this.filterSpecialite);
+        this.charger(true);
+    }
+
+    nextPage() {
+        if (this.page * this.limit < this.total) {
+            this.page++;
+            this.charger(false);
         }
-        this.filteredResidents = result;
+    }
+
+    prevPage() {
+        if (this.page > 1) {
+            this.page--;
+            this.charger(false);
+        }
     }
 
     toggleExpand(resident: any) {
@@ -101,6 +129,7 @@ export class AdminData implements OnInit {
             cin: r.cin,
             nom_prenom: r.nom_prenom,
             niveau: r.niveau,
+            promotion: r.promotion,
             faculte_origine: r.faculte_origine || 'FMSfax'
         };
     }

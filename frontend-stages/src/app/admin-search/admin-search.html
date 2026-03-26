@@ -93,8 +93,12 @@
                                             (click)="sauvegarderFiche(fiche)">
                                             💾 Mettre à jour
                                         </button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill mt-1"
+                                            [disabled]="isGeneratingPdf" (click)="apercuPDF(fiche)">
+                                            👁 Aperçu
+                                        </button>
                                         <button type="button" class="btn btn-outline-dark btn-sm rounded-pill mt-1"
-                                            [disabled]="!(fiche.url_pdf || fiche.url)" (click)="telechargerPDF(fiche)">
+                                            [disabled]="isGeneratingPdf" (click)="telechargerPDF(fiche)">
                                             📄 Télécharger
                                         </button>
                                     </td>

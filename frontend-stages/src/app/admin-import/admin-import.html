@@ -60,9 +60,30 @@
                     </div>
 
                     @if (messageImport) { <div class="alert alert-info mt-3 mb-0">{{ messageImport }}</div> }
+
+                    @if (isImportSuccess) {
+                        <div class="d-flex justify-content-center gap-3 mt-4">
+                            <button type="button" class="btn pill-btn-outline-dark" (click)="annulerImport()">❌ Annuler l'import</button>
+                            <button type="button" class="btn pill-btn-orange" (click)="validerImport()">✅ Valider définitivement</button>
+                        </div>
+                    }
                 </div>
             </div>
-
         </div>
     </div>
 </div>
+
+<!-- Custom Confirmation Modal -->
+@if (showConfirmModal) {
+<div class="custom-modal-overlay">
+    <div class="custom-modal-card">
+        <span class="custom-modal-icon">⚠️</span>
+        <h3 class="custom-modal-title">{{ confirmTitle }}</h3>
+        <p class="custom-modal-text">{{ confirmMessage }}</p>
+        <div class="d-flex justify-content-center gap-3">
+            <button class="btn pill-btn-outline-dark px-4" (click)="annulerConfirm()">Annuler</button>
+            <button class="btn pill-btn-orange px-4 fw-bold" (click)="confirmAction()">Oui, importer</button>
+        </div>
+    </div>
+</div>
+}

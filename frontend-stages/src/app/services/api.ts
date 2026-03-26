@@ -17,8 +17,13 @@ export class ApiService {
     return this.http.get(`${this.apiUrl}/residents/${cin}`);
   }
 
-  getAllResidents(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/admin/residents`);
+  getAllResidents(page: number = 1, limit: number = 20, search: string = '', specialite: string = '', promo: string = '', sortCol: string = '', sortDesc: boolean = false): Observable<any> {
+    const params = { page, limit, search, specialite, promo, sortCol, sortDesc };
+    return this.http.get<any>(`${this.apiUrl}/admin/residents`, { params });
+  }
+
+  getPromotions(): Observable<number[]> {
+    return this.http.get<number[]>(`${this.apiUrl}/admin/promotions`);
   }
 
   createResident(data: any): Observable<any> {

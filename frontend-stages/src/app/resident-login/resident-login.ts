@@ -49,7 +49,7 @@ import { environment } from '../../environments/environment';
                 </div>
                 <div class="flat-input-group mb-5">
                   <input type="email" [(ngModel)]="email" (keyup.enter)="requestOtp()" class="flat-input" id="flatEmail" placeholder=" " />
-                  <label for="flatEmail" class="flat-label">Adresse E-mail Institutionnelle</label>
+                  <label for="flatEmail" class="flat-label">Adresse E-mail</label>
                   <div class="form-text small mt-1 opacity-75">Le code sera envoyé à cette adresse.</div>
                 </div>
                 <button class="pill-btn-orange w-100 mt-4 interactive-btn" (click)="requestOtp()" [disabled]="isLoading">

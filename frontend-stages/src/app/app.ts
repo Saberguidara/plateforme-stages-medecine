@@ -1,6 +1,7 @@
 import { Component, inject, PLATFORM_ID } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { AuthService } from './services/auth';
 
 @Component({
   selector: 'app-root',
@@ -13,6 +14,7 @@ export class App {
   title = 'frontend-stages';
   router = inject(Router);
   platformId = inject(PLATFORM_ID);
+  authService = inject(AuthService);
 
   isLoginPage(): boolean {
     const url = this.router.url.split('?')[0];
@@ -20,30 +22,12 @@ export class App {
   }
 
   getUserName(): string {
-    if (!isPlatformBrowser(this.platformId)) return '';
-
-    const adminToken = localStorage.getItem('admin_token');
-    const residentToken = localStorage.getItem('resident_token');
-    const token = adminToken || residentToken;
-
-    if (!token) return '';
-
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (adminToken) return payload.login || 'Administrateur';
-      if (residentToken) return payload.nom_prenom || 'Résident';
-    } catch (e) {
-      return '';
-    }
-    return '';
+    return this.authService.getUserName();
   }
 
   logout() {
-    if (!isPlatformBrowser(this.platformId)) return;
-    const isAdmin = !!localStorage.getItem('admin_token');
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('resident_token');
-    localStorage.removeItem('resident_cin');
+    const isAdmin = this.authService.isAdmin();
+    this.authService.logout();
     this.router.navigate([isAdmin ? '/admin' : '/login']);
   }
 }

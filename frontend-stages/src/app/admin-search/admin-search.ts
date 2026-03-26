@@ -226,26 +226,82 @@ export class AdminSearch implements OnInit {
         this.cinRecherche = '';
     }
 
+    apercuPDF(fiche: any) {
+        this.messageSucces = '';
+        this.messageErreur = '';
+        this.isGeneratingPdf = true;
+
+        const payload = {
+            resident: {
+                nom_prenom: this.donneesResident.nom_prenom,
+                specialite: this.donneesResident.specialite,
+                niveau: this.donneesResident.niveau,
+                promotion: this.donneesResident.promotion
+            },
+            fiche: {
+                periode: fiche.periode,
+                annee: fiche.annee,
+                hopital: fiche.hopital,
+                service: fiche.service
+            }
+        };
+
+        this.http.post(`${environment.apiUrl}/generate-pdf`, payload, { responseType: 'blob' })
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (blob: Blob) => {
+                    this.isGeneratingPdf = false;
+                    const urlFichier = window.URL.createObjectURL(blob);
+                    window.open(urlFichier, '_blank');
+                    this.cdr.markForCheck();
+                },
+                error: () => {
+                    this.isGeneratingPdf = false;
+                    this.messageErreur = 'Impossible de générer l\'aperçu.';
+                    this.cdr.markForCheck();
+                }
+            });
+    }
+
     telechargerPDF(fiche: any) {
-        const fileName = fiche.url_pdf || fiche.url;
-        if (fileName) {
-            this.apiService.downloadFile(fileName)
-                .pipe(takeUntilDestroyed(this.destroyRef))
-                .subscribe({
-                    next: (blob) => {
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `Validation_${this.donneesResident?.cin}_${fiche.periode}.pdf`;
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                    },
-                    error: () => {
-                        this.messageErreur = 'Impossible de télécharger le PDF.';
-                        this.cdr.markForCheck();
-                    }
-                });
-        }
+        this.messageSucces = '';
+        this.messageErreur = '';
+        this.isGeneratingPdf = true;
+
+        const payload = {
+            resident: {
+                nom_prenom: this.donneesResident.nom_prenom,
+                specialite: this.donneesResident.specialite,
+                niveau: this.donneesResident.niveau,
+                promotion: this.donneesResident.promotion
+            },
+            fiche: {
+                periode: fiche.periode,
+                annee: fiche.annee,
+                hopital: fiche.hopital,
+                service: fiche.service
+            }
+        };
+
+        this.http.post(`${environment.apiUrl}/generate-pdf`, payload, { responseType: 'blob' })
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: (blob: Blob) => {
+                    this.isGeneratingPdf = false;
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Validation_${this.donneesResident?.cin}_${fiche.periode}.pdf`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    this.cdr.markForCheck();
+                },
+                error: () => {
+                    this.isGeneratingPdf = false;
+                    this.messageErreur = 'Impossible de générer le PDF.';
+                    this.cdr.markForCheck();
+                }
+            });
     }
 
     retour() { this.router.navigate(['/admin/dashboard']); }

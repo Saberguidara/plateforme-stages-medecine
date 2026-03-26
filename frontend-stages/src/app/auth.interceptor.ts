@@ -7,7 +7,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         const adminToken = localStorage.getItem('admin_token');
         const residentToken = localStorage.getItem('resident_token');
         const token = adminToken || residentToken;
-        console.log(`[INTERCEPTOR] ${req.method} ${req.url} — token: ${token ? 'OUI (' + token.substring(0, 30) + '...)' : 'AUCUN'}`);
         if (token) {
             const authReq = req.clone({
                 setHeaders: { Authorization: `Bearer ${token}` }

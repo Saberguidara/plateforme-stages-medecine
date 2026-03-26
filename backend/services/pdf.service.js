@@ -157,8 +157,8 @@ function generateFicheHtml(resident, fiche) {
         </div>
 
         <div class="title-section">
-            <h3>FICHE DE VALIDATION DE STAGE</h3>
-            <h2>R E S I D A N A T</h2>
+            <h3>FICHE DE VALIDATION</h3>
+            <h2>RESIDANAT</h2>
             <div class="title-hr">
                 <span class="diamond">♦</span>
             </div>
