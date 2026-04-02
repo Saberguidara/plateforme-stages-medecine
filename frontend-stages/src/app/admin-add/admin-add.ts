@@ -1,7 +1,7 @@
-import { Component, ChangeDetectorRef, DestroyRef, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, ChangeDetectorRef, DestroyRef, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ApiService } from '../services/api';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -15,7 +15,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 export class AdminAdd implements OnInit {
     private cdr = inject(ChangeDetectorRef);
     private destroyRef = inject(DestroyRef);
-    private platformId = inject(PLATFORM_ID);
 
     specialites: string[] = [];
     periodes: string[] = ['S1', 'S2', 'T1', 'T2', 'T3', 'T4', 'R1', 'R2'];
@@ -37,7 +36,6 @@ export class AdminAdd implements OnInit {
     constructor(private apiService: ApiService, private router: Router) { }
 
     ngOnInit() {
-        if (!isPlatformBrowser(this.platformId)) return;
         this.apiService.getSpecialites().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(data => {
             this.specialites = data;
             this.nouveauResident.specialite = data.length ? data[0] : '';

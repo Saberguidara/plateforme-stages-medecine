@@ -1,6 +1,6 @@
-import { Component, inject, PLATFORM_ID } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { AuthService } from './services/auth';
 
 @Component({
@@ -13,7 +13,6 @@ import { AuthService } from './services/auth';
 export class App {
   title = 'frontend-stages';
   router = inject(Router);
-  platformId = inject(PLATFORM_ID);
   authService = inject(AuthService);
 
   isLoginPage(): boolean {

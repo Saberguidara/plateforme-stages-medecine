@@ -1,7 +1,7 @@
-import { Component, ChangeDetectorRef, DestroyRef, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, ChangeDetectorRef, DestroyRef, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../services/api';
@@ -18,7 +18,6 @@ import { environment } from '../../environments/environment';
 export class AdminSearch implements OnInit {
     private cdr = inject(ChangeDetectorRef);
     private destroyRef = inject(DestroyRef);
-    private platformId = inject(PLATFORM_ID);
 
     cinRecherche: string = '';
     donneesResident: any = null;
@@ -49,8 +48,24 @@ export class AdminSearch implements OnInit {
         private route: ActivatedRoute
     ) { }
 
+    private buildPdfPayload(fiche: { periode: string; annee: number; hopital: string; service: string }) {
+        return {
+            resident: {
+                nom_prenom: this.donneesResident.nom_prenom,
+                specialite: this.donneesResident.specialite,
+                niveau: this.donneesResident.niveau,
+                promotion: this.donneesResident.promotion
+            },
+            fiche: {
+                periode: fiche.periode,
+                annee: fiche.annee,
+                hopital: fiche.hopital,
+                service: fiche.service
+            }
+        };
+    }
+
     ngOnInit() {
-        if (!isPlatformBrowser(this.platformId)) return;
         this.apiService.getSpecialites().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(data => {
             this.specialites = data;
             this.cdr.markForCheck();
@@ -148,20 +163,7 @@ export class AdminSearch implements OnInit {
         this.messageErreur = '';
         this.isGeneratingPdf = true;
 
-        const payload = {
-            resident: {
-                nom_prenom: this.donneesResident.nom_prenom,
-                specialite: this.donneesResident.specialite,
-                niveau: this.donneesResident.niveau,
-                promotion: this.donneesResident.promotion
-            },
-            fiche: {
-                periode: this.nouveauStage.periode,
-                annee: this.nouveauStage.annee,
-                hopital: this.nouveauStage.hopital,
-                service: this.nouveauStage.service
-            }
-        };
+        const payload = this.buildPdfPayload(this.nouveauStage);
 
         this.http.post(`${environment.apiUrl}/generate-pdf`, payload, { responseType: 'blob' })
             .pipe(takeUntilDestroyed(this.destroyRef))
@@ -231,20 +233,7 @@ export class AdminSearch implements OnInit {
         this.messageErreur = '';
         this.isGeneratingPdf = true;
 
-        const payload = {
-            resident: {
-                nom_prenom: this.donneesResident.nom_prenom,
-                specialite: this.donneesResident.specialite,
-                niveau: this.donneesResident.niveau,
-                promotion: this.donneesResident.promotion
-            },
-            fiche: {
-                periode: fiche.periode,
-                annee: fiche.annee,
-                hopital: fiche.hopital,
-                service: fiche.service
-            }
-        };
+        const payload = this.buildPdfPayload(fiche);
 
         this.http.post(`${environment.apiUrl}/generate-pdf`, payload, { responseType: 'blob' })
             .pipe(takeUntilDestroyed(this.destroyRef))
@@ -268,20 +257,7 @@ export class AdminSearch implements OnInit {
         this.messageErreur = '';
         this.isGeneratingPdf = true;
 
-        const payload = {
-            resident: {
-                nom_prenom: this.donneesResident.nom_prenom,
-                specialite: this.donneesResident.specialite,
-                niveau: this.donneesResident.niveau,
-                promotion: this.donneesResident.promotion
-            },
-            fiche: {
-                periode: fiche.periode,
-                annee: fiche.annee,
-                hopital: fiche.hopital,
-                service: fiche.service
-            }
-        };
+        const payload = this.buildPdfPayload(fiche);
 
         this.http.post(`${environment.apiUrl}/generate-pdf`, payload, { responseType: 'blob' })
             .pipe(takeUntilDestroyed(this.destroyRef))

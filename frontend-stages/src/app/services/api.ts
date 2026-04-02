@@ -3,6 +3,21 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+export interface FichePayload {
+  resident_id?: number;
+  periode: string;
+  annee: number;
+  service: string;
+  hopital: string;
+  url_pdf?: string;
+}
+
+export interface ApiMutationResponse {
+  success: boolean;
+  message: string;
+  id?: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -40,16 +55,16 @@ export class ApiService {
 
   // ===== Fiches / Stages =====
 
-  updateFiche(idFiche: number, donnees: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/admin/fiches/${idFiche}`, donnees);
+  updateFiche(idFiche: number, donnees: FichePayload): Observable<ApiMutationResponse> {
+    return this.http.put<ApiMutationResponse>(`${this.apiUrl}/admin/fiches/${idFiche}`, donnees);
   }
 
-  createFiche(data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/admin/fiches`, data);
+  createFiche(data: FichePayload): Observable<ApiMutationResponse> {
+    return this.http.post<ApiMutationResponse>(`${this.apiUrl}/admin/fiches`, data);
   }
 
-  deleteFiche(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/admin/fiches/${id}`);
+  deleteFiche(id: number): Observable<ApiMutationResponse> {
+    return this.http.delete<ApiMutationResponse>(`${this.apiUrl}/admin/fiches/${id}`);
   }
 
   // ===== Référentiels =====

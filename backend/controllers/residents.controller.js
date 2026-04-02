@@ -1,8 +1,13 @@
 const db = require('../config/db');
+const logger = require('../utils/logger');
+const { validateResidentPayload, validateCin } = require('../utils/validation');
 
-// Recherche d'un résident et ses stages (Resident & Admin)
 exports.getResidentByCin = async (req, res) => {
-    const cin = req.params.cin;
+    const cinValidation = validateCin(req.params.cin);
+    if (!cinValidation.valid) {
+        return res.status(400).json({ success: false, message: cinValidation.message });
+    }
+    const cin = cinValidation.value;
 
     if (req.authUser.role === 'resident' && req.authUser.cin !== cin) {
         return res.status(403).json({ error: 'Accès non autorisé à ce dossier.' });
@@ -10,16 +15,16 @@ exports.getResidentByCin = async (req, res) => {
 
     try {
         const [residents] = await db.query(
-            `SELECT id, cin, nom_prenom, specialite, faculte_origine, 
-                IF(promotion IS NOT NULL AND promotion > 0, 
-                    LEAST(5, GREATEST(1, YEAR(CURRENT_DATE) - promotion + 1)), 
-                    niveau) as niveau, promotion 
+            `SELECT id, cin, nom_prenom, specialite, faculte_origine,
+                IF(promotion IS NOT NULL AND promotion > 0,
+                    LEAST(5, GREATEST(1, YEAR(CURRENT_DATE) - promotion + 1)),
+                    niveau) as niveau, promotion
              FROM residents WHERE cin = ?`,
             [cin]
         );
 
         if (residents.length === 0) {
-            return res.status(404).json({ message: "Résident introuvable" });
+            return res.status(404).json({ message: 'Résident introuvable' });
         }
 
         const resident = residents[0];
@@ -31,18 +36,16 @@ exports.getResidentByCin = async (req, res) => {
         );
 
         res.json({ ...resident, fiches });
-
     } catch (error) {
-        console.error("Erreur lors de la recherche :", error);
-        res.status(500).json({ error: "Erreur serveur lors de la recherche" });
+        logger.error('Erreur lors de la recherche : ' + error);
+        res.status(500).json({ error: 'Erreur serveur lors de la recherche' });
     }
 };
 
-// Lite de tous les résidents (Admin) - AVEC PAGINATION SERVEUR
 exports.getAllResidents = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 20;
         const offset = (page - 1) * limit;
 
         const search = req.query.search || '';
@@ -52,7 +55,7 @@ exports.getAllResidents = async (req, res) => {
         const sortDesc = req.query.sortDesc === 'true';
 
         let whereClause = 'WHERE 1=1';
-        let queryParams = [];
+        const queryParams = [];
 
         if (search) {
             whereClause += ' AND (r.cin LIKE ? OR r.nom_prenom LIKE ?)';
@@ -64,111 +67,118 @@ exports.getAllResidents = async (req, res) => {
         }
         if (promo) {
             whereClause += ' AND r.promotion = ?';
-            queryParams.push(parseInt(promo));
+            queryParams.push(parseInt(promo, 10));
         }
 
         const validSortCols = ['cin', 'nom_prenom', 'specialite', 'faculte_origine', 'promotion', 'niveau', 'nb_fiches'];
         const orderBy = validSortCols.includes(sortCol) ? sortCol : 'nom_prenom';
         const orderDir = sortDesc ? 'DESC' : 'ASC';
 
-        const countQuery = `SELECT COUNT(*) as total FROM residents r ${whereClause}`;
-        const [countResult] = await db.query(countQuery, queryParams);
+        const [countResult] = await db.query(`SELECT COUNT(*) as total FROM residents r ${whereClause}`, queryParams);
         const total = countResult[0].total;
 
-        const dataQuery = `
-            SELECT r.id, r.cin, r.nom_prenom, r.specialite, r.faculte_origine, r.promotion,
-                   IF(r.promotion IS NOT NULL AND r.promotion > 0, 
-                        LEAST(5, GREATEST(1, YEAR(CURRENT_DATE) - r.promotion + 1)), 
+        const [rows] = await db.query(
+            `SELECT r.id, r.cin, r.nom_prenom, r.specialite, r.faculte_origine, r.promotion,
+                    IF(r.promotion IS NOT NULL AND r.promotion > 0,
+                        LEAST(5, GREATEST(1, YEAR(CURRENT_DATE) - r.promotion + 1)),
                         r.niveau) as niveau,
-                   (SELECT COUNT(id) FROM formulaires_stage WHERE resident_id = r.id) AS nb_fiches
-            FROM residents r
-            ${whereClause}
-            ORDER BY ${orderBy} ${orderDir}
-            LIMIT ? OFFSET ?
-        `;
-        const [rows] = await db.query(dataQuery, [...queryParams, limit, offset]);
+                    (SELECT COUNT(id) FROM formulaires_stage WHERE resident_id = r.id) AS nb_fiches
+             FROM residents r
+             ${whereClause}
+             ORDER BY ${orderBy} ${orderDir}
+             LIMIT ? OFFSET ?`,
+            [...queryParams, limit, offset]
+        );
 
-        res.json({
-            data: rows,
-            total,
-            page,
-            limit
-        });
-    } catch (err) {
-        console.error('Get all residents error:', err);
-        res.status(500).json({ error: "Erreur lors de la récupération des résidents" });
+        res.json({ data: rows, total, page, limit });
+    } catch (error) {
+        logger.error('Get all residents error: ' + error);
+        res.status(500).json({ error: 'Erreur lors de la récupération des résidents' });
     }
 };
 
-// Créer un nouveau résident
 exports.createResident = async (req, res) => {
-    const { cin, nom_prenom, specialite, faculte_origine, niveau, promotion } = req.body;
-    if (!cin || !nom_prenom) return res.status(400).json({ message: "CIN et Nom/Prénom sont obligatoires." });
+    const validation = validateResidentPayload(req.body);
+    if (!validation.valid) {
+        return res.status(400).json({ success: false, message: validation.message });
+    }
+
+    const { cin, nom_prenom, specialite, faculte_origine, niveau, promotion } = validation.data;
 
     try {
         const [existing] = await db.query('SELECT id FROM residents WHERE cin = ?', [cin]);
-        if (existing.length > 0) return res.status(409).json({ message: "Un résident avec ce CIN existe déjà." });
+        if (existing.length > 0) {
+            return res.status(409).json({ success: false, message: 'Un résident avec ce CIN existe déjà.' });
+        }
 
         const [result] = await db.query(
             'INSERT INTO residents (cin, nom_prenom, specialite, faculte_origine, niveau, promotion) VALUES (?, ?, ?, ?, ?, ?)',
-            [cin.trim(), nom_prenom.trim(), specialite || '', faculte_origine || 'FMSfax', niveau || 1, promotion || null]
+            [cin, nom_prenom, specialite, faculte_origine, niveau, promotion]
         );
-        res.json({ success: true, id: result.insertId, message: "Résident créé avec succès." });
-    } catch (err) {
-        console.error('Create resident error:', err);
-        res.status(500).json({ error: "Erreur lors de la création du résident" });
+
+        res.json({ success: true, id: result.insertId, message: 'Résident créé avec succès.' });
+    } catch (error) {
+        logger.error('Create resident error: ' + error);
+        res.status(500).json({ error: 'Erreur lors de la création du résident' });
     }
 };
 
-// Modifier un résident
 exports.updateResident = async (req, res) => {
     const residentId = req.params.id;
-    const { cin, nom_prenom, niveau, promotion, faculte_origine } = req.body;
-    if (!cin || !nom_prenom) return res.status(400).json({ message: "CIN et Nom/Prénom sont obligatoires." });
+    const validation = validateResidentPayload(req.body);
+    if (!validation.valid) {
+        return res.status(400).json({ success: false, message: validation.message });
+    }
+
+    const { cin, nom_prenom, niveau, promotion, faculte_origine } = validation.data;
 
     try {
         const [existing] = await db.query('SELECT id FROM residents WHERE cin = ? AND id != ?', [cin, residentId]);
-        if (existing.length > 0) return res.status(409).json({ message: "Un autre résident possède déjà ce CIN." });
+        if (existing.length > 0) {
+            return res.status(409).json({ success: false, message: 'Un autre résident possède déjà ce CIN.' });
+        }
 
         await db.query(
             'UPDATE residents SET cin = ?, nom_prenom = ?, niveau = ?, promotion = ?, faculte_origine = ? WHERE id = ?',
-            [cin.trim(), nom_prenom.trim(), niveau || 1, promotion || null, faculte_origine || 'FMSfax', residentId]
+            [cin, nom_prenom, niveau, promotion, faculte_origine, residentId]
         );
-        res.json({ success: true, message: "Résident mis à jour avec succès." });
-    } catch (err) {
-        res.status(500).json({ error: "Erreur lors de la mise à jour du résident" });
+
+        res.json({ success: true, message: 'Résident mis à jour avec succès.' });
+    } catch (error) {
+        logger.error('Update resident error: ' + error);
+        res.status(500).json({ error: 'Erreur lors de la mise à jour du résident' });
     }
 };
 
-// Supprimer un résident
 exports.deleteResident = async (req, res) => {
     const residentId = req.params.id;
     try {
         await db.query('DELETE FROM formulaires_stage WHERE resident_id = ?', [residentId]);
         const [result] = await db.query('DELETE FROM residents WHERE id = ?', [residentId]);
-        if (result.affectedRows === 0) return res.status(404).json({ message: "Résident introuvable." });
-        res.json({ success: true, message: "Résident et ses fiches supprimés." });
-    } catch (err) {
-        res.status(500).json({ error: "Erreur lors de la suppression" });
+        if (result.affectedRows === 0) return res.status(404).json({ message: 'Résident introuvable.' });
+        res.json({ success: true, message: 'Résident et ses fiches supprimés.' });
+    } catch (error) {
+        logger.error('Delete resident error: ' + error);
+        res.status(500).json({ error: 'Erreur lors de la suppression' });
     }
 };
 
-// Extraction des promotions uniques pour le filtre
 exports.getPromotions = async (req, res) => {
     try {
         const [rows] = await db.query('SELECT DISTINCT promotion FROM residents WHERE promotion IS NOT NULL AND promotion > 0 ORDER BY promotion DESC');
-        res.json(rows.map(r => r.promotion));
-    } catch (err) {
-        res.status(500).json({ error: "Erreur promotions" });
+        res.json(rows.map((row) => row.promotion));
+    } catch (error) {
+        logger.error('Promotions error: ' + error);
+        res.status(500).json({ error: 'Erreur promotions' });
     }
 };
 
-// Extraction des spécialités uniques pour le filtre
 exports.getSpecialites = async (req, res) => {
     try {
         const [rows] = await db.query('SELECT DISTINCT specialite FROM residents WHERE specialite IS NOT NULL AND specialite != "" ORDER BY specialite');
-        res.json(rows.map(r => r.specialite));
-    } catch (err) {
-        res.status(500).json({ error: "Erreur spécialités" });
+        res.json(rows.map((row) => row.specialite));
+    } catch (error) {
+        logger.error('Specialites error: ' + error);
+        res.status(500).json({ error: 'Erreur spécialités' });
     }
 };

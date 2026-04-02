@@ -3,6 +3,7 @@ const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
 const db = require('../config/db');
 const logger = require('../utils/logger');
+const { validateCin, validateEmail, normalizeString } = require('../utils/validation');
 
 const transporter = nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
@@ -15,21 +16,23 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.adminLogin = async (req, res) => {
-    const { login, password } = req.body;
+    const login = normalizeString(req.body.login);
+    const password = normalizeString(req.body.password);
+
     if (!login || !password) {
-        return res.status(400).json({ success: false, message: "Login et mot de passe requis." });
+        return res.status(400).json({ success: false, message: 'Login et mot de passe requis.' });
     }
+
     try {
         const [results] = await db.query('SELECT * FROM administrateurs WHERE login = ?', [login]);
         if (results.length === 0) {
-            return res.status(401).json({ success: false, message: "Identifiants incorrects" });
+            return res.status(401).json({ success: false, message: 'Identifiants incorrects' });
         }
 
         const admin = results[0];
-
         const isMatch = await bcrypt.compare(password, admin.mot_de_passe);
         if (!isMatch) {
-            return res.status(401).json({ success: false, message: "Identifiants incorrects" });
+            return res.status(401).json({ success: false, message: 'Identifiants incorrects' });
         }
 
         const token = jwt.sign(
@@ -39,32 +42,34 @@ exports.adminLogin = async (req, res) => {
         );
 
         res.json({ success: true, token });
-    } catch (err) {
-        logger.error('Admin login error: ' + err);
-        res.status(500).json({ error: "Erreur serveur" });
+    } catch (error) {
+        logger.error('Admin login error: ' + error);
+        res.status(500).json({ error: 'Erreur serveur' });
     }
 };
 
 exports.requestOTP = async (req, res) => {
-    const { cin, email } = req.body;
-    if (!cin || !email) {
-        return res.status(400).json({ success: false, message: "CIN et Email requis" });
+    const cinValidation = validateCin(req.body.cin);
+    const emailValidation = validateEmail(req.body.email);
+
+    if (!cinValidation.valid) {
+        return res.status(400).json({ success: false, message: 'CIN et Email requis' });
+    }
+    if (!emailValidation.valid) {
+        return res.status(400).json({ success: false, message: emailValidation.message });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        return res.status(400).json({ success: false, message: "Format d'email invalide." });
-    }
+    const cin = cinValidation.value;
+    const email = emailValidation.value;
 
     try {
         const [residents] = await db.query('SELECT id, cin, nom_prenom, email, otp_expires_at FROM residents WHERE cin = ?', [cin]);
         if (residents.length === 0) {
-            return res.status(404).json({ success: false, message: "Résident introuvable" });
+            return res.status(404).json({ success: false, message: 'Résident introuvable' });
         }
 
         const resident = residents[0];
 
-        // Anti-spam : fenêtre de 2 minutes
         if (resident.otp_expires_at) {
             const timeGenerated = new Date(resident.otp_expires_at).getTime() - (10 * 60000);
             const timeElapsedInSeconds = Math.floor((Date.now() - timeGenerated) / 1000);
@@ -81,7 +86,7 @@ exports.requestOTP = async (req, res) => {
         if (!resident.email) {
             await db.query('UPDATE residents SET email = ? WHERE id = ?', [email, resident.id]);
         } else if (resident.email !== email) {
-            return res.status(400).json({ success: false, message: "Cet email ne correspond pas à ce dossier résident." });
+            return res.status(400).json({ success: false, message: 'Cet email ne correspond pas à ce dossier résident.' });
         }
 
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -90,8 +95,7 @@ exports.requestOTP = async (req, res) => {
         await db.query('UPDATE residents SET otp_code = ?, otp_expires_at = ? WHERE id = ?', [otpCode, expiresAt, resident.id]);
 
         if (!process.env.BREVO_USER || process.env.BREVO_USER.startsWith('REMPLACER')) {
-            // No longer logging the OTP in production logs for security.
-            return res.json({ success: true, message: "Mode Dev: Check database for OTP or configure BREVO_USER properly." });
+            return res.json({ success: true, message: 'Mode Dev: Check database for OTP or configure BREVO_USER properly.' });
         }
 
         transporter.sendMail({
@@ -104,23 +108,30 @@ exports.requestOTP = async (req, res) => {
                 <h2 style="color: blue; letter-spacing: 5px;">${otpCode}</h2>
                 <p>Ce code expire dans 10 minutes. Ne le partagez avec personne.</p>
             `
-        }).then(() => logger.info("Email envoyé avec succès."))
-            .catch(e => logger.error("Erreur d'envoi email :", e));
+        }).then(() => logger.info('Email envoyé avec succès.'))
+            .catch((error) => logger.error("Erreur d'envoi email : " + error));
 
-        return res.json({ success: true, message: "Code OTP envoyé par email." });
-
-    } catch (err) {
-        logger.error("Erreur OTP : " + err);
-        res.status(500).json({ success: false, message: "Erreur serveur." });
+        return res.json({ success: true, message: 'Code OTP envoyé par email.' });
+    } catch (error) {
+        logger.error('Erreur OTP : ' + error);
+        res.status(500).json({ success: false, message: 'Erreur serveur.' });
     }
 };
 
 exports.verifyOTP = async (req, res) => {
-    const { cin, otpCode } = req.body;
+    const cinValidation = validateCin(req.body.cin);
+    const otpCode = normalizeString(req.body.otpCode);
+
+    if (!cinValidation.valid || !otpCode) {
+        return res.status(400).json({ success: false, message: 'CIN et code OTP requis.' });
+    }
+
+    const cin = cinValidation.value;
+
     try {
         const [residents] = await db.query('SELECT id, nom_prenom, otp_code, otp_expires_at FROM residents WHERE cin = ?', [cin]);
         if (residents.length === 0) {
-            return res.status(404).json({ success: false, message: "Résident introuvable" });
+            return res.status(404).json({ success: false, message: 'Résident introuvable' });
         }
 
         const resident = residents[0];
@@ -128,20 +139,20 @@ exports.verifyOTP = async (req, res) => {
         const expirationDate = new Date(resident.otp_expires_at);
 
         if (!resident.otp_code || resident.otp_code !== otpCode || now > expirationDate) {
-            return res.status(401).json({ success: false, message: "Code invalide ou expiré" });
+            return res.status(401).json({ success: false, message: 'Code invalide ou expiré' });
         }
 
         await db.query('UPDATE residents SET otp_code = NULL, otp_expires_at = NULL WHERE id = ?', [resident.id]);
 
         const token = jwt.sign(
-            { id: resident.id, cin: cin, nom_prenom: resident.nom_prenom, role: 'resident' },
+            { id: resident.id, cin, nom_prenom: resident.nom_prenom, role: 'resident' },
             process.env.JWT_SECRET,
             { expiresIn: '8h' }
         );
 
         res.json({ success: true, token });
-    } catch (err) {
-        logger.error("Erreur serveur lors de la vérification OTP : " + err);
-        res.status(500).json({ success: false, message: "Erreur serveur lors de la vérification OTP" });
+    } catch (error) {
+        logger.error('Erreur serveur lors de la vérification OTP : ' + error);
+        res.status(500).json({ success: false, message: 'Erreur serveur lors de la vérification OTP' });
     }
 };

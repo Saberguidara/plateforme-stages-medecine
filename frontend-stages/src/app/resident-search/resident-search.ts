@@ -1,7 +1,7 @@
-import { Component, DestroyRef, ChangeDetectorRef, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, DestroyRef, ChangeDetectorRef, inject, OnInit } from '@angular/core';
 import { ApiService } from '../services/api';
 import { FormsModule } from '@angular/forms';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -24,12 +24,10 @@ export class ResidentSearchComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private http = inject(HttpClient);
   private router = inject(Router);
-  private platformId = inject(PLATFORM_ID);
 
   constructor(private apiService: ApiService) { }
 
   ngOnInit() {
-    if (!isPlatformBrowser(this.platformId)) return;
     const savedCin = localStorage.getItem('resident_cin');
     if (savedCin) {
       this.cinRecherche = savedCin;

@@ -7,22 +7,15 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.startsWith('REMPLACER')) {
 
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer');
-const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
-const puppeteer = require('puppeteer');
-const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const logger = require('./utils/logger');
 
 const app = express();
-app.use(helmet({ crossOriginResourcePolicy: false })); // false allows serving uploads if needed
-const db = require('./config/db');
+app.use(helmet({ crossOriginResourcePolicy: false }));
 
-// File upload is handled by middlewares/upload.middleware.js
-
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:4200').split(',').map(o => o.trim());
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:4200').split(',').map((origin) => origin.trim());
 
 app.use(cors({
     origin: (origin, cb) => {
@@ -61,55 +54,18 @@ app.get('/api/files/:name', (req, res) => {
     });
 });
 
-// ==========================================
-// Authentification
-// ==========================================
 const authRoutes = require('./routes/auth.routes');
-app.use('/api/auth', authRoutes);
-
-const authMiddleware = require('./middlewares/auth.middleware');
-const requireAdmin = authMiddleware.requireAdmin;
-const requireResident = authMiddleware.requireResident;
-const requireAnyAuth = authMiddleware.requireAnyAuth;
-
-// PDF logic moved to controllers/pdf.controller.js and routes/pdf.routes.js
-
-// ==========================================
-// Routes
-// ==========================================
 const importRoutes = require('./routes/import.routes');
 const residentsRoutes = require('./routes/residents.routes');
-
-app.use('/api', residentsRoutes);
-app.use('/api/admin', importRoutes);
-// Resident operations moved to controllers/residents.controller.js
-
-// ==========================================
-// Supprimer une fiche
-// ==========================================
-app.delete('/api/admin/fiches/:id', requireAdmin, async (req, res) => {
-    const ficheId = req.params.id;
-    try {
-        const [result] = await db.query('DELETE FROM formulaires_stage WHERE id = ?', [ficheId]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: "Fiche introuvable." });
-        }
-        res.json({ success: true, message: "Fiche supprimée." });
-    } catch (err) {
-        console.error('Delete fiche error:', err);
-        res.status(500).json({ error: "Erreur lors de la suppression" });
-    }
-});
-
-// ==========================================
-// Génération PDF (Router)
-// ==========================================
+const fichesRoutes = require('./routes/fiches.routes');
 const pdfRoutes = require('./routes/pdf.routes');
+
+app.use('/api/auth', authRoutes);
+app.use('/api', residentsRoutes);
+app.use('/api', fichesRoutes);
+app.use('/api/admin', importRoutes);
 app.use('/api', pdfRoutes);
 
-// ==========================================
-// Gestionnaire d'erreurs global
-// ==========================================
 app.use((err, req, res, next) => {
     if (err.message && err.message.startsWith('CORS:')) {
         return res.status(403).json({ error: err.message });
