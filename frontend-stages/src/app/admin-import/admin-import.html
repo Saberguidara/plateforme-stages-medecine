@@ -1,0 +1,89 @@
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+            <div class="admin-page-header">
+                <h2 class="admin-page-title">📥 Import de stages</h2>
+                <button type="button" class="btn-back" (click)="retour()">← Retour</button>
+            </div>
+
+            <div class="card dashboard-card">
+                <div class="card-body p-4">
+
+                    @if (typeSpecialite === 'standard') {
+                    <div class="alert alert-info py-2 mb-3 shadow-sm border-info">
+                        <strong>📄 Format Ministère (Toutes spécialités) :</strong><br>
+                        <span class="small">
+                            Colonnes attendues : <b>CIN</b>, <b>NOM ET PPRENOM</b>, <b>SP.</b>, <b>FAC D'ORIGINE</b>,
+                            <b>HOPITAL</b>, <b>SERVICE</b> et <b>ANNEE</b>.
+                        </span>
+                    </div>
+                    } @else {
+                    <div class="alert alert-warning py-2 mb-3 shadow-sm border-warning">
+                        <strong>⚠️ Format Personnalisé (Médecine de famille) :</strong><br>
+                        <span class="small">
+                            Respectez cet ordre : <b>A:</b> CIN | <b>B:</b> Nom et prénom | <b>C:</b> Spécialité |
+                            <b>D:</b> Faculté d'origine | <b>E:</b> Hopital 1 | <b>F:</b> Service 1 | <b>G:</b> Hopital
+                            2 | <b>H:</b> Service 2 | <b>I:</b> Année
+                        </span>
+                    </div>
+                    }
+
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small">Spécialité</label>
+                            <select class="form-select" [(ngModel)]="typeSpecialite">
+                                <option value="standard">Toutes spécialités</option>
+                                <option value="famille">Médecine de famille</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small">Année</label>
+                            <input type="number" class="form-control" [(ngModel)]="anneeImport">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small">Période</label>
+                            <select class="form-select" [(ngModel)]="semestreImport">
+                                <option value="S1">S1</option>
+                                <option value="S2">S2</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small">Fichier (.xlsx)</label>
+                            <input type="file" class="form-control" accept=".xlsx, .xls"
+                                (change)="onFileSelected($event)">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn pill-btn-orange w-100"
+                                (click)="importerExcel()">Importer</button>
+                        </div>
+                    </div>
+
+                    @if (messageImport) { <div class="alert alert-info mt-3 mb-0">{{ messageImport }}</div> }
+
+                    @if (isImportSuccess) {
+                        <div class="d-flex justify-content-center gap-3 mt-4">
+                            <button type="button" class="btn pill-btn-outline-dark" (click)="annulerImport()">❌ Annuler l'import</button>
+                            <button type="button" class="btn pill-btn-orange" (click)="validerImport()">✅ Valider définitivement</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Confirmation Modal -->
+@if (showConfirmModal) {
+<div class="custom-modal-overlay">
+    <div class="custom-modal-card">
+        <span class="custom-modal-icon">⚠️</span>
+        <h3 class="custom-modal-title">{{ confirmTitle }}</h3>
+        <p class="custom-modal-text">{{ confirmMessage }}</p>
+        <div class="d-flex justify-content-center gap-3">
+            <button class="btn pill-btn-outline-dark px-4" (click)="annulerConfirm()">Annuler</button>
+            <button class="btn pill-btn-orange px-4 fw-bold" (click)="confirmAction()">Oui, importer</button>
+        </div>
+    </div>
+</div>
+}

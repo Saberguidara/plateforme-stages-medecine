@@ -1,0 +1,26 @@
+<div class="app-container">
+    <header class="app-header" *ngIf="!isLoginPage()">
+        <div class="header-layout">
+            <div class="header-empty-space" aria-hidden="true"></div>
+
+            <div class="header-center-block">
+                <img src="logo.png" alt="Logo de la faculté" class="header-logo">
+                <div class="header-text ms-3 text-center text-md-start">
+                    <h1 class="header-main-title">PLATEFORME DES STAGES</h1>
+                    <h2 class="header-sub-title mb-0">Service des stages - Faculté de médecine de Sfax</h2>
+                </div>
+            </div>
+
+            <div class="header-user-actions">
+                <span class="header-welcome-text"><strong>Bienvenue</strong> {{ getUserName() }}</span>
+                <button type="button" class="btn-header-logout" (click)="logout()">Déconnexion</button>
+            </div>
+        </div>
+    </header>
+    <div class="main-content">
+        <router-outlet></router-outlet>
+    </div>
+    <footer class="app-footer" *ngIf="!isLoginPage()">
+        &copy; Saber GUIDARA - Faculté de Médecine de Sfax - 2026
+    </footer>
+</div>

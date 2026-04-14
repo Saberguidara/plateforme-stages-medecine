@@ -1,0 +1,182 @@
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-11">
+
+            <div class="admin-page-header">
+                <h2 class="admin-page-title">📊 Visualisation des données</h2>
+                <button type="button" class="btn-back" (click)="retour()">← Retour</button>
+            </div>
+
+            @if (messageSucces) { <div class="alert alert-success py-2">{{ messageSucces }}</div> }
+            @if (messageErreur) { <div class="alert alert-warning py-2">{{ messageErreur }}</div> }
+
+            <!-- Toolbar -->
+            <div class="data-toolbar mb-3">
+                <input type="text" class="form-control" style="max-width: 300px;"
+                    placeholder="🔍 Rechercher CIN ou nom..." [(ngModel)]="searchText" (input)="appliquerFiltres()">
+                <select class="form-select" style="max-width: 240px;" [(ngModel)]="filterSpecialite"
+                    (change)="appliquerFiltres()">
+                    <option value="">Toutes les spécialités</option>
+                    @for (spec of specialites; track spec) {
+                    <option [value]="spec">{{ spec }}</option>
+                    }
+                </select>
+                <select class="form-select" style="max-width: 150px;" [(ngModel)]="filterPromo"
+                    (change)="appliquerFiltres()">
+                    <option value="">Toutes les promos</option>
+                    @for (p of promos; track p) {
+                    <option [value]="p">{{ p }}</option>
+                    }
+                </select>
+                <span class="text-muted small ms-auto">{{ total }} résident(s) trouvé(s)</span>
+            </div>
+
+            <!-- Table -->
+            <div class="card dashboard-card">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>N°</th>
+                                <th style="cursor: pointer" (click)="sortBy('cin')">CIN {{ sortCol === 'cin' ? (sortDesc ? '▼' : '▲') : '' }}</th>
+                                <th style="cursor: pointer" (click)="sortBy('nom_prenom')">Nom et Prénom {{ sortCol === 'nom_prenom' ? (sortDesc ? '▼' : '▲') : '' }}</th>
+                                <th style="cursor: pointer" (click)="sortBy('specialite')">Spécialité {{ sortCol === 'specialite' ? (sortDesc ? '▼' : '▲') : '' }}</th>
+                                <th style="cursor: pointer" (click)="sortBy('faculte_origine')">Faculté {{ sortCol === 'faculte_origine' ? (sortDesc ? '▼' : '▲') : '' }}</th>
+                                <th style="cursor: pointer" (click)="sortBy('promotion')">Promo {{ sortCol === 'promotion' ? (sortDesc ? '▼' : '▲') : '' }}</th>
+                                <th class="text-center" style="cursor: pointer" (click)="sortBy('nb_fiches')">Stages {{ sortCol === 'nb_fiches' ? (sortDesc ? '▼' : '▲') : '' }}</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (r of residents; track r.id; let i = $index) {
+
+                            <!-- Si en mode édition -->
+                            @if (editingResident && editingResident.id === r.id) {
+                            <tr style="background-color: #fef6f0;">
+                                <td class="text-muted">{{ (page - 1) * limit + i + 1 }}</td>
+                                <td><input type="text" class="form-control form-control-sm"
+                                        [(ngModel)]="editingResident.cin"></td>
+                                <td><input type="text" class="form-control form-control-sm"
+                                        [(ngModel)]="editingResident.nom_prenom"></td>
+                                <td>{{ r.specialite }}</td>
+                                <td>
+                                    <select class="form-select form-select-sm"
+                                        [(ngModel)]="editingResident.faculte_origine">
+                                        @for (fac of facultes; track fac) {
+                                        <option [value]="fac">{{ fac }}</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" [(ngModel)]="editingResident.promotion">
+                                </td>
+                                <td class="text-center"><span class="badge-count">{{ r.nb_fiches }}</span></td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-success rounded-pill me-1"
+                                        (click)="saveEditResident()">✓</button>
+                                    <button class="btn btn-sm btn-outline-secondary rounded-pill"
+                                        (click)="cancelEditResident()">✗</button>
+                                </td>
+                            </tr>
+                            } @else {
+
+                            <!-- Mode affichage normal -->
+                            <tr style="cursor: pointer;" (click)="toggleExpand(r)">
+                                <td class="text-muted">{{ (page - 1) * limit + i + 1 }}</td>
+                                <td><strong>{{ r.cin }}</strong></td>
+                                <td>{{ r.nom_prenom }}</td>
+                                <td>{{ r.specialite }}</td>
+                                <td>{{ r.faculte_origine }}</td>
+                                <td>{{ r.promotion }}</td>
+                                <td class="text-center"><span class="badge-count">{{ r.nb_fiches }}</span></td>
+                                <td class="text-end" (click)="$event.stopPropagation()">
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill me-1"
+                                        (click)="startEditResident(r)" title="Modifier">✏️</button>
+                                    <button class="btn btn-sm btn-outline-danger rounded-pill"
+                                        (click)="demanderSuppressionResident(r)" title="Supprimer">🗑️</button>
+                                </td>
+                            </tr>
+
+                            <!-- Expanded row: fiches -->
+                            @if (expandedId === r.id) {
+                            <tr>
+                                <td colspan="8" style="padding: 0; border-top: none;">
+                                    <div class="resident-expand mx-3 mb-3">
+                                        <h6 class="mb-2" style="color: #f47b45; font-weight: 700;">Stages de {{
+                                            r.nom_prenom }}</h6>
+                                        @if (expandedFiches.length === 0) {
+                                        <p class="text-muted small mb-0">Aucun stage enregistré.</p>
+                                        } @else {
+                                        <table class="table table-sm table-bordered align-middle mb-0">
+                                            <thead>
+                                                <tr class="table-light">
+                                                    <th>Période</th>
+                                                    <th>Année</th>
+                                                    <th>Service</th>
+                                                    <th>Hôpital</th>
+                                                    <th class="text-end">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @for (f of expandedFiches; track f.id) {
+                                                <tr>
+                                                    <td><input type="text" class="form-control form-control-sm"
+                                                            [(ngModel)]="f.periode" style="width:80px;"></td>
+                                                    <td><input type="number" class="form-control form-control-sm"
+                                                            [(ngModel)]="f.annee" style="width:90px;"></td>
+                                                    <td><input type="text" class="form-control form-control-sm"
+                                                            [(ngModel)]="f.service"></td>
+                                                    <td><input type="text" class="form-control form-control-sm"
+                                                            [(ngModel)]="f.hopital"></td>
+                                                    <td class="text-end text-nowrap">
+                                                        <button class="btn btn-sm pill-btn-orange"
+                                                            (click)="sauvegarderFiche(f)">💾</button>
+                                                        <button class="btn btn-sm btn-outline-danger rounded-pill ms-1"
+                                                            (click)="demanderSuppressionFiche(f)">🗑️</button>
+                                                    </td>
+                                                </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                            }
+                            }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pagination Toolbar -->
+            <div class="d-flex justify-content-between align-items-center mt-3 mb-5">
+                <span class="text-muted small">
+                    Affichage {{ (page - 1) * limit + 1 }} à {{ Math.min(page * limit, total) }} sur {{ total }}
+                </span>
+                <div class="btn-group">
+                    <button class="btn btn-outline-secondary btn-sm" [disabled]="page === 1" (click)="prevPage()">Précédent</button>
+                    <button class="btn btn-secondary btn-sm" disabled>Page {{ page }}</button>
+                    <button class="btn btn-outline-secondary btn-sm" [disabled]="page * limit >= total" (click)="nextPage()">Suivant</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Custom Confirmation Modal -->
+@if (showConfirmModal) {
+<div class="custom-modal-overlay">
+    <div class="custom-modal-card">
+        <span class="custom-modal-icon">⚠️</span>
+        <h3 class="custom-modal-title">{{ confirmTitle }}</h3>
+        <p class="custom-modal-text">{{ confirmMessage }}</p>
+        <div class="d-flex justify-content-center gap-3">
+            <button class="btn pill-btn-outline-dark px-4" (click)="annulerSuppression()">Annuler</button>
+            <button class="btn btn-danger rounded-pill px-4 fw-bold" (click)="confirmAction()">Oui, supprimer</button>
+        </div>
+    </div>
+</div>
+}

@@ -1,0 +1,45 @@
+<div class="h-100 d-flex flex-column" style="min-height: 80vh;">
+
+  <!-- Titre exactement centré dans l'espace disponible au-dessus des cartes -->
+  <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+    <div class="admin-page-header m-0" style="border-bottom: none;">
+      <h2 class="admin-page-title" style="font-size: 2.2rem; text-align: center;">Espace Administration</h2>
+    </div>
+  </div>
+
+  <!-- Grille de cartes en bas -->
+  <div class="container pb-5">
+    <div class="row justify-content-center w-100 m-0">
+      <div class="col-lg-10 px-0">
+
+        <div class="hub-grid">
+
+          <div class="hub-card" (click)="navigateTo('import')">
+            <span class="hub-card-icon">📥</span>
+            <div class="hub-card-title">Import de stages</div>
+            <p class="hub-card-desc">Importer un fichier Excel d'affectations de stages</p>
+          </div>
+
+          <div class="hub-card" (click)="navigateTo('data')">
+            <span class="hub-card-icon">📊</span>
+            <div class="hub-card-title">Visualisation des données</div>
+            <p class="hub-card-desc">Consulter, filtrer, modifier ou supprimer les données</p>
+          </div>
+
+          <div class="hub-card" (click)="navigateTo('search')">
+            <span class="hub-card-icon">🔍</span>
+            <div class="hub-card-title">Rechercher un résident</div>
+            <p class="hub-card-desc">Trouver un résident par CIN et gérer ses stages</p>
+          </div>
+
+          <div class="hub-card" (click)="navigateTo('add')">
+            <span class="hub-card-icon">➕</span>
+            <div class="hub-card-title">Ajouter un résident</div>
+            <p class="hub-card-desc">Créer un nouveau résident et lui affecter un stage</p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
