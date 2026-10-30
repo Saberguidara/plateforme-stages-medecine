@@ -57,7 +57,9 @@
                                 <td><input type="text" class="form-control form-control-sm"
                                         [(ngModel)]="editingResident.cin"></td>
                                 <td><input type="text" class="form-control form-control-sm"
-                                        [(ngModel)]="editingResident.nom_prenom"></td>
+                                        [(ngModel)]="editingResident.nom_prenom">
+                                    <input type="email" class="form-control form-control-sm mt-1"
+                                        [(ngModel)]="editingResident.email" placeholder="E-mail de connexion"></td>
                                 <td>{{ r.specialite }}</td>
                                 <td>
                                     <select class="form-select form-select-sm"
@@ -84,7 +86,9 @@
                             <tr style="cursor: pointer;" (click)="toggleExpand(r)">
                                 <td class="text-muted">{{ (page - 1) * limit + i + 1 }}</td>
                                 <td><strong>{{ r.cin }}</strong></td>
-                                <td>{{ r.nom_prenom }}</td>
+                                <td>{{ r.nom_prenom }}
+                                    <div class="small" [class.text-muted]="r.email" [class.text-danger]="!r.email">
+                                        {{ r.email || 'Aucun e-mail : connexion impossible' }}</div></td>
                                 <td>{{ r.specialite }}</td>
                                 <td>{{ r.faculte_origine }}</td>
                                 <td>{{ r.promotion }}</td>

@@ -7,13 +7,15 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.startsWith('REMPLACER')) {
 
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
 const helmet = require('helmet');
 const logger = require('./utils/logger');
 
 const app = express();
-app.use(helmet({ crossOriginResourcePolicy: false }));
+
+// Derrière l'hébergeur (Render…), l'IP du visiteur arrive par X-Forwarded-For.
+// Sans ce réglage, tous les visiteurs partagent la même IP et les mêmes limites de requêtes.
+if (process.env.TRUST_PROXY) app.set('trust proxy', parseInt(process.env.TRUST_PROXY, 10) || process.env.TRUST_PROXY);
+app.use(helmet());
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:4200').split(',').map((origin) => origin.trim());
 
@@ -25,34 +27,7 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(express.json());
-
-const uploadsDir = path.join(__dirname, 'uploads');
-app.use('/uploads', (req, res, next) => {
-    const origin = req.headers.origin;
-    if (!origin || allowedOrigins.includes(origin)) {
-        res.setHeader('Access-Control-Allow-Origin', origin || allowedOrigins[0]);
-    }
-    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS');
-    next();
-}, express.static(uploadsDir));
-
-app.get('/api/files/:name', (req, res) => {
-    const name = req.params.name;
-    if (!name) return res.status(400).json({ error: 'Filename required' });
-
-    const safeName = path.normalize(name).replace(/^\.+[\\/]/, '');
-    const filePath = path.join(uploadsDir, safeName);
-
-    if (path.dirname(filePath) !== uploadsDir) {
-        return res.status(400).json({ error: 'Invalid filename' });
-    }
-
-    fs.stat(filePath, (err, stats) => {
-        if (err || !stats.isFile()) return res.status(404).json({ error: 'File not found' });
-        res.sendFile(filePath);
-    });
-});
+app.use(express.json({ limit: '100kb' }));
 
 const authRoutes = require('./routes/auth.routes');
 const importRoutes = require('./routes/import.routes');
@@ -69,6 +44,9 @@ app.use('/api', pdfRoutes);
 app.use((err, req, res, next) => {
     if (err.message && err.message.startsWith('CORS:')) {
         return res.status(403).json({ error: err.message });
+    }
+    if (err.name === 'MulterError' || (err.message && err.message.startsWith('Format refusé'))) {
+        return res.status(400).json({ message: err.code === 'LIMIT_FILE_SIZE' ? 'Fichier trop volumineux (10 Mo maximum).' : err.message });
     }
     logger.error('Unhandled error: ' + err.stack);
     res.status(500).json({ error: 'Erreur interne du serveur' });

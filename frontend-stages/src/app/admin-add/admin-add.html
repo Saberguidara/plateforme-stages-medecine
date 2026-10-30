@@ -30,13 +30,19 @@
                                     [(ngModel)]="nouveauResident.nom_prenom" name="nom" required>
                             </div>
                             <div class="col-md-12">
+                                <label class="form-label text-muted small fw-bold">E-mail de connexion</label>
+                                <input type="email" class="form-control elegant-input" [(ngModel)]="nouveauResident.email"
+                                    name="email" autocomplete="off">
+                                <div class="form-text">Le résident recevra ses codes de connexion à cette adresse.
+                                    Sans e-mail, il ne pourra pas se connecter.</div>
+                            </div>
+                            <div class="col-md-12">
                                 <label class="form-label text-muted small fw-bold">Spécialité</label>
                                 <select class="form-select elegant-input" [(ngModel)]="nouveauResident.specialite"
                                     name="spec">
                                     @for (spec of specialites; track spec) {
                                     <option [value]="spec">{{ spec }}</option>
                                     }
-                                    <option value="">— Autre —</option>
                                 </select>
                             </div>
                             <div class="col-md-6">

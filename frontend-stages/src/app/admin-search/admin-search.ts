@@ -48,20 +48,14 @@ export class AdminSearch implements OnInit {
         private route: ActivatedRoute
     ) { }
 
+    // Le serveur relit le résident en base ; seules les infos du stage viennent du formulaire.
     private buildPdfPayload(fiche: { periode: string; annee: number; hopital: string; service: string }) {
         return {
-            resident: {
-                nom_prenom: this.donneesResident.nom_prenom,
-                specialite: this.donneesResident.specialite,
-                niveau: this.donneesResident.niveau,
-                promotion: this.donneesResident.promotion
-            },
-            fiche: {
-                periode: fiche.periode,
-                annee: fiche.annee,
-                hopital: fiche.hopital,
-                service: fiche.service
-            }
+            resident_id: this.donneesResident.id,
+            periode: fiche.periode,
+            annee: fiche.annee,
+            hopital: fiche.hopital,
+            service: fiche.service
         };
     }
 
@@ -93,9 +87,13 @@ export class AdminSearch implements OnInit {
             .subscribe({
                 next: (data) => {
                     this.donneesResident = data;
+                    // Tous les champs sont renvoyés à la mise à jour : un champ absent serait effacé.
                     this.editResident = {
                         cin: data.cin,
                         nom_prenom: data.nom_prenom,
+                        email: data.email || '',
+                        specialite: data.specialite,
+                        promotion: data.promotion,
                         niveau: data.niveau || 1,
                         faculte_origine: data.faculte_origine || 'FMSfax'
                     };
@@ -125,6 +123,7 @@ export class AdminSearch implements OnInit {
                     this.donneesResident.nom_prenom = this.editResident.nom_prenom;
                     this.donneesResident.niveau = this.editResident.niveau;
                     this.donneesResident.faculte_origine = this.editResident.faculte_origine;
+                    this.donneesResident.email = this.editResident.email;
                     this.cinRecherche = this.editResident.cin;
                     this.cdr.markForCheck();
                 },
@@ -165,7 +164,7 @@ export class AdminSearch implements OnInit {
 
         const payload = this.buildPdfPayload(this.nouveauStage);
 
-        this.http.post(`${environment.apiUrl}/generate-pdf`, payload, { responseType: 'blob' })
+        this.http.post(`${environment.apiUrl}/admin/apercu-pdf`, payload, { responseType: 'blob' })
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (blob: Blob) => {
@@ -235,7 +234,7 @@ export class AdminSearch implements OnInit {
 
         const payload = this.buildPdfPayload(fiche);
 
-        this.http.post(`${environment.apiUrl}/generate-pdf`, payload, { responseType: 'blob' })
+        this.http.post(`${environment.apiUrl}/admin/apercu-pdf`, payload, { responseType: 'blob' })
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (blob: Blob) => {
@@ -259,7 +258,7 @@ export class AdminSearch implements OnInit {
 
         const payload = this.buildPdfPayload(fiche);
 
-        this.http.post(`${environment.apiUrl}/generate-pdf`, payload, { responseType: 'blob' })
+        this.http.post(`${environment.apiUrl}/admin/apercu-pdf`, payload, { responseType: 'blob' })
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (blob: Blob) => {

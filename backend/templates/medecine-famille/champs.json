@@ -1,0 +1,36 @@
+{
+  "source": "modele.docx",
+  "police": "../fonts/carlito-bold.woff",
+  "largeurPage": 595.32,
+  "champs": {
+    "hopital": {
+      "centreX": 296.38,
+      "y": 631.78,
+      "taille": 14.04,
+      "alignement": "centre"
+    },
+    "service": {
+      "centreX": 296.32,
+      "y": 614.62,
+      "taille": 14.04,
+      "alignement": "centre"
+    },
+    "nomPrenom": {
+      "x": 139.7,
+      "y": 597.58,
+      "taille": 14.04
+    },
+    "annee": {
+      "x": 141.98,
+      "y": 580.39,
+      "taille": 12,
+      "suffixe": " année",
+      "tailleSuffixe": 14.04
+    },
+    "periode": {
+      "x": 141.26,
+      "y": 563.35,
+      "taille": 14.04
+    }
+  }
+}

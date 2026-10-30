@@ -100,7 +100,7 @@ export class ResidentSearchComponent implements OnInit {
 
   /** Appel commun à /api/generate-pdf — token injecté automatiquement par authInterceptor */
   private generatePdf(fiche: any, resident: any): Promise<Blob> {
-    const payload = { resident, fiche };
+    const payload = { ficheId: fiche.id };
     return new Promise((resolve, reject) => {
       this.http.post(`${environment.apiUrl}/generate-pdf`, payload, {
         responseType: 'blob'

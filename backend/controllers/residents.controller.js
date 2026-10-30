@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { validateResidentPayload, validateCin } = require('../utils/validation');
+const { SPECIALITES } = require('../config/specialites');
 
 exports.getResidentByCin = async (req, res) => {
     const cinValidation = validateCin(req.params.cin);
@@ -15,7 +16,7 @@ exports.getResidentByCin = async (req, res) => {
 
     try {
         const [residents] = await db.query(
-            `SELECT id, cin, nom_prenom, specialite, faculte_origine,
+            `SELECT id, cin, nom_prenom, email, specialite, faculte_origine,
                 IF(promotion IS NOT NULL AND promotion > 0,
                     LEAST(5, GREATEST(1, YEAR(CURRENT_DATE) - promotion + 1)),
                     niveau) as niveau, promotion
@@ -78,7 +79,7 @@ exports.getAllResidents = async (req, res) => {
         const total = countResult[0].total;
 
         const [rows] = await db.query(
-            `SELECT r.id, r.cin, r.nom_prenom, r.specialite, r.faculte_origine, r.promotion,
+            `SELECT r.id, r.cin, r.nom_prenom, r.email, r.specialite, r.faculte_origine, r.promotion,
                     IF(r.promotion IS NOT NULL AND r.promotion > 0,
                         LEAST(5, GREATEST(1, YEAR(CURRENT_DATE) - r.promotion + 1)),
                         r.niveau) as niveau,
@@ -103,7 +104,7 @@ exports.createResident = async (req, res) => {
         return res.status(400).json({ success: false, message: validation.message });
     }
 
-    const { cin, nom_prenom, specialite, faculte_origine, niveau, promotion } = validation.data;
+    const { cin, nom_prenom, email, specialite, faculte_origine, niveau, promotion } = validation.data;
 
     try {
         const [existing] = await db.query('SELECT id FROM residents WHERE cin = ?', [cin]);
@@ -112,8 +113,8 @@ exports.createResident = async (req, res) => {
         }
 
         const [result] = await db.query(
-            'INSERT INTO residents (cin, nom_prenom, specialite, faculte_origine, niveau, promotion) VALUES (?, ?, ?, ?, ?, ?)',
-            [cin, nom_prenom, specialite, faculte_origine, niveau, promotion]
+            'INSERT INTO residents (cin, nom_prenom, email, specialite, faculte_origine, niveau, promotion) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [cin, nom_prenom, email, specialite, faculte_origine, niveau, promotion]
         );
 
         res.json({ success: true, id: result.insertId, message: 'Résident créé avec succès.' });
@@ -130,7 +131,7 @@ exports.updateResident = async (req, res) => {
         return res.status(400).json({ success: false, message: validation.message });
     }
 
-    const { cin, nom_prenom, niveau, promotion, faculte_origine } = validation.data;
+    const { cin, nom_prenom, email, specialite, niveau, promotion, faculte_origine } = validation.data;
 
     try {
         const [existing] = await db.query('SELECT id FROM residents WHERE cin = ? AND id != ?', [cin, residentId]);
@@ -139,8 +140,8 @@ exports.updateResident = async (req, res) => {
         }
 
         await db.query(
-            'UPDATE residents SET cin = ?, nom_prenom = ?, niveau = ?, promotion = ?, faculte_origine = ? WHERE id = ?',
-            [cin, nom_prenom, niveau, promotion, faculte_origine, residentId]
+            'UPDATE residents SET cin = ?, nom_prenom = ?, email = ?, specialite = ?, niveau = ?, promotion = ?, faculte_origine = ? WHERE id = ?',
+            [cin, nom_prenom, email, specialite, niveau, promotion, faculte_origine, residentId]
         );
 
         res.json({ success: true, message: 'Résident mis à jour avec succès.' });
@@ -173,12 +174,7 @@ exports.getPromotions = async (req, res) => {
     }
 };
 
-exports.getSpecialites = async (req, res) => {
-    try {
-        const [rows] = await db.query('SELECT DISTINCT specialite FROM residents WHERE specialite IS NOT NULL AND specialite != "" ORDER BY specialite');
-        res.json(rows.map((row) => row.specialite));
-    } catch (error) {
-        logger.error('Specialites error: ' + error);
-        res.status(500).json({ error: 'Erreur spécialités' });
-    }
+// Spécialités ouvertes sur la plateforme (config/specialites.js), pas celles présentes en base.
+exports.getSpecialites = (req, res) => {
+    res.json(Object.values(SPECIALITES).map((s) => s.libelle));
 };

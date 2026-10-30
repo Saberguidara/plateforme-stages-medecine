@@ -1,0 +1,285 @@
+<title>Audit Plateforme Stages FMSfax</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : rapport à une colonne (~760px), sections numérotées car le plan d'action est une vraie séquence */
+:root {
+  --bg: #f6f8f9; --surface: #ffffff; --fg: #15232b; --muted: #5a6b75; --line: #dbe3e7;
+  --accent: #0e6175; --accent-soft: #e2f0f3;
+  --crit: #b4232c; --crit-bg: #fbe8e9; --high: #b4570e; --high-bg: #fcefe3;
+  --med: #8a6a00; --med-bg: #fbf4d9; --low: #4b5d68; --low-bg: #eaeff2;
+  --ok: #1d7a46; --ok-bg: #e3f4ea;
+  --f-display: "Source Serif 4", Georgia, serif;
+  --f-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f171c; --surface: #16222a; --fg: #e3ebef; --muted: #9aabb5; --line: #2a3a44;
+  --accent: #5fbfd4; --accent-soft: #173842;
+  --crit: #ff8a8f; --crit-bg: #3a1a1d; --high: #ffb072; --high-bg: #3a2614;
+  --med: #e8c95a; --med-bg: #332b10; --low: #b3c2ca; --low-bg: #24323a;
+  --ok: #6fd69b; --ok-bg: #143323; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #16222a; --fg: #e3ebef; --muted: #9aabb5; --line: #2a3a44;
+  --accent: #5fbfd4; --accent-soft: #173842;
+  --crit: #ff8a8f; --crit-bg: #3a1a1d; --high: #ffb072; --high-bg: #3a2614;
+  --med: #e8c95a; --med-bg: #332b10; --low: #b3c2ca; --low-bg: #24323a;
+  --ok: #6fd69b; --ok-bg: #143323; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15.5px/1.6 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 780px; margin: 0 auto; padding-block: 48px 80px; display: grid; gap: 44px; }
+header { display: grid; gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 28px; }
+.eyebrow { font: 500 12px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 700 clamp(30px, 5vw, 42px)/1.12 var(--f-display); margin: 0; text-wrap: balance; }
+h2 { font: 700 25px/1.2 var(--f-display); margin: 0; text-wrap: balance; display: flex; gap: 12px; align-items: baseline; }
+h2 .n { font: 500 14px var(--f-mono); color: var(--accent); }
+h3 { font: 600 16px/1.35 var(--f-body); margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lead { font-size: 17px; color: var(--muted); }
+section { display: grid; gap: 16px; }
+code { font: 13px var(--f-mono); background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.meta { font: 13px var(--f-mono); color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+
+.verdict { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; display: grid; gap: 14px; }
+.tally { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 600 12px/1 var(--f-body); padding: 6px 9px; border-radius: 999px; white-space: nowrap; }
+.crit { color: var(--crit); background: var(--crit-bg); } .high { color: var(--high); background: var(--high-bg); }
+.med { color: var(--med); background: var(--med-bg); } .low { color: var(--low); background: var(--low-bg); }
+.ok { color: var(--ok); background: var(--ok-bg); }
+
+.finding { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--sev); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; }
+.finding.s-crit { --sev: var(--crit); } .finding.s-high { --sev: var(--high); } .finding.s-med { --sev: var(--med); } .finding.s-low { --sev: var(--low); }
+.finding .top { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.finding .where { font: 12.5px var(--f-mono); color: var(--muted); overflow-wrap: anywhere; }
+.finding p { font-size: 14.5px; }
+.finding .fix { color: var(--fg); } .finding .fix b { color: var(--accent); }
+.list { display: grid; gap: 10px; }
+
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 560px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 12px var(--f-body); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--f-mono); font-size: 13px; white-space: nowrap; }
+
+ul.plain { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 68ch; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; min-width: 0; }
+.box.rec { border: 2px solid var(--accent); }
+.box h3 { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.box ul { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
+.diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; }
+.diagram svg { display: block; min-width: 560px; width: 100%; height: auto; }
+.diagram text { font-family: var(--f-body); fill: var(--fg); }
+.diagram .sub { fill: var(--muted); font-size: 12px; }
+.steps { counter-reset: s; display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.steps li::before { content: counter(s); font: 600 14px/30px var(--f-mono); text-align: center; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.steps li div { display: grid; gap: 4px; min-width: 0; }
+.steps li p { font-size: 14px; color: var(--muted); }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Audit technique · 30 octobre 2026</span>
+  <h1>Plateforme des fiches de validation de stage</h1>
+  <p class="lead">Angular 21 + Express 5 + MySQL. Audit du code, tests de sécurité et de charge réalisés sur la base locale (707 résidents, 3 421 fiches), et proposition d'un déploiement gratuit en une seule URL.</p>
+  <div class="meta"><span>Dépôt : Saberguidara/plateforme-stages-medecine</span><span>Commit : a9b52f6</span></div>
+</header>
+
+<section>
+  <div class="verdict">
+    <h3>Verdict</h3>
+    <p>Pour un projet de 2ᵉ année, la base est saine : requêtes SQL paramétrées, JWT, bcrypt, helmet, rate limiting, transactions sur l'import, tests Jest. Le projet <b>ne doit pas être mis en ligne tel quel</b> : deux failles permettent de produire de fausses fiches officielles et de prendre le compte de presque n'importe quel résident.</p>
+    <div class="tally">
+      <span class="chip crit">3 critiques</span><span class="chip high">5 élevées</span><span class="chip med">6 moyennes</span><span class="chip low">4 faibles</span><span class="chip ok">API de lecture : ~3 000 req/s</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">1</span>Sécurité du code et des accès</h2>
+  <p>Chaque point critique a été vérifié en exécutant le serveur, pas seulement en lisant le code.</p>
+  <div class="list">
+    <div class="finding s-crit">
+      <div class="top"><span class="chip crit">Critique</span><h3>N'importe quel connecté peut générer une fiche officielle falsifiée</h3></div>
+      <div class="where">controllers/pdf.controller.js · POST /api/generate-pdf</div>
+      <p>Le serveur fabrique le PDF à partir du nom, de la spécialité, de l'hôpital et du service <b>envoyés par le navigateur</b>, sans rien comparer à la base. Test réalisé : avec le jeton d'un résident au CIN inexistant « ZZZ », le serveur a renvoyé une fiche de 116 Ko au nom de « PERSONNE INVENTEE », CHU Fictif, 5ᵉ année.</p>
+      <p class="fix"><b>Correctif :</b> la route reçoit uniquement <code>ficheId</code>, relit la fiche et le résident en base, et vérifie que la fiche appartient au résident connecté (ou que l'appelant est admin).</p>
+    </div>
+    <div class="finding s-crit">
+      <div class="top"><span class="chip crit">Critique</span><h3>Prise de compte par « premier e-mail arrivé »</h3></div>
+      <div class="where">controllers/auth.controller.js · requestOTP</div>
+      <p>Si le résident n'a pas encore d'e-mail en base, le premier qui saisit son CIN choisit l'adresse qui recevra le code, et elle est enregistrée définitivement. Or <b>705 résidents sur 707</b> n'ont pas d'e-mail. Un CIN (imprimé sur beaucoup de documents) suffit pour s'approprier le dossier et bloquer le vrai résident.</p>
+      <p class="fix"><b>Correctif :</b> importer l'e-mail depuis la liste officielle de la faculté (colonne Excel) ou faire valider l'association CIN/e-mail par l'admin. Ne jamais lier un e-mail sur simple déclaration.</p>
+    </div>
+    <div class="finding s-crit">
+      <div class="top"><span class="chip crit">Critique au déploiement</span><h3>Le rate limiting deviendra global derrière Render</h3></div>
+      <div class="where">server.js · absence de app.set('trust proxy', 1)</div>
+      <p>Derrière un proxy (Render, Koyeb…), Express voit l'IP du proxy pour toutes les requêtes. Résultat : <b>5 connexions admin par 15 min et 10 PDF par minute pour toute la faculté</b>. Le jour de la remise des fiches, presque tout le monde recevra « Trop de requêtes ».</p>
+      <p class="fix"><b>Correctif :</b> une ligne, <code>app.set('trust proxy', 1)</code>, puis limiter aussi par compte (CIN), pas seulement par IP.</p>
+    </div>
+    <div class="finding s-high">
+      <div class="top"><span class="chip high">Élevée</span><h3>OTP faible et code de demande non limité</h3></div>
+      <div class="where">auth.controller.js · auth.routes.js</div>
+      <p>Le code est généré par <code>Math.random()</code> (non cryptographique), stocké en clair, sans compteur d'essais par compte. <code>/login/request-otp</code> n'a aucun limiteur : 30 requêtes d'affilée sont toutes passées, et la réponse 404 « Résident introuvable » permet de tester quels CIN existent.</p>
+      <p class="fix"><b>Correctif :</b> <code>crypto.randomInt</code>, code haché, blocage après 5 essais par CIN, limiteur sur la demande, et message neutre (« Si ce dossier existe, un code a été envoyé »).</p>
+    </div>
+    <div class="finding s-high">
+      <div class="top"><span class="chip high">Élevée</span><h3>« Annuler l'import » supprime ce que le navigateur demande</h3></div>
+      <div class="where">controllers/import.controller.js · undoImport</div>
+      <p>Les CIN et identifiants à supprimer viennent du corps de la requête. Une erreur ou un onglet resté ouvert peut effacer des résidents antérieurs ; leurs fiches restent alors orphelines (pas de suppression en cascade, pas de transaction). La table <code>historique_imports</code> existe mais n'est pas utilisée.</p>
+      <p class="fix"><b>Correctif :</b> enregistrer l'import côté serveur et annuler par <code>importId</code>, dans une transaction, avec une clé étrangère <code>ON DELETE CASCADE</code>.</p>
+    </div>
+    <div class="finding s-high">
+      <div class="top"><span class="chip high">Élevée</span><h3>22 vulnérabilités connues côté backend, 11 côté frontend</h3></div>
+      <div class="where">npm audit --omit=dev</div>
+      <p>Dont <code>xlsx</code> 0.18.5 (pollution de prototype et ReDoS, aucun correctif sur npm), précisément la librairie qui lit les fichiers Excel envoyés.</p>
+      <p class="fix"><b>Correctif :</b> passer à <code>exceljs</code> ou au paquet SheetJS officiel 0.20.x, puis <code>npm audit fix</code>.</p>
+    </div>
+    <div class="finding s-high">
+      <div class="top"><span class="chip high">Élevée</span><h3>Aucun schéma SQL versionné</h3></div>
+      <div class="where">docs/database-schema.md</div>
+      <p>Impossible de recréer la base sur un hébergeur sans exporter à la main depuis WAMP. C'est l'une des causes de la difficulté de déploiement.</p>
+      <p class="fix"><b>Correctif :</b> ajouter <code>backend/db/schema.sql</code> (tables, clés étrangères, index) et un script <code>npm run db:init</code>.</p>
+    </div>
+    <div class="finding s-med">
+      <div class="top"><span class="chip med">Moyenne</span><h3>Points secondaires</h3></div>
+      <ul class="plain" style="font-size:14.5px">
+        <li>Mot de passe admin en clair encore accepté (modification non commitée) : utile pour migrer, à retirer ensuite.</li>
+        <li><code>/uploads</code> et <code>/api/files/:name</code> sont publics et sans authentification ; le dossier n'existe plus : code mort à supprimer.</li>
+        <li>L'erreur d'import renvoie <code>error.message</code> brut au client.</li>
+        <li><code>requireResident</code> ne vérifie pas <code>role === 'resident'</code>.</li>
+        <li>Les logs (<code>backend/logs/*.log</code>) sont versionnés dans Git : à ignorer.</li>
+        <li>Pool MySQL à 50 connexions : les bases gratuites en acceptent souvent 10 à 25. Passer à 5–10.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">2</span>Fluidité et gestion du trafic</h2>
+  <p>Mesures sur le serveur local (Windows, MySQL WAMP) avec autocannon, 50 connexions simultanées pendant 15 secondes.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Scénario</th><th>Débit</th><th>Latence médiane</th><th>p99</th><th>Lecture</th></tr></thead>
+    <tbody>
+      <tr><td>Dossier d'un résident <code>GET /residents/:cin</code></td><td class="num">3 044 req/s</td><td class="num">15 ms</td><td class="num">30 ms</td><td><span class="chip ok">Excellent</span></td></tr>
+      <tr><td>Liste admin avec recherche et tri par nombre de fiches</td><td class="num">42 req/s</td><td class="num">1 192 ms</td><td class="num">1 460 ms</td><td><span class="chip med">Lent</span></td></tr>
+      <tr><td>12 PDF lancés en même temps (même IP)</td><td class="num">≈ 3 PDF/s</td><td class="num">≈ 2,1 s</td><td class="num">3,3 s</td><td><span class="chip high">Goulot</span></td></tr>
+    </tbody>
+  </table></div>
+  <ul class="plain">
+    <li><b>Lecture résident :</b> largement suffisante pour toute la promotion connectée le même jour.</li>
+    <li><b>Liste admin :</b> une sous-requête <code>COUNT</code> par ligne, plus un tri sur ce calcul. Un <code>LEFT JOIN … GROUP BY</code> la rend environ 10 fois plus rapide. Usage admin seulement, donc non bloquant.</li>
+    <li><b>PDF :</b> chaque fiche lance une page Chromium (~1 s, ~200–300 Mo de RAM). Sur une offre gratuite à 512 Mo, Puppeteer risque de faire planter le serveur. Le remplacer par <code>pdf-lib</code> ou <code>pdfkit</code> donne des fiches en ~50 ms avec quelques Mo, et rend le déploiement gratuit fiable.</li>
+    <li><b>Index :</b> <code>residents.cin</code> est indexé trois fois et <code>formulaires_stage.resident_id</code> deux fois de trop. Cela ralentit l'import sans rien apporter.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">3</span>Critique UX/UI</h2>
+  <div class="two">
+    <div class="box"><h3>Ce qui marche</h3><ul>
+      <li>Page de connexion soignée, identité FMSfax claire sur ordinateur.</li>
+      <li>Parcours OTP compréhensible, compte à rebours, 429 géré sans message d'erreur brutal.</li>
+      <li>Tri des fiches dans l'ordre réel du cursus (T1, T2, S1…).</li>
+      <li>Admin : pagination, filtres, annulation d'import.</li>
+    </ul></div>
+    <div class="box"><h3>À corriger en priorité</h3><ul>
+      <li><b>Mobile :</b> sur un téléphone de 375×812, le premier champ est à 846 px, sous la ligne de flottaison. Les résidents ouvriront le lien sur leur téléphone et verront une grande image floue sans formulaire.</li>
+      <li><b>Icônes invisibles :</b> les classes <code>bi-eye</code>, <code>bi-download</code> sont utilisées mais Bootstrap Icons n'est pas chargé.</li>
+      <li><b>Double clic :</b> <code>isGenerating</code> ne désactive pas les boutons, ce qui relance des PDF et déclenche le limiteur.</li>
+    </ul></div>
+  </div>
+  <ul class="plain">
+    <li>Champ OTP : ajouter <code>inputmode="numeric"</code> et <code>autocomplete="one-time-code"</code> pour le pavé numérique et le remplissage automatique.</li>
+    <li>Contraste : texte orange sur fond beige (environ 2,6:1) sous le minimum WCAG de 4,5:1.</li>
+    <li>Tableau des fiches à 6 colonnes : sur téléphone, passer en cartes (période, hôpital, bouton Télécharger).</li>
+    <li>« Aperçu » ouvre un onglet après un appel asynchrone : bloqué par Safari iOS. Afficher le PDF dans la page ou ne garder que Télécharger sur mobile.</li>
+    <li>Animations lourdes (flous, pulsation infinie) sans <code>prefers-reduced-motion</code> : coûteux sur les téléphones d'entrée de gamme.</li>
+    <li>Un serveur gratuit met jusqu'à une minute à se réveiller : prévoir un message « Démarrage du serveur… » plutôt qu'un échec silencieux.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">4</span>Architecture et qualité du code</h2>
+  <ul class="plain">
+    <li>Bon découpage routes / contrôleurs / middlewares / services, validation centralisée.</li>
+    <li>Bug : <code>updateResident</code> ignore la spécialité envoyée.</li>
+    <li>Suppression d'un résident en deux requêtes sans transaction.</li>
+    <li>Front : <code>express</code> et <code>@angular/platform-server</code> installés mais inutilisés (restes de SSR) ; plusieurs composants appellent <code>HttpClient</code> directement au lieu de passer par <code>ApiService</code>.</li>
+    <li>URL de l'API codée en dur dans <code>environment.prod.ts</code> : avec un seul serveur, elle devient simplement <code>/api</code>.</li>
+    <li>Tests : 15 tests passent, mais aucun ne couvre l'OTP, la génération de PDF ou l'import.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">5</span>Déploiement gratuit, une seule URL</h2>
+  <p>La difficulté venait du découpage : front sur Netlify, API sur Render, base ailleurs, avec CORS et deux URL à synchroniser. La solution est de faire servir l'application Angular compilée <b>par le serveur Express lui-même</b>. Une seule application, une seule URL, plus de CORS, et un déploiement automatique à chaque <code>git push</code>.</p>
+  <div class="diagram">
+    <svg viewBox="0 0 720 220" role="img" aria-label="Schéma : le résident accède à un seul service Render qui sert le front et l'API et se connecte à MySQL gratuit">
+      <rect x="10" y="80" width="140" height="60" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+      <text x="80" y="106" text-anchor="middle" font-weight="600" font-size="14">Résident / Admin</text>
+      <text x="80" y="124" text-anchor="middle" class="sub">téléphone ou PC</text>
+      <line x1="150" y1="110" x2="230" y2="110" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#a)"/>
+      <text x="190" y="100" text-anchor="middle" class="sub">1 lien</text>
+      <rect x="232" y="30" width="270" height="160" rx="10" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>
+      <text x="367" y="56" text-anchor="middle" font-weight="700" font-size="15">Render · 1 Web Service</text>
+      <text x="367" y="74" text-anchor="middle" class="sub">stages-fmsfax.onrender.com</text>
+      <rect x="252" y="90" width="230" height="38" rx="6" fill="var(--bg)" stroke="var(--line)"/>
+      <text x="367" y="114" text-anchor="middle" font-size="13">Angular compilé (fichiers statiques)</text>
+      <rect x="252" y="138" width="230" height="38" rx="6" fill="var(--bg)" stroke="var(--line)"/>
+      <text x="367" y="162" text-anchor="middle" font-size="13">Express /api + PDF (pdf-lib)</text>
+      <line x1="502" y1="157" x2="570" y2="157" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#a)"/>
+      <rect x="572" y="117" width="138" height="80" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+      <text x="641" y="146" text-anchor="middle" font-weight="600" font-size="14">MySQL gratuit</text>
+      <text x="641" y="164" text-anchor="middle" class="sub">Aiven ou TiDB Cloud</text>
+      <text x="641" y="181" text-anchor="middle" class="sub">aucune réécriture SQL</text>
+      <rect x="572" y="30" width="138" height="56" rx="8" fill="var(--surface)" stroke="var(--line)"/>
+      <text x="641" y="54" text-anchor="middle" font-weight="600" font-size="13">GitHub</text>
+      <text x="641" y="72" text-anchor="middle" class="sub">push = redéploiement</text>
+      <line x1="572" y1="62" x2="504" y2="72" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#a)"/>
+      <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+    </svg>
+  </div>
+  <div class="two">
+    <div class="box rec">
+      <h3>A · Render + MySQL gratuit <span class="chip ok">Recommandé</span></h3>
+      <ul>
+        <li>Un seul service Render, connecté au dépôt GitHub.</li>
+        <li>Base MySQL gratuite chez Aiven (ou TiDB Cloud, compatible MySQL) : le code SQL reste identique.</li>
+        <li>Deux comptes au lieu de trois, configurés une fois ; ensuite tout passe par <code>git push</code>.</li>
+        <li>Limite : le service s'endort après 15 min d'inactivité (réveil 30–60 s).</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>B · Une VM gratuite (Oracle Always Free)</h3>
+      <ul>
+        <li>Tout sur une machine via Docker Compose : app + MySQL.</li>
+        <li>Pas de mise en veille, une seule plateforme.</li>
+        <li>Demande une carte bancaire à l'inscription et l'administration d'un serveur Linux (mises à jour, HTTPS, sauvegardes).</li>
+        <li>Trop lourd pour un débutant ; à envisager plus tard.</li>
+      </ul>
+    </div>
+  </div>
+  <p style="color:var(--muted);font-size:14px">Les limites des offres gratuites changent souvent : je les vérifierai sur les sites officiels au moment de créer les comptes. Pour un usage officiel durable, demander à la faculté un petit hébergement ou un sous-domaine reste la meilleure option à terme.</p>
+</section>
+
+<section>
+  <h2><span class="n">6</span>Plan d'action</h2>
+  <ol class="steps">
+    <li><div><h3>Corriger les trois failles critiques</h3><p>PDF généré depuis la base uniquement, liaison e-mail sécurisée, <code>trust proxy</code>. OTP renforcé et limiteurs dans la foulée.</p></div></li>
+    <li><div><h3>Remplacer Puppeteer par pdf-lib</h3><p>Fiche identique, ~20 fois plus rapide, compatible avec une offre gratuite à 512 Mo.</p></div></li>
+    <li><div><h3>Fusionner front et back en une application</h3><p>Express sert le build Angular, API sur <code>/api</code>, script <code>npm run build</code> unique à la racine.</p></div></li>
+    <li><div><h3>Versionner le schéma SQL</h3><p><code>schema.sql</code> + script d'initialisation, nettoyage des index en double, clés étrangères.</p></div></li>
+    <li><div><h3>Corrections UX mobiles</h3><p>Formulaire visible dès l'ouverture, icônes, boutons désactivés pendant la génération, champ OTP numérique, cartes sur mobile.</p></div></li>
+    <li><div><h3>Mettre à jour GitHub et déployer</h3><p>Commit propre (sans logs ni secrets), création de la base gratuite, du service Render, puis lien final à donner aux résidents.</p></div></li>
+  </ol>
+</section>
+
+<footer>Audit réalisé avec Claude Code. Tests de charge et de sécurité exécutés uniquement sur l'environnement local du propriétaire du projet ; jetons de test supprimés après usage.</footer>
+</div>

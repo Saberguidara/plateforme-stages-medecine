@@ -10,30 +10,21 @@
             <div class="card dashboard-card">
                 <div class="card-body p-4">
 
-                    @if (typeSpecialite === 'standard') {
-                    <div class="alert alert-info py-2 mb-3 shadow-sm border-info">
-                        <strong>📄 Format Ministère (Toutes spécialités) :</strong><br>
-                        <span class="small">
-                            Colonnes attendues : <b>CIN</b>, <b>NOM ET PPRENOM</b>, <b>SP.</b>, <b>FAC D'ORIGINE</b>,
-                            <b>HOPITAL</b>, <b>SERVICE</b> et <b>ANNEE</b>.
-                        </span>
-                    </div>
-                    } @else {
                     <div class="alert alert-warning py-2 mb-3 shadow-sm border-warning">
-                        <strong>⚠️ Format Personnalisé (Médecine de famille) :</strong><br>
+                        <strong>⚠️ Format Médecine de famille :</strong><br>
                         <span class="small">
                             Respectez cet ordre : <b>A:</b> CIN | <b>B:</b> Nom et prénom | <b>C:</b> Spécialité |
                             <b>D:</b> Faculté d'origine | <b>E:</b> Hopital 1 | <b>F:</b> Service 1 | <b>G:</b> Hopital
-                            2 | <b>H:</b> Service 2 | <b>I:</b> Année
+                            2 | <b>H:</b> Service 2 | <b>I:</b> Année<br>
+                            Hôpital 2 et Service 2 vides : une fiche semestrielle (S1/S2, urgences, 1re et 2e ligne).
+                            Sinon : deux fiches trimestrielles (T1+T2 ou T3+T4).
                         </span>
                     </div>
-                    }
 
                     <div class="row g-3 align-items-end">
                         <div class="col-md-3">
                             <label class="form-label text-muted small">Spécialité</label>
                             <select class="form-select" [(ngModel)]="typeSpecialite">
-                                <option value="standard">Toutes spécialités</option>
                                 <option value="famille">Médecine de famille</option>
                             </select>
                         </div>

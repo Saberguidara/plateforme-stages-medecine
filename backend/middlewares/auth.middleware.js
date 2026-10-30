@@ -26,6 +26,9 @@ exports.requireResident = (req, res, next) => {
     const token = authHeader.substring(7);
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.role !== 'resident') {
+            return res.status(403).json({ error: 'Accès réservé aux résidents' });
+        }
         req.resident = decoded;
         next();
     } catch (err) {

@@ -9,11 +9,14 @@ if (process.env.NODE_ENV === 'production' && (!process.env.DB_PASS || process.en
 
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT, 10) || 3306,
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASS || '',
     database: process.env.DB_NAME || 'gestion_stages',
     waitForConnections: true,
-    connectionLimit: 50, // Increased limit for bulk usage properly
+    // Les offres MySQL gratuites acceptent peu de connexions simultanées
+    connectionLimit: parseInt(process.env.DB_POOL_SIZE, 10) || 10,
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
     queueLimit: 0
 });
 

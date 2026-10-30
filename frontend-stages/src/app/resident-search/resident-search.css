@@ -75,3 +75,41 @@
     background: #1a1a1a;
     color: #f5f0e6;
 }
+.pill-btn-orange:disabled,
+.pill-btn-outline-dark:disabled {
+    opacity: 0.6;
+    transform: none;
+    cursor: wait;
+}
+
+.fiche-cards {
+    display: grid;
+    gap: 12px;
+}
+
+.fiche-card {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: grid;
+    gap: 4px;
+}
+
+.fiche-periode {
+    font-size: 1.05rem;
+}
+
+.fiche-lieu {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) {
+    .dashboard-page-title {
+        font-size: 1.8rem !important;
+    }
+
+    .dashboard-card-header-dark {
+        padding: 14px 16px;
+    }
+}

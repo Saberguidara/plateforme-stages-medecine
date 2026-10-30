@@ -44,13 +44,13 @@ import { environment } from '../../environments/environment';
               <!-- Etape 1 : Demande OTP -->
               <div *ngIf="step === 1" class="fade-in mt-2">
                 <div class="flat-input-group mb-5">
-                  <input type="text" [(ngModel)]="cin" (keyup.enter)="requestOtp()" class="flat-input" id="flatCIN" placeholder=" " />
+                  <input type="text" [(ngModel)]="cin" (keyup.enter)="requestOtp()" class="flat-input" id="flatCIN" placeholder=" " autocomplete="username" autocapitalize="characters" />
                   <label for="flatCIN" class="flat-label">Numéro de CIN / Passeport</label>
                 </div>
                 <div class="flat-input-group mb-5">
-                  <input type="email" [(ngModel)]="email" (keyup.enter)="requestOtp()" class="flat-input" id="flatEmail" placeholder=" " />
+                  <input type="email" [(ngModel)]="email" (keyup.enter)="requestOtp()" class="flat-input" id="flatEmail" placeholder=" " autocomplete="email" inputmode="email" />
                   <label for="flatEmail" class="flat-label">Adresse E-mail</label>
-                  <div class="form-text small mt-1 opacity-75">Le code sera envoyé à cette adresse.</div>
+                  <div class="form-text small mt-1 opacity-75">L'adresse enregistrée par le service des stages.</div>
                 </div>
                 <button class="pill-btn-orange w-100 mt-4 interactive-btn" (click)="requestOtp()" [disabled]="isLoading">
                   {{ isLoading ? 'Envoi...' : 'RECEVOIR MON CODE' }}
@@ -59,11 +59,11 @@ import { environment } from '../../environments/environment';
 
               <!-- Etape 2 : Vérification OTP -->
               <div *ngIf="step === 2" class="fade-in mt-2">
-                <div class="alert alert-success border-0 bg-success bg-opacity-10 text-success text-center">
-                  Un code a été envoyé à <strong>{{email}}</strong>.<br>Il expire dans 10 minutes.
+                <div class="alert alert-success border-0 bg-success bg-opacity-10 text-success text-center small">
+                  {{ infoMessage || 'Un code a été envoyé par e-mail.' }} Le code expire dans 10 minutes.
                 </div>
                 <div class="flat-input-group mt-5 mb-5 text-center">
-                  <input type="text" [(ngModel)]="otpCode" (keyup.enter)="verifyOtp()" class="flat-input text-center code-input" id="flatOTP" placeholder=" " maxlength="6" />
+                  <input type="text" [(ngModel)]="otpCode" (keyup.enter)="verifyOtp()" class="flat-input text-center code-input" id="flatOTP" placeholder=" " maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" />
                   <label for="flatOTP" class="flat-label fw-normal" style="left:50%; transform:translateX(-50%);">Code de sécurité (6 chiffres)</label>
                 </div>
                 <button class="pill-btn-orange w-100 mt-4 interactive-btn" (click)="verifyOtp()" [disabled]="isLoading">
@@ -124,15 +124,15 @@ import { environment } from '../../environments/environment';
     .abstract-subtitle { font-size: 1rem; color: #555; text-align: center; margin-bottom: 40px; }
 
     .flat-input-group { position: relative; margin-bottom: 30px; }
-    .flat-input { width: 100%; background: transparent; border: none; border-bottom: 2px solid #555; color: #f47b45; padding: 10px 5px; font-size: 1.1rem; font-weight: 600; outline: none; transition: border-color 0.3s; }
+    .flat-input { width: 100%; background: transparent; border: none; border-bottom: 2px solid #555; color: #b5521f; padding: 10px 5px; font-size: 1.1rem; font-weight: 600; outline: none; transition: border-color 0.3s; }
     .flat-input:focus { border-bottom-color: #f47b45; }
     .flat-label { position: absolute; top: 12px; left: 5px; color: #777; font-size: 1.1rem; pointer-events: none; transition: 0.3s ease all; }
-    .flat-input:focus ~ .flat-label, .flat-input:not(:placeholder-shown) ~ .flat-label { top: -20px; font-size: 0.85rem; color: #f47b45; }
+    .flat-input:focus ~ .flat-label, .flat-input:not(:placeholder-shown) ~ .flat-label { top: -20px; font-size: 0.85rem; color: #b5521f; }
 
     .pill-btn-orange { background: #f47b45; color: white; border: none; border-radius: 50rem; padding: 12px 20px; font-size: 1.1rem; font-weight: bold; display: block; box-shadow: 0 4px 15px rgba(244, 123, 69, 0.4); transition: transform 0.2s, box-shadow 0.2s; letter-spacing: 1px; }
     .pill-btn-orange:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(244, 123, 69, 0.6); }
 
-    .flat-input.code-input { font-size: 1.8rem; letter-spacing: 10px; font-weight: 800; color: #f47b45; }
+    .flat-input.code-input { font-size: 1.8rem; letter-spacing: 10px; font-weight: 800; color: #b5521f; }
     
     .interactive-btn { transition: all 0.3s ease; }
     .interactive-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
@@ -150,11 +150,28 @@ import { environment } from '../../environments/environment';
     @keyframes simpleFadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
     @media (max-width: 991px) {
-      .auth-page-wrapper { display: block; overflow-y: auto; padding: 20px 0; }
-      .auth-floating-card { flex-direction: column; width: 95%; margin: 0 auto; border-radius: 20px; }
-      .split-left { min-height: 40vh; max-width: 100%; flex: none; padding: 40px 20px; border-width: 8px; border-radius: 30px; }
-      .welcome-title-animated { font-size: 2.2rem; }
-      .split-right { min-height: 60vh; max-width: 100%; flex: none; padding: 20px 0; }
+      .auth-page-wrapper { display: block; overflow-y: auto; padding: 12px 0; }
+      .auth-floating-card { flex-direction: column; width: calc(100% - 24px); min-height: 0; margin: 0 auto; border-radius: 20px; }
+      .split-left { min-height: 0; max-width: 100%; flex: none; padding: 18px 16px; border-width: 8px; border-radius: 24px; }
+      .split-logo-animated { max-width: 72px; }
+      .welcome-text-container { margin-top: 6px; }
+      .welcome-overline-animated { font-size: 0.75rem; letter-spacing: 3px; margin-bottom: 4px; }
+      .welcome-title-animated { font-size: 1.7rem; }
+      .welcome-title-animated .line-1, .welcome-title-animated .line-2 { display: inline; }
+      .welcome-subtitle-animated { font-size: 0.85rem; margin-top: 8px; padding-top: 6px; }
+      .split-right { min-height: 0; max-width: 100%; flex: none; padding: 0; }
+      .login-form-container { padding: 8px 12px 16px; }
+      .abstract-login-wrapper { padding: 8px; }
+      .abstract-login-wrapper .pt-4 { padding-top: 0.5rem !important; }
+      .abstract-title { font-size: 1.6rem; }
+      .abstract-subtitle { margin-bottom: 16px; }
+      .flat-input-group.mb-5 { margin-bottom: 1.75rem !important; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .split-logo-animated, .welcome-overline-animated, .welcome-title-animated .line-1,
+      .welcome-title-animated .line-2, .welcome-subtitle-animated, .login-form-container { opacity: 1; }
     }
   `]
 })
@@ -165,6 +182,7 @@ export class ResidentLoginComponent implements OnDestroy {
   otpCode = '';
   isLoading = false;
   errorMessage = '';
+  infoMessage = '';
   countdown = 120; // 2 minutes (120 seconds)
   private intervalId: any;
 
@@ -190,6 +208,7 @@ export class ResidentLoginComponent implements OnDestroy {
           setTimeout(() => {
             this.isLoading = false;
             if (res.success) {
+              this.infoMessage = res.message || '';
               this.step = 2;
               this.startCountdown(120);
             }
@@ -226,7 +245,7 @@ export class ResidentLoginComponent implements OnDestroy {
             if (res.success && res.token) {
               localStorage.removeItem('admin_token'); // Éviter conflit avec un ancien token admin
               localStorage.setItem('resident_token', res.token);
-              localStorage.setItem('resident_cin', this.cin);
+              localStorage.setItem('resident_cin', res.cin || this.cin);
               this.router.navigate(['/mes-stages']);
             }
           }, 0);

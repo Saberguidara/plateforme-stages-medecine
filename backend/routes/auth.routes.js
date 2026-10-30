@@ -19,11 +19,19 @@ const otpVerifyLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const otpRequestLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { success: false, message: 'Trop de demandes de code. Réessayez dans 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 // Admin Login
 router.post('/admin/login', loginLimiter, authController.adminLogin);
 
 // Resident Login (OTP)
-router.post('/login/request-otp', authController.requestOTP);
+router.post('/login/request-otp', otpRequestLimiter, authController.requestOTP);
 router.post('/login/verify-otp', otpVerifyLimiter, authController.verifyOTP);
 
 module.exports = router;

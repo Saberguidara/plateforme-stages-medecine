@@ -26,6 +26,7 @@ export class AdminAdd implements OnInit {
     nouveauResident: any = {
         cin: '',
         nom_prenom: '',
+        email: '',
         specialite: '',
         faculte_origine: 'FMSfax',
         niveau: 1

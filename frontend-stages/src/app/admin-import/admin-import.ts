@@ -17,7 +17,7 @@ export class AdminImport {
     private cdr = inject(ChangeDetectorRef);
     private destroyRef = inject(DestroyRef);
 
-    typeSpecialite: string = 'standard';
+    typeSpecialite: string = 'famille';
     anneeImport: number = new Date().getFullYear();
     semestreImport: string = 'S1';
     fichierSelectionne: File | null = null;
@@ -74,7 +74,7 @@ export class AdminImport {
             .subscribe({
                 next: (res) => {
                     this.messageImport = "✅ " + (res.message || "Importation réussie");
-                    this.importUndoData = res.undoData;
+                    this.importUndoData = { importId: res.importId };
                     this.isImportSuccess = true;
                     this.fichierSelectionne = null;
                     this.cdr.markForCheck();

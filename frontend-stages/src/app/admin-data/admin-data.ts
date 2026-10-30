@@ -126,6 +126,8 @@ export class AdminData implements OnInit {
             id: r.id,
             cin: r.cin,
             nom_prenom: r.nom_prenom,
+            email: r.email || '',
+            specialite: r.specialite,
             niveau: r.niveau,
             promotion: r.promotion,
             faculte_origine: r.faculte_origine || 'FMSfax'

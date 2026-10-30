@@ -15,3 +15,7 @@ uploads/
 .worktrees/
 .security-key
 logs/security/
+
+# Journaux applicatifs (peuvent contenir des données personnelles)
+backend/logs/
+backend/temp_uploads/

@@ -1,4 +1,7 @@
-const VALID_PERIODES = ['S1', 'S2', 'T1', 'T2', 'T3', 'T4', 'R1', 'R2'];
+const { SPECIALITES, SPECIALITE_PAR_DEFAUT, specialiteDe } = require('../config/specialites');
+
+// Périodes acceptées : celles de toutes les spécialités ouvertes sur la plateforme.
+const VALID_PERIODES = [...new Set(Object.values(SPECIALITES).flatMap((s) => s.periodes))];
 
 function normalizeString(value) {
     if (value === undefined || value === null) return '';
@@ -19,12 +22,23 @@ function validateResidentPayload(payload = {}) {
         return { valid: false, message: 'CIN et Nom/Prénom sont obligatoires.' };
     }
 
+    const email = normalizeString(payload.email).toLowerCase();
+    if (email && !validateEmail(email).valid) {
+        return { valid: false, message: "Format d'email invalide." };
+    }
+
+    const specialite = specialiteDe(normalizeString(payload.specialite) || SPECIALITES[SPECIALITE_PAR_DEFAUT].libelle);
+    if (!specialite) {
+        return { valid: false, message: 'Spécialité non prise en charge par la plateforme.' };
+    }
+
     return {
         valid: true,
         data: {
             cin,
             nom_prenom: nomPrenom,
-            specialite: normalizeString(payload.specialite),
+            email: email || null,
+            specialite: specialite.libelle,
             faculte_origine: normalizeString(payload.faculte_origine) || 'FMSfax',
             niveau: parseInt(String(payload.niveau || 1), 10) || 1,
             promotion: payload.promotion === '' || payload.promotion === undefined || payload.promotion === null
