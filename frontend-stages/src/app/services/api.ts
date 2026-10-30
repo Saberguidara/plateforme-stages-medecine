@@ -32,8 +32,8 @@ export class ApiService {
     return this.http.get(`${this.apiUrl}/residents/${cin}`);
   }
 
-  getAllResidents(page: number = 1, limit: number = 20, search: string = '', specialite: string = '', promo: string = '', sortCol: string = '', sortDesc: boolean = false): Observable<any> {
-    const params = { page, limit, search, specialite, promo, sortCol, sortDesc };
+  getAllResidents(page: number = 1, limit: number = 20, search: string = '', specialite: string = '', promo: string = '', sortCol: string = '', sortDesc: boolean = false, email: string = ''): Observable<any> {
+    const params = { page, limit, search, specialite, promo, sortCol, sortDesc, email };
     return this.http.get<any>(`${this.apiUrl}/admin/residents`, { params });
   }
 

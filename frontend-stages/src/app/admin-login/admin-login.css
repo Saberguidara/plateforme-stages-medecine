@@ -366,3 +366,21 @@
         padding: 20px 0;
     }
 }
+/* Contact du service des stages */
+.contact-service {
+  margin: 28px 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #555;
+  overflow-wrap: anywhere;
+}
+
+.contact-service a {
+  color: #b5521f;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.contact-service a:hover {
+  text-decoration: underline;
+}

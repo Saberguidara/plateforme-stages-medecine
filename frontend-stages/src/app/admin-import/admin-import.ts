@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { environment } from '../../environments/environment';
+import { ToastService } from '../services/toast';
 
 @Component({
     selector: 'app-admin-import',
@@ -16,10 +17,10 @@ import { environment } from '../../environments/environment';
 export class AdminImport {
     private cdr = inject(ChangeDetectorRef);
     private destroyRef = inject(DestroyRef);
+    private toast = inject(ToastService);
 
     specialite: string = 'medecine-famille';
     fichierSelectionne: File | null = null;
-    messageImport: string = '';
     isImporting: boolean = false;
     rapport: any[] = [];
     bilan: any = null;
@@ -40,8 +41,7 @@ export class AdminImport {
 
     importerExcel() {
         if (!this.fichierSelectionne) {
-            this.messageImport = "⚠️ Veuillez d'abord sélectionner un fichier Excel.";
-            this.cdr.markForCheck();
+            this.toast.info("Sélectionnez d'abord un fichier Excel.");
             return;
         }
 
@@ -61,7 +61,6 @@ export class AdminImport {
         this.showConfirmModal = false;
         if (!this.fichierSelectionne) return;
 
-        this.messageImport = "⏳ Importation en cours, veuillez patienter...";
         this.isImporting = true;
         this.rapport = [];
         this.bilan = null;
@@ -76,7 +75,7 @@ export class AdminImport {
             .subscribe({
                 next: (res) => {
                     this.isImporting = false;
-                    this.messageImport = "✅ " + (res.message || "Importation réussie");
+                    this.toast.succes(res.message || "Importation réussie.");
                     this.rapport = res.rapport || [];
                     this.bilan = res.bilan || null;
                     this.importUndoData = { importId: res.importId };
@@ -86,7 +85,7 @@ export class AdminImport {
                 },
                 error: (err) => {
                     this.isImporting = false;
-                    this.messageImport = "❌ " + (err.error?.message || "Erreur lors de l'importation.");
+                    this.toast.erreur(err.error?.message || "Erreur lors de l'importation.");
                     this.rapport = err.error?.rapport || [];
                     this.isImportSuccess = false;
                     this.cdr.markForCheck();
@@ -95,7 +94,7 @@ export class AdminImport {
     }
 
     validerImport() {
-        this.messageImport = "✅ Import validé définitivement.";
+        this.toast.succes("Import validé définitivement.");
         this.isImportSuccess = false;
         this.importUndoData = null;
         this.cdr.markForCheck();
@@ -103,12 +102,11 @@ export class AdminImport {
 
     annulerImport() {
         if (!this.importUndoData) return;
-        this.messageImport = "🔄 Annulation en cours, suppression des données...";
         this.http.post<any>(`${environment.apiUrl}/admin/import/undo`, this.importUndoData)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (res) => {
-                    this.messageImport = "✅ " + (res.message || "Importation annulée et données supprimées avec succès.");
+                    this.toast.succes(res.message || "Importation annulée et données supprimées.");
                     this.rapport = [];
                     this.bilan = null;
                     this.isImportSuccess = false;
@@ -116,7 +114,7 @@ export class AdminImport {
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
-                    this.messageImport = "⚠️ " + (err.error?.message || "Erreur lors de l'annulation.");
+                    this.toast.erreur(err.error?.message || "Erreur lors de l'annulation.");
                     this.cdr.markForCheck();
                 }
             });

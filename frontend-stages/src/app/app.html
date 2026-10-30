@@ -13,14 +13,19 @@
 
             <div class="header-user-actions">
                 <span class="header-welcome-text"><strong>Bienvenue</strong> {{ getUserName() }}</span>
-                <button type="button" class="btn-header-logout" (click)="logout()">Déconnexion</button>
+                <button type="button" class="btn-header-logout" (click)="logout()">
+                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Déconnexion
+                </button>
             </div>
         </div>
     </header>
-    <div class="main-content">
+    <main class="main-content">
         <router-outlet></router-outlet>
-    </div>
+    </main>
     <footer class="app-footer" *ngIf="!isLoginPage()">
-        &copy; Saber GUIDARA - Faculté de Médecine de Sfax - 2026
+        &copy; {{ annee }} Saber GUIDARA - Faculté de Médecine de Sfax
     </footer>
 </div>
+
+<app-toasts></app-toasts>
+<app-pdf-viewer></app-pdf-viewer>

@@ -6,6 +6,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
+import { ToastService } from '../services/toast';
+import { PdfViewerService } from '../services/pdf-viewer';
 
 @Component({
   selector: 'app-resident-search',
@@ -24,6 +26,8 @@ export class ResidentSearchComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private http = inject(HttpClient);
   private router = inject(Router);
+  private toast = inject(ToastService);
+  private pdfViewer = inject(PdfViewerService);
 
   constructor(private apiService: ApiService) { }
 
@@ -91,7 +95,7 @@ export class ResidentSearchComponent implements OnInit {
           if (err.status === 404) {
             this.messageErreur = "Aucun résident trouvé avec ce CIN.";
           } else {
-            this.messageErreur = "Erreur de connexion au serveur.";
+            this.messageErreur = "Le serveur ne répond pas. Il peut mettre jusqu'à une minute à démarrer : réessayez.";
           }
           this.cdr.markForCheck();
         }
@@ -115,13 +119,13 @@ export class ResidentSearchComponent implements OnInit {
         const urlFichier = window.URL.createObjectURL(blob);
         const lien = document.createElement('a');
         lien.href = urlFichier;
-        lien.download = `Fiche_${resident.cin}_${fiche.periode}.pdf`;
+        lien.download = `Fiche_${resident.cin}_${fiche.periode}_${fiche.annee}.pdf`;
         lien.click();
         window.URL.revokeObjectURL(urlFichier);
       })
       .catch((err) => {
         console.error("Erreur téléchargement PDF :", err);
-        this.messageErreur = "Erreur lors de la génération du document.";
+        this.toast.erreur("La fiche n'a pas pu être générée. Réessayez dans un instant.");
         this.cdr.markForCheck();
       })
       .finally(() => {
@@ -134,12 +138,11 @@ export class ResidentSearchComponent implements OnInit {
     this.isGenerating = true;
     this.generatePdf(fiche, resident)
       .then((blob: Blob) => {
-        const urlFichier = window.URL.createObjectURL(blob);
-        window.open(urlFichier, '_blank');
+        this.pdfViewer.ouvrir(blob, `Fiche_${resident.cin}_${fiche.periode}_${fiche.annee}.pdf`);
       })
       .catch((err) => {
         console.error("Erreur aperçu PDF :", err);
-        this.messageErreur = "Erreur lors de la génération de l'aperçu.";
+        this.toast.erreur("L'aperçu n'a pas pu être généré. Réessayez dans un instant.");
         this.cdr.markForCheck();
       })
       .finally(() => {

@@ -3,12 +3,10 @@
         <div class="col-lg-8">
 
             <div class="admin-page-header">
-                <h2 class="admin-page-title">➕ Ajouter un résident</h2>
-                <button type="button" class="btn-back" (click)="retour()">← Retour</button>
+                <h2 class="admin-page-title"><i class="bi bi-person-plus" aria-hidden="true"></i> Ajouter un résident</h2>
+                <button type="button" class="btn-back" (click)="retour()"><i class="bi bi-arrow-left" aria-hidden="true"></i> Retour</button>
             </div>
 
-            @if (messageErreur) { <div class="alert alert-warning">{{ messageErreur }}</div> }
-            @if (messageSucces) { <div class="alert alert-success">{{ messageSucces }}</div> }
 
             <div class="card dashboard-card">
                 <div class="card-body p-4">
@@ -71,9 +69,9 @@
                             <button type="submit" class="btn pill-btn-orange px-4"
                                 [disabled]="isSaving || !nouveauResident.cin || !nouveauResident.nom_prenom">
                                 @if (isSaving) {
-                                <span class="spinner-border spinner-border-sm me-2"></span> Création...
+                                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> Création…
                                 } @else {
-                                Créer et passer aux stages ➔
+                                Créer et passer aux stages <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
                                 }
                             </button>
                         </div>

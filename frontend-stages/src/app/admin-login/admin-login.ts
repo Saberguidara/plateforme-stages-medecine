@@ -16,16 +16,20 @@ export class AdminLogin {
   loginSaisi: string = '';
   motDePasseSaisi: string = '';
   messageErreur: string = '';
+  isLoading = false;
 
   constructor(private http: HttpClient, private router: Router) { }
 
   seConnecter() {
+    if (this.isLoading) return;
     this.messageErreur = '';
+    this.isLoading = true;
     const identifiants = { login: this.loginSaisi, password: this.motDePasseSaisi };
 
     this.http.post<any>(`${environment.apiUrl}/auth/admin/login`, identifiants).subscribe({
       next: (reponse) => {
         setTimeout(() => {
+          this.isLoading = false;
           if (reponse.success && reponse.token) {
             localStorage.removeItem('resident_token');
             localStorage.removeItem('resident_cin');
@@ -38,6 +42,7 @@ export class AdminLogin {
       },
       error: (err) => {
         setTimeout(() => {
+          this.isLoading = false;
           this.messageErreur = err.error?.message || "Erreur de connexion au serveur.";
         }, 0);
       }

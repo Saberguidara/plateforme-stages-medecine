@@ -1,5 +1,5 @@
 import { Component, ChangeDetectorRef, DestroyRef, inject, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -7,22 +7,26 @@ import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../services/api';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { environment } from '../../environments/environment';
+import { ToastService } from '../services/toast';
+import { PdfViewerService } from '../services/pdf-viewer';
 
 @Component({
     selector: 'app-admin-search',
     standalone: true,
-    imports: [FormsModule, CommonModule],
+    imports: [FormsModule, CommonModule, RouterLink],
     templateUrl: './admin-search.html',
     styleUrls: ['../admin-dashboard/admin-dashboard.css']
 })
 export class AdminSearch implements OnInit {
     private cdr = inject(ChangeDetectorRef);
     private destroyRef = inject(DestroyRef);
+    private toast = inject(ToastService);
+    private pdfViewer = inject(PdfViewerService);
 
     cinRecherche: string = '';
     donneesResident: any = null;
-    messageSucces: string = '';
-    messageErreur: string = '';
+    isSearching: boolean = false;
+    introuvable: boolean = false;
 
     specialites: string[] = [];
     periodes: string[] = ['S1', 'S2', 'T1', 'T2', 'T3', 'T4', 'R1', 'R2'];
@@ -75,17 +79,18 @@ export class AdminSearch implements OnInit {
     }
 
     chercherResident() {
-        this.messageSucces = '';
-        this.messageErreur = '';
         this.donneesResident = null;
         this.stageAjoute = false;
+        this.introuvable = false;
 
         if (!this.cinRecherche) return;
+        this.isSearching = true;
 
         this.apiService.getResidentByCin(this.cinRecherche)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (data) => {
+                    this.isSearching = false;
                     this.donneesResident = data;
                     // Tous les champs sont renvoyés à la mise à jour : un champ absent serait effacé.
                     this.editResident = {
@@ -100,10 +105,11 @@ export class AdminSearch implements OnInit {
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
+                    this.isSearching = false;
                     if (err.status === 404) {
-                        this.messageErreur = "Résident introuvable. Utilisez « Ajouter un résident » pour le créer.";
+                        this.introuvable = true;
                     } else {
-                        this.messageErreur = err.error?.message || "Erreur de connexion au serveur.";
+                        this.toast.erreur(err.error?.message || "Erreur de connexion au serveur.");
                     }
                     this.cdr.markForCheck();
                 }
@@ -111,14 +117,12 @@ export class AdminSearch implements OnInit {
     }
 
     mettreAJourResident() {
-        this.messageSucces = '';
-        this.messageErreur = '';
 
         this.apiService.updateResident(this.donneesResident.id, this.editResident)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (res) => {
-                    this.messageSucces = res.message || "Résident mis à jour.";
+                    this.toast.succes(res.message || "Résident mis à jour.");
                     this.donneesResident.cin = this.editResident.cin;
                     this.donneesResident.nom_prenom = this.editResident.nom_prenom;
                     this.donneesResident.niveau = this.editResident.niveau;
@@ -128,15 +132,13 @@ export class AdminSearch implements OnInit {
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
-                    this.messageErreur = err.error?.message || "Erreur lors de la mise à jour.";
+                    this.toast.erreur(err.error?.message || "Erreur lors de la mise à jour.");
                     this.cdr.markForCheck();
                 }
             });
     }
 
     sauvegarderFiche(fiche: any) {
-        this.messageSucces = '';
-        this.messageErreur = '';
 
         this.apiService.updateFiche(fiche.id, {
             periode: fiche.periode,
@@ -147,19 +149,17 @@ export class AdminSearch implements OnInit {
         }).pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: () => {
-                    this.messageSucces = `La fiche de la période ${fiche.periode} a été mise à jour !`;
+                    this.toast.succes(`La fiche ${fiche.periode} ${fiche.annee} a été mise à jour.`);
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
-                    this.messageErreur = err.error?.message || "Erreur lors de la sauvegarde.";
+                    this.toast.erreur(err.error?.message || "Erreur lors de la sauvegarde.");
                     this.cdr.markForCheck();
                 }
             });
     }
 
     apercuNouveauStage() {
-        this.messageSucces = '';
-        this.messageErreur = '';
         this.isGeneratingPdf = true;
 
         const payload = this.buildPdfPayload(this.nouveauStage);
@@ -169,21 +169,18 @@ export class AdminSearch implements OnInit {
             .subscribe({
                 next: (blob: Blob) => {
                     this.isGeneratingPdf = false;
-                    const urlFichier = window.URL.createObjectURL(blob);
-                    window.open(urlFichier, '_blank');
+                    this.pdfViewer.ouvrir(blob, this.nomFichier(this.nouveauStage));
                     this.cdr.markForCheck();
                 },
                 error: () => {
                     this.isGeneratingPdf = false;
-                    this.messageErreur = "Erreur lors de la génération de l'aperçu.";
+                    this.toast.erreur("Erreur lors de la génération de l'aperçu.");
                     this.cdr.markForCheck();
                 }
             });
     }
 
     validerNouveauStage() {
-        this.messageSucces = '';
-        this.messageErreur = '';
         this.isAddingStage = true;
 
         const data = {
@@ -200,14 +197,14 @@ export class AdminSearch implements OnInit {
                 next: (res) => {
                     this.isAddingStage = false;
                     this.stageAjoute = true;
-                    this.messageSucces = res.message || "Stage ajouté avec succès.";
+                    this.toast.succes(res.message || "Stage ajouté avec succès.");
                     this.chercherResident();
                     this.nouveauStage = { periode: 'S1', annee: new Date().getFullYear(), hopital: '', service: '' };
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
                     this.isAddingStage = false;
-                    this.messageErreur = err.error?.message || "Erreur lors de l'ajout du stage.";
+                    this.toast.erreur(err.error?.message || "Erreur lors de l'ajout du stage.");
                     this.cdr.markForCheck();
                 }
             });
@@ -215,21 +212,16 @@ export class AdminSearch implements OnInit {
 
     ajouterAutreStage() {
         this.stageAjoute = false;
-        this.messageSucces = '';
         this.nouveauStage = { periode: 'S1', annee: new Date().getFullYear(), hopital: '', service: '' };
     }
 
     rechercherAutreResident() {
         this.stageAjoute = false;
         this.donneesResident = null;
-        this.messageSucces = '';
-        this.messageErreur = '';
         this.cinRecherche = '';
     }
 
     apercuPDF(fiche: any) {
-        this.messageSucces = '';
-        this.messageErreur = '';
         this.isGeneratingPdf = true;
 
         const payload = this.buildPdfPayload(fiche);
@@ -239,21 +231,18 @@ export class AdminSearch implements OnInit {
             .subscribe({
                 next: (blob: Blob) => {
                     this.isGeneratingPdf = false;
-                    const urlFichier = window.URL.createObjectURL(blob);
-                    window.open(urlFichier, '_blank');
+                    this.pdfViewer.ouvrir(blob, this.nomFichier(fiche));
                     this.cdr.markForCheck();
                 },
                 error: () => {
                     this.isGeneratingPdf = false;
-                    this.messageErreur = 'Impossible de générer l\'aperçu.';
+                    this.toast.erreur('Impossible de générer l\'aperçu.');
                     this.cdr.markForCheck();
                 }
             });
     }
 
     telechargerPDF(fiche: any) {
-        this.messageSucces = '';
-        this.messageErreur = '';
         this.isGeneratingPdf = true;
 
         const payload = this.buildPdfPayload(fiche);
@@ -266,17 +255,21 @@ export class AdminSearch implements OnInit {
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `Validation_${this.donneesResident?.cin}_${fiche.periode}.pdf`;
+                    a.download = this.nomFichier(fiche);
                     a.click();
                     window.URL.revokeObjectURL(url);
                     this.cdr.markForCheck();
                 },
                 error: () => {
                     this.isGeneratingPdf = false;
-                    this.messageErreur = 'Impossible de générer le PDF.';
+                    this.toast.erreur('Impossible de générer le PDF.');
                     this.cdr.markForCheck();
                 }
             });
+    }
+
+    private nomFichier(fiche: { periode: string; annee: number }) {
+        return `Fiche_${this.donneesResident?.cin}_${fiche.periode}_${fiche.annee}.pdf`;
     }
 
     retour() { this.router.navigate(['/admin/dashboard']); }

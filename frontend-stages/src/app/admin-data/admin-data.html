@@ -3,66 +3,88 @@
         <div class="col-lg-11">
 
             <div class="admin-page-header">
-                <h2 class="admin-page-title">📊 Visualisation des données</h2>
-                <button type="button" class="btn-back" (click)="retour()">← Retour</button>
+                <h2 class="admin-page-title"><i class="bi bi-table" aria-hidden="true"></i> Visualisation des données</h2>
+                <button type="button" class="btn-back" (click)="retour()"><i class="bi bi-arrow-left" aria-hidden="true"></i> Retour</button>
             </div>
 
-            @if (messageSucces) { <div class="alert alert-success py-2">{{ messageSucces }}</div> }
-            @if (messageErreur) { <div class="alert alert-warning py-2">{{ messageErreur }}</div> }
-
-            <!-- Toolbar -->
+            <!-- Barre de filtres -->
             <div class="data-toolbar mb-3">
-                <input type="text" class="form-control" style="max-width: 300px;"
-                    placeholder="🔍 Rechercher CIN ou nom..." [(ngModel)]="searchText" (input)="appliquerFiltres()">
-                <select class="form-select" style="max-width: 240px;" [(ngModel)]="filterSpecialite"
-                    (change)="appliquerFiltres()">
+                <div class="champ-recherche">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input type="text" class="form-control" id="rechercheResident" aria-label="Rechercher un CIN ou un nom"
+                        placeholder="Rechercher CIN ou nom…" [(ngModel)]="searchText" (input)="appliquerFiltres()">
+                </div>
+                <select class="form-select filtre-specialite" id="filtreSpecialite" aria-label="Filtrer par spécialité"
+                    [(ngModel)]="filterSpecialite" (change)="appliquerFiltres()">
                     <option value="">Toutes les spécialités</option>
                     @for (spec of specialites; track spec) {
                     <option [value]="spec">{{ spec }}</option>
                     }
                 </select>
-                <select class="form-select" style="max-width: 150px;" [(ngModel)]="filterPromo"
-                    (change)="appliquerFiltres()">
+                <select class="form-select filtre-promo" id="filtrePromo" aria-label="Filtrer par promotion"
+                    [(ngModel)]="filterPromo" (change)="appliquerFiltres()">
                     <option value="">Toutes les promos</option>
                     @for (p of promos; track p) {
                     <option [value]="p">{{ p }}</option>
                     }
                 </select>
-                <span class="text-muted small ms-auto">{{ total }} résident(s) trouvé(s)</span>
+                @if (sansEmail > 0) {
+                <button type="button" class="compteur-alerte" [attr.aria-pressed]="filterEmail === 'sans'"
+                    (click)="basculerFiltreEmail()"
+                    [title]="filterEmail === 'sans' ? 'Afficher tous les résidents' : 'Afficher seulement les résidents sans e-mail'">
+                    <i class="bi bi-envelope-exclamation" aria-hidden="true"></i>
+                    {{ sansEmail }} sans e-mail
+                    @if (filterEmail === 'sans') { <i class="bi bi-x-circle" aria-hidden="true"></i> }
+                </button>
+                }
+                <span class="text-muted small ms-auto chiffres">{{ total }} résident(s) trouvé(s)</span>
             </div>
 
-            <!-- Table -->
+            <!-- Tableau -->
             <div class="card dashboard-card">
-                <div class="table-responsive">
+                <div class="table-responsive table-defilante">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>N°</th>
-                                <th style="cursor: pointer" (click)="sortBy('cin')">CIN {{ sortCol === 'cin' ? (sortDesc ? '▼' : '▲') : '' }}</th>
-                                <th style="cursor: pointer" (click)="sortBy('nom_prenom')">Nom et Prénom {{ sortCol === 'nom_prenom' ? (sortDesc ? '▼' : '▲') : '' }}</th>
-                                <th style="cursor: pointer" (click)="sortBy('specialite')">Spécialité {{ sortCol === 'specialite' ? (sortDesc ? '▼' : '▲') : '' }}</th>
-                                <th style="cursor: pointer" (click)="sortBy('faculte_origine')">Faculté {{ sortCol === 'faculte_origine' ? (sortDesc ? '▼' : '▲') : '' }}</th>
-                                <th style="cursor: pointer" (click)="sortBy('promotion')">Promo {{ sortCol === 'promotion' ? (sortDesc ? '▼' : '▲') : '' }}</th>
-                                <th class="text-center" style="cursor: pointer" (click)="sortBy('nb_fiches')">Stages {{ sortCol === 'nb_fiches' ? (sortDesc ? '▼' : '▲') : '' }}</th>
-                                <th class="text-end">Actions</th>
+                                <th scope="col">N°</th>
+                                @for (col of colonnes; track col.cle) {
+                                <th scope="col" class="th-triable" [class.text-center]="col.cle === 'nb_fiches'"
+                                    tabindex="0" (click)="sortBy(col.cle)" (keydown.enter)="sortBy(col.cle)"
+                                    [attr.aria-sort]="sortCol === col.cle ? (sortDesc ? 'descending' : 'ascending') : null">
+                                    {{ col.libelle }}
+                                    @if (sortCol === col.cle) {
+                                    <i class="bi" [class.bi-caret-down-fill]="sortDesc" [class.bi-caret-up-fill]="!sortDesc" aria-hidden="true"></i>
+                                    }
+                                </th>
+                                }
+                                <th scope="col" class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
+                            @if (isLoading) {
+                            @for (n of lignesChargement; track n) {
+                            <tr aria-hidden="true">
+                                @for (c of [1, 2, 3, 4, 5, 6, 7, 8]; track c) {
+                                <td><span class="skeleton skeleton-ligne"></span></td>
+                                }
+                            </tr>
+                            }
+                            } @else {
                             @for (r of residents; track r.id; let i = $index) {
 
                             <!-- Si en mode édition -->
                             @if (editingResident && editingResident.id === r.id) {
-                            <tr style="background-color: #fef6f0;">
-                                <td class="text-muted">{{ (page - 1) * limit + i + 1 }}</td>
-                                <td><input type="text" class="form-control form-control-sm"
+                            <tr class="ligne-edition">
+                                <td class="text-muted chiffres">{{ (page - 1) * limit + i + 1 }}</td>
+                                <td><input type="text" class="form-control form-control-sm" aria-label="CIN"
                                         [(ngModel)]="editingResident.cin"></td>
-                                <td><input type="text" class="form-control form-control-sm"
+                                <td><input type="text" class="form-control form-control-sm" aria-label="Nom et prénom"
                                         [(ngModel)]="editingResident.nom_prenom">
-                                    <input type="email" class="form-control form-control-sm mt-1"
+                                    <input type="email" class="form-control form-control-sm mt-1" aria-label="E-mail de connexion"
                                         [(ngModel)]="editingResident.email" placeholder="E-mail de connexion"></td>
                                 <td>{{ r.specialite }}</td>
                                 <td>
-                                    <select class="form-select form-select-sm"
+                                    <select class="form-select form-select-sm" aria-label="Faculté d'origine"
                                         [(ngModel)]="editingResident.faculte_origine">
                                         @for (fac of facultes; track fac) {
                                         <option [value]="fac">{{ fac }}</option>
@@ -70,73 +92,77 @@
                                     </select>
                                 </td>
                                 <td>
-                                    <input type="number" class="form-control form-control-sm" [(ngModel)]="editingResident.promotion">
+                                    <input type="number" class="form-control form-control-sm" aria-label="Promotion" [(ngModel)]="editingResident.promotion">
                                 </td>
                                 <td class="text-center"><span class="badge-count">{{ r.nb_fiches }}</span></td>
-                                <td class="text-end">
-                                    <button class="btn btn-sm btn-success rounded-pill me-1"
-                                        (click)="saveEditResident()">✓</button>
-                                    <button class="btn btn-sm btn-outline-secondary rounded-pill"
-                                        (click)="cancelEditResident()">✗</button>
+                                <td class="text-end text-nowrap">
+                                    <button class="btn-icone btn-icone-orange me-1" (click)="saveEditResident()"
+                                        title="Enregistrer" aria-label="Enregistrer"><i class="bi bi-check-lg" aria-hidden="true"></i></button>
+                                    <button class="btn-icone" (click)="cancelEditResident()"
+                                        title="Annuler" aria-label="Annuler la modification"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                                 </td>
                             </tr>
                             } @else {
 
                             <!-- Mode affichage normal -->
-                            <tr style="cursor: pointer;" (click)="toggleExpand(r)">
-                                <td class="text-muted">{{ (page - 1) * limit + i + 1 }}</td>
-                                <td><strong>{{ r.cin }}</strong></td>
+                            <tr class="ligne-cliquable" (click)="toggleExpand(r)" [attr.aria-expanded]="expandedId === r.id">
+                                <td class="text-muted chiffres">{{ (page - 1) * limit + i + 1 }}</td>
+                                <td class="chiffres"><strong>{{ r.cin }}</strong></td>
                                 <td>{{ r.nom_prenom }}
-                                    <div class="small" [class.text-muted]="r.email" [class.text-danger]="!r.email">
-                                        {{ r.email || 'Aucun e-mail : connexion impossible' }}</div></td>
+                                    @if (r.email) {
+                                    <div class="small text-muted">{{ r.email }}</div>
+                                    } @else {
+                                    <div><span class="pastille pastille-alerte" title="Ce résident ne peut pas se connecter">
+                                        <i class="bi bi-envelope-slash" aria-hidden="true"></i> Sans e-mail</span></div>
+                                    }
+                                </td>
                                 <td>{{ r.specialite }}</td>
                                 <td>{{ r.faculte_origine }}</td>
-                                <td>{{ r.promotion }}</td>
+                                <td class="chiffres">{{ r.promotion }}</td>
                                 <td class="text-center"><span class="badge-count">{{ r.nb_fiches }}</span></td>
-                                <td class="text-end" (click)="$event.stopPropagation()">
-                                    <button class="btn btn-sm btn-outline-primary rounded-pill me-1"
-                                        (click)="startEditResident(r)" title="Modifier">✏️</button>
-                                    <button class="btn btn-sm btn-outline-danger rounded-pill"
-                                        (click)="demanderSuppressionResident(r)" title="Supprimer">🗑️</button>
+                                <td class="text-end text-nowrap" (click)="$event.stopPropagation()">
+                                    <button class="btn-icone me-1" (click)="startEditResident(r)"
+                                        title="Modifier" [attr.aria-label]="'Modifier ' + r.nom_prenom"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+                                    <button class="btn-icone btn-icone-danger" (click)="demanderSuppressionResident(r)"
+                                        title="Supprimer" [attr.aria-label]="'Supprimer ' + r.nom_prenom"><i class="bi bi-trash3" aria-hidden="true"></i></button>
                                 </td>
                             </tr>
 
-                            <!-- Expanded row: fiches -->
+                            <!-- Ligne dépliée : fiches du résident -->
                             @if (expandedId === r.id) {
                             <tr>
-                                <td colspan="8" style="padding: 0; border-top: none;">
+                                <td colspan="8" class="p-0 border-top-0">
                                     <div class="resident-expand mx-3 mb-3">
-                                        <h6 class="mb-2" style="color: #f47b45; font-weight: 700;">Stages de {{
-                                            r.nom_prenom }}</h6>
+                                        <h6 class="section-titre mb-2"><i class="bi bi-journal-medical" aria-hidden="true"></i> Stages de {{ r.nom_prenom }}</h6>
                                         @if (expandedFiches.length === 0) {
-                                        <p class="text-muted small mb-0">Aucun stage enregistré.</p>
+                                        <p class="text-muted small mb-0">Aucun stage enregistré pour ce résident.</p>
                                         } @else {
                                         <table class="table table-sm table-bordered align-middle mb-0">
                                             <thead>
                                                 <tr class="table-light">
-                                                    <th>Période</th>
-                                                    <th>Année</th>
-                                                    <th>Service</th>
-                                                    <th>Hôpital</th>
-                                                    <th class="text-end">Actions</th>
+                                                    <th scope="col">Période</th>
+                                                    <th scope="col">Année</th>
+                                                    <th scope="col">Service</th>
+                                                    <th scope="col">Hôpital</th>
+                                                    <th scope="col" class="text-end">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 @for (f of expandedFiches; track f.id) {
                                                 <tr>
-                                                    <td><input type="text" class="form-control form-control-sm"
-                                                            [(ngModel)]="f.periode" style="width:80px;"></td>
-                                                    <td><input type="number" class="form-control form-control-sm"
-                                                            [(ngModel)]="f.annee" style="width:90px;"></td>
-                                                    <td><input type="text" class="form-control form-control-sm"
+                                                    <td><input type="text" class="form-control form-control-sm champ-periode" aria-label="Période"
+                                                            [(ngModel)]="f.periode"></td>
+                                                    <td><input type="number" class="form-control form-control-sm champ-annee" aria-label="Année"
+                                                            [(ngModel)]="f.annee"></td>
+                                                    <td><input type="text" class="form-control form-control-sm" aria-label="Service"
                                                             [(ngModel)]="f.service"></td>
-                                                    <td><input type="text" class="form-control form-control-sm"
+                                                    <td><input type="text" class="form-control form-control-sm" aria-label="Hôpital"
                                                             [(ngModel)]="f.hopital"></td>
                                                     <td class="text-end text-nowrap">
-                                                        <button class="btn btn-sm pill-btn-orange"
-                                                            (click)="sauvegarderFiche(f)">💾</button>
-                                                        <button class="btn btn-sm btn-outline-danger rounded-pill ms-1"
-                                                            (click)="demanderSuppressionFiche(f)">🗑️</button>
+                                                        <button class="btn-icone btn-icone-orange" (click)="sauvegarderFiche(f)"
+                                                            title="Enregistrer la fiche" aria-label="Enregistrer la fiche"><i class="bi bi-floppy" aria-hidden="true"></i></button>
+                                                        <button class="btn-icone btn-icone-danger ms-1" (click)="demanderSuppressionFiche(f)"
+                                                            title="Supprimer la fiche" aria-label="Supprimer la fiche"><i class="bi bi-trash3" aria-hidden="true"></i></button>
                                                     </td>
                                                 </tr>
                                                 }
@@ -148,38 +174,59 @@
                             </tr>
                             }
                             }
+                            } @empty {
+                            <tr>
+                                <td colspan="8">
+                                    <div class="etat-vide">
+                                        <i class="bi bi-people etat-vide-icone" aria-hidden="true"></i>
+                                        <div class="etat-vide-titre">Aucun résident trouvé</div>
+                                        @if (filtresActifs()) {
+                                        <p class="etat-vide-texte">Aucun résident ne correspond à ces filtres.</p>
+                                        <button type="button" class="btn pill-btn-outline-dark" (click)="reinitialiserFiltres()">Effacer les filtres</button>
+                                        } @else {
+                                        <p class="etat-vide-texte">La base est vide. Importez un registre de choix pour créer les résidents et leurs fiches.</p>
+                                        <a class="btn pill-btn-orange" routerLink="/admin/dashboard/import"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Importer un registre</a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                            }
                             }
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Pagination Toolbar -->
-            <div class="d-flex justify-content-between align-items-center mt-3 mb-5">
-                <span class="text-muted small">
-                    Affichage {{ (page - 1) * limit + 1 }} à {{ Math.min(page * limit, total) }} sur {{ total }}
+            <!-- Pagination -->
+            @if (total > 0) {
+            <div class="pagination-fms mt-3 mb-5">
+                <span class="text-muted small chiffres">
+                    {{ (page - 1) * limit + 1 }}–{{ Math.min(page * limit, total) }} sur {{ total }}
                 </span>
-                <div class="btn-group">
-                    <button class="btn btn-outline-secondary btn-sm" [disabled]="page === 1" (click)="prevPage()">Précédent</button>
-                    <button class="btn btn-secondary btn-sm" disabled>Page {{ page }}</button>
-                    <button class="btn btn-outline-secondary btn-sm" [disabled]="page * limit >= total" (click)="nextPage()">Suivant</button>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm pill-btn-outline-dark" [disabled]="page === 1" (click)="prevPage()">
+                        <i class="bi bi-chevron-left" aria-hidden="true"></i> Précédent</button>
+                    <span class="small text-muted chiffres px-1">Page {{ page }} / {{ nbPages }}</span>
+                    <button class="btn btn-sm pill-btn-outline-dark" [disabled]="page * limit >= total" (click)="nextPage()">
+                        Suivant <i class="bi bi-chevron-right ms-1" aria-hidden="true"></i></button>
                 </div>
             </div>
+            }
 
         </div>
     </div>
 </div>
 
-<!-- Custom Confirmation Modal -->
+<!-- Fenêtre de confirmation -->
 @if (showConfirmModal) {
 <div class="custom-modal-overlay">
-    <div class="custom-modal-card">
-        <span class="custom-modal-icon">⚠️</span>
-        <h3 class="custom-modal-title">{{ confirmTitle }}</h3>
+    <div class="custom-modal-card" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitre">
+        <i class="bi bi-exclamation-triangle custom-modal-icon" aria-hidden="true"></i>
+        <h3 class="custom-modal-title" id="confirmTitre">{{ confirmTitle }}</h3>
         <p class="custom-modal-text">{{ confirmMessage }}</p>
         <div class="d-flex justify-content-center gap-3">
             <button class="btn pill-btn-outline-dark px-4" (click)="annulerSuppression()">Annuler</button>
-            <button class="btn btn-danger rounded-pill px-4 fw-bold" (click)="confirmAction()">Oui, supprimer</button>
+            <button class="btn btn-danger-pill px-4" (click)="confirmAction()">Oui, supprimer</button>
         </div>
     </div>
 </div>

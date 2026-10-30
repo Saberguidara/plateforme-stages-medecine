@@ -36,19 +36,25 @@
               </div>
 
               <div class="flat-input-group mb-5">
-                <input name="login" type="text" class="flat-input" id="flatLogin" placeholder=" "
+                <input name="login" type="text" class="flat-input" id="flatLogin" placeholder=" " autocomplete="username"
                   [(ngModel)]="loginSaisi" (keyup.enter)="seConnecter()">
                 <label for="flatLogin" class="flat-label">Identifiant</label>
               </div>
 
               <div class="flat-input-group mb-5">
-                <input name="password" type="password" class="flat-input" id="flatPassword" placeholder=" "
+                <input name="password" type="password" class="flat-input" id="flatPassword" placeholder=" " autocomplete="current-password"
                   [(ngModel)]="motDePasseSaisi" (keyup.enter)="seConnecter()">
                 <label for="flatPassword" class="flat-label">Mot de passe</label>
               </div>
 
-              <button type="submit" class="pill-btn-orange w-100 mt-4 interactive-btn">SE CONNECTER</button>
+              <button type="submit" class="pill-btn-orange w-100 mt-4 interactive-btn" [disabled]="isLoading">
+                {{ isLoading ? 'CONNEXION…' : 'SE CONNECTER' }}
+              </button>
             </form>
+            <p class="contact-service">
+              Un problème d'accès ? Service des stages :
+              <a href="mailto:saber_guidara@medecinesfax.org">saber_guidara@medecinesfax.org</a>
+            </p>
           </div>
         </div>
       </div>

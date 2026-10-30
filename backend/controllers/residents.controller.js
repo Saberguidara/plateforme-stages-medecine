@@ -52,6 +52,7 @@ exports.getAllResidents = async (req, res) => {
         const search = req.query.search || '';
         const specialite = req.query.specialite || '';
         const promo = req.query.promo || '';
+        const sansEmail = req.query.email === 'sans';
         const sortCol = req.query.sortCol || 'nom_prenom';
         const sortDesc = req.query.sortDesc === 'true';
 
@@ -70,6 +71,9 @@ exports.getAllResidents = async (req, res) => {
             whereClause += ' AND r.promotion = ?';
             queryParams.push(parseInt(promo, 10));
         }
+        if (sansEmail) {
+            whereClause += " AND (r.email IS NULL OR r.email = '')";
+        }
 
         const validSortCols = ['cin', 'nom_prenom', 'specialite', 'faculte_origine', 'promotion', 'niveau', 'nb_fiches'];
         const orderBy = validSortCols.includes(sortCol) ? sortCol : 'nom_prenom';
@@ -77,6 +81,8 @@ exports.getAllResidents = async (req, res) => {
 
         const [countResult] = await db.query(`SELECT COUNT(*) as total FROM residents r ${whereClause}`, queryParams);
         const total = countResult[0].total;
+        // Résidents qui ne peuvent pas se connecter, sur toute la base (indépendant des filtres)
+        const [sansEmailResult] = await db.query("SELECT COUNT(*) AS n FROM residents WHERE email IS NULL OR email = ''");
 
         const [rows] = await db.query(
             `SELECT r.id, r.cin, r.nom_prenom, r.email, r.specialite, r.faculte_origine, r.promotion,
@@ -91,7 +97,7 @@ exports.getAllResidents = async (req, res) => {
             [...queryParams, limit, offset]
         );
 
-        res.json({ data: rows, total, page, limit });
+        res.json({ data: rows, total, page, limit, sansEmail: sansEmailResult[0].n });
     } catch (error) {
         logger.error('Get all residents error: ' + error);
         res.status(500).json({ error: 'Erreur lors de la récupération des résidents' });

@@ -1,85 +1,19 @@
+/* Styles propres à l'espace résident ; cartes et boutons sont dans src/styles.css. */
+
 .dashboard-page-title {
-    font-family: 'Georgia', serif;
+    font-family: var(--fms-titre);
     font-weight: 700;
-    color: #1a1a1a;
+    color: var(--fms-noir);
+    font-size: 2.5rem;
+    letter-spacing: 1px;
+}
+
+.page-sous-titre {
+    font-size: 1.2rem;
 }
 
 .border-bottom-soft {
     border-bottom: 2px solid rgba(0, 0, 0, 0.05) !important;
-}
-
-.dashboard-card {
-    border: none;
-    border-radius: 20px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
-    background: #ffffff;
-    overflow: hidden;
-}
-
-.dashboard-card-header {
-    background: transparent;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    padding: 20px 25px;
-    color: #1a1a1a;
-}
-
-.dashboard-card-header h5 {
-    font-family: 'Georgia', serif;
-    font-weight: 600;
-    margin: 0;
-}
-
-.dashboard-card-header-dark {
-    background: #1a1a1a;
-    color: #f5f0e6;
-    padding: 15px 25px;
-}
-
-.dashboard-card-header-dark h5,
-.dashboard-card-header-dark h4 {
-    font-family: 'Georgia', serif;
-    font-weight: 600;
-    margin: 0;
-}
-
-.pill-btn-orange {
-    background: #f47b45;
-    color: white;
-    border: none;
-    border-radius: 50px;
-    padding: 10px 20px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 4px 15px rgba(244, 123, 69, 0.4);
-    transition: all 0.3s ease;
-}
-
-.pill-btn-orange:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(244, 123, 69, 0.6);
-    color: white;
-}
-
-.pill-btn-outline-dark {
-    background: transparent;
-    color: #1a1a1a;
-    border: 2px solid #1a1a1a;
-    border-radius: 50px;
-    padding: 8px 18px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.pill-btn-outline-dark:hover {
-    background: #1a1a1a;
-    color: #f5f0e6;
-}
-.pill-btn-orange:disabled,
-.pill-btn-outline-dark:disabled {
-    opacity: 0.6;
-    transform: none;
-    cursor: wait;
 }
 
 .fiche-cards {
@@ -106,7 +40,7 @@
 
 @media (max-width: 767px) {
     .dashboard-page-title {
-        font-size: 1.8rem !important;
+        font-size: 1.8rem;
     }
 
     .dashboard-card-header-dark {

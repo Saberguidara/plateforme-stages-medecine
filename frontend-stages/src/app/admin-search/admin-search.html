@@ -3,20 +3,44 @@
         <div class="col-lg-10">
 
             <div class="admin-page-header">
-                <h2 class="admin-page-title">🔍 Rechercher un résident</h2>
-                <button type="button" class="btn-back" (click)="retour()">← Retour</button>
+                <h2 class="admin-page-title"><i class="bi bi-search" aria-hidden="true"></i> Rechercher un résident</h2>
+                <button type="button" class="btn-back" (click)="retour()"><i class="bi bi-arrow-left" aria-hidden="true"></i> Retour</button>
             </div>
 
             <div class="card dashboard-card mb-4">
-                <form class="card-body d-flex gap-2" (ngSubmit)="chercherResident()">
+                <form class="card-body d-flex gap-2" role="search" (ngSubmit)="chercherResident()">
                     <input type="text" class="form-control elegant-input" placeholder="CIN du résident" name="cinAdmin"
-                        [(ngModel)]="cinRecherche" (keyup.enter)="chercherResident()">
-                    <button type="submit" class="btn pill-btn-dark">Rechercher</button>
+                        id="cinAdmin" aria-label="CIN du résident" [(ngModel)]="cinRecherche" autocomplete="off">
+                    <button type="submit" class="btn pill-btn-dark text-nowrap" [disabled]="isSearching">
+                        <i class="bi bi-search" aria-hidden="true"></i> Rechercher
+                    </button>
                 </form>
             </div>
 
-            @if (messageErreur) { <div class="alert alert-warning">{{ messageErreur }}</div> }
-            @if (messageSucces) { <div class="alert alert-success">{{ messageSucces }}</div> }
+            <!-- Chargement -->
+            @if (isSearching) {
+            <div class="card dashboard-card mb-4" aria-busy="true" aria-label="Chargement du dossier">
+                <div class="card-body">
+                    <span class="skeleton skeleton-titre"></span>
+                    <span class="skeleton skeleton-carte mb-3"></span>
+                    <span class="skeleton skeleton-ligne"></span>
+                    <span class="skeleton skeleton-ligne"></span>
+                    <span class="skeleton skeleton-ligne w-75"></span>
+                </div>
+            </div>
+            }
+
+            <!-- Résident introuvable -->
+            @if (introuvable) {
+            <div class="card dashboard-card mb-4">
+                <div class="etat-vide">
+                    <i class="bi bi-person-x etat-vide-icone" aria-hidden="true"></i>
+                    <div class="etat-vide-titre">Aucun résident avec le CIN {{ cinRecherche }}</div>
+                    <p class="etat-vide-texte">Vérifiez le numéro, ou créez le dossier de ce résident.</p>
+                    <a class="btn pill-btn-orange" routerLink="/admin/dashboard/add"><i class="bi bi-person-plus" aria-hidden="true"></i> Ajouter un résident</a>
+                </div>
+            </div>
+            }
 
             @if (donneesResident) {
             <div class="card dashboard-card mb-4">
@@ -26,30 +50,30 @@
                 </div>
                 <div class="card-body">
 
-                    <!-- SECTION A : Informations Résident -->
-                    <div class="p-3 mb-4 rounded" style="background-color: #fef6f0; border: 1px solid #f47b4533;">
-                        <h6 class="mb-3" style="color: #f47b45; font-weight: 700;">👤 Informations Résident</h6>
+                    <!-- SECTION A : Informations résident -->
+                    <div class="section-encadre mb-4">
+                        <h6 class="section-titre"><i class="bi bi-person-vcard" aria-hidden="true"></i> Informations résident</h6>
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label text-muted small">Nom et Prénom</label>
-                                <input type="text" class="form-control elegant-input"
+                                <label class="form-label text-muted small" for="editNom">Nom et Prénom</label>
+                                <input type="text" class="form-control elegant-input" id="editNom"
                                     [(ngModel)]="editResident.nom_prenom">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label text-muted small">CIN / N° Passeport</label>
-                                <input type="text" class="form-control elegant-input" [(ngModel)]="editResident.cin">
+                                <label class="form-label text-muted small" for="editCin">CIN / N° Passeport</label>
+                                <input type="text" class="form-control elegant-input chiffres" id="editCin" [(ngModel)]="editResident.cin">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label text-muted small">Faculté d'origine</label>
-                                <select class="form-select elegant-input" [(ngModel)]="editResident.faculte_origine">
+                                <label class="form-label text-muted small" for="editFac">Faculté d'origine</label>
+                                <select class="form-select elegant-input" id="editFac" [(ngModel)]="editResident.faculte_origine">
                                     @for (fac of facultes; track fac) {
                                     <option [value]="fac">{{ fac }}</option>
                                     }
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label text-muted small">Niveau d'étude</label>
-                                <select class="form-select elegant-input" [(ngModel)]="editResident.niveau">
+                                <label class="form-label text-muted small" for="editNiveau">Niveau d'étude</label>
+                                <select class="form-select elegant-input" id="editNiveau" [(ngModel)]="editResident.niveau">
                                     <option [ngValue]="1">1ère Année</option>
                                     <option [ngValue]="2">2ème Année</option>
                                     <option [ngValue]="3">3ème Année</option>
@@ -58,53 +82,56 @@
                                 </select>
                             </div>
                             <div class="col-md-12">
-                                <label class="form-label text-muted small">E-mail de connexion</label>
-                                <input type="email" class="form-control elegant-input" [(ngModel)]="editResident.email"
+                                <label class="form-label text-muted small" for="editEmail">E-mail de connexion</label>
+                                <input type="email" class="form-control elegant-input" id="editEmail" [(ngModel)]="editResident.email"
                                     placeholder="Aucun e-mail : le résident ne peut pas se connecter">
                             </div>
                         </div>
                         <div class="mt-3 text-end">
                             <button type="button" class="btn pill-btn-dark btn-sm" (click)="mettreAJourResident()">
-                                💾 Mettre à jour le résident
+                                <i class="bi bi-floppy" aria-hidden="true"></i> Mettre à jour le résident
                             </button>
                         </div>
                     </div>
 
-                    <!-- SECTION B : Tableau des fiches -->
+                    <!-- SECTION B : Fiches -->
                     @if (donneesResident.fiches.length === 0) {
-                    <p class="text-muted">Aucune fiche pour ce résident.</p>
+                    <div class="etat-vide py-4">
+                        <i class="bi bi-journal-x etat-vide-icone" aria-hidden="true"></i>
+                        <div class="etat-vide-titre">Aucune fiche pour ce résident</div>
+                        <p class="etat-vide-texte mb-0">Ajoutez un stage ci-dessous, ou importez le registre de choix du semestre.</p>
+                    </div>
                     } @else {
                     <div class="table-responsive">
                         <table class="table table-bordered align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Période</th>
-                                    <th>Année</th>
-                                    <th>Service</th>
-                                    <th>Hôpital</th>
-                                    <th>Action</th>
+                                    <th scope="col">Période</th>
+                                    <th scope="col">Année</th>
+                                    <th scope="col">Service</th>
+                                    <th scope="col">Hôpital</th>
+                                    <th scope="col">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @for (fiche of donneesResident.fiches; track fiche.id) {
                                 <tr>
-                                    <td><input type="text" class="form-control" [(ngModel)]="fiche.periode"></td>
-                                    <td><input type="number" class="form-control" [(ngModel)]="fiche.annee"
-                                            style="width: 100px;"></td>
-                                    <td><input type="text" class="form-control" [(ngModel)]="fiche.service"></td>
-                                    <td><input type="text" class="form-control" [(ngModel)]="fiche.hopital"></td>
+                                    <td><input type="text" class="form-control" aria-label="Période" [(ngModel)]="fiche.periode"></td>
+                                    <td><input type="number" class="form-control champ-annee-large" aria-label="Année" [(ngModel)]="fiche.annee"></td>
+                                    <td><input type="text" class="form-control" aria-label="Service" [(ngModel)]="fiche.service"></td>
+                                    <td><input type="text" class="form-control" aria-label="Hôpital" [(ngModel)]="fiche.hopital"></td>
                                     <td class="d-grid gap-2">
                                         <button type="button" class="btn pill-btn-orange btn-sm"
                                             (click)="sauvegarderFiche(fiche)">
-                                            💾 Mettre à jour
+                                            <i class="bi bi-floppy" aria-hidden="true"></i> Mettre à jour
                                         </button>
-                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill mt-1"
+                                        <button type="button" class="btn pill-btn-outline-dark btn-sm"
                                             [disabled]="isGeneratingPdf" (click)="apercuPDF(fiche)">
-                                            👁 Aperçu
+                                            <i class="bi bi-eye" aria-hidden="true"></i> Aperçu
                                         </button>
-                                        <button type="button" class="btn btn-outline-dark btn-sm rounded-pill mt-1"
+                                        <button type="button" class="btn pill-btn-outline-dark btn-sm"
                                             [disabled]="isGeneratingPdf" (click)="telechargerPDF(fiche)">
-                                            📄 Télécharger
+                                            <i class="bi bi-download" aria-hidden="true"></i> Télécharger
                                         </button>
                                     </td>
                                 </tr>
@@ -115,58 +142,58 @@
                     }
 
                     <!-- SECTION C : Ajouter un stage -->
-                    <div class="p-3 mt-4 rounded" style="background-color: #f0f7fe; border: 1px solid #3b82f633;">
-                        <h6 class="mb-3" style="color: #3b82f6; font-weight: 700;">➕ Ajouter un stage</h6>
+                    <div class="section-encadre mt-4">
+                        <h6 class="section-titre"><i class="bi bi-plus-circle" aria-hidden="true"></i> Ajouter un stage</h6>
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <label class="form-label text-muted small">Période</label>
-                                <select class="form-select" [(ngModel)]="nouveauStage.periode">
+                                <label class="form-label text-muted small" for="nsPeriode">Période</label>
+                                <select class="form-select" id="nsPeriode" [(ngModel)]="nouveauStage.periode">
                                     @for (p of periodes; track p) {
                                     <option [value]="p">{{ p }}</option>
                                     }
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label text-muted small">Année</label>
-                                <input type="number" class="form-control" [(ngModel)]="nouveauStage.annee">
+                                <label class="form-label text-muted small" for="nsAnnee">Année</label>
+                                <input type="number" class="form-control" id="nsAnnee" [(ngModel)]="nouveauStage.annee">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label text-muted small">Hôpital</label>
-                                <input type="text" class="form-control" [(ngModel)]="nouveauStage.hopital">
+                                <label class="form-label text-muted small" for="nsHopital">Hôpital</label>
+                                <input type="text" class="form-control" id="nsHopital" [(ngModel)]="nouveauStage.hopital">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label text-muted small">Service</label>
-                                <input type="text" class="form-control" [(ngModel)]="nouveauStage.service">
+                                <label class="form-label text-muted small" for="nsService">Service</label>
+                                <input type="text" class="form-control" id="nsService" [(ngModel)]="nouveauStage.service">
                             </div>
                         </div>
-                        <div class="mt-3 d-flex gap-2 justify-content-end">
-                            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill"
+                        <div class="mt-3 d-flex gap-2 justify-content-end flex-wrap">
+                            <button type="button" class="btn pill-btn-outline-dark btn-sm"
                                 (click)="apercuNouveauStage()" [disabled]="isGeneratingPdf">
                                 @if (isGeneratingPdf) {
-                                <span class="spinner-border spinner-border-sm me-1"></span> Aperçu...
+                                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Aperçu…
                                 } @else {
-                                👁 Aperçu
+                                <i class="bi bi-eye" aria-hidden="true"></i> Aperçu
                                 }
                             </button>
                             <button type="button" class="btn pill-btn-orange btn-sm" (click)="validerNouveauStage()"
                                 [disabled]="isAddingStage">
                                 @if (isAddingStage) {
-                                <span class="spinner-border spinner-border-sm me-1"></span> Enregistrement...
+                                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Enregistrement…
                                 } @else {
-                                ✅ Valider et enregistrer
+                                <i class="bi bi-check2-circle" aria-hidden="true"></i> Valider et enregistrer
                                 }
                             </button>
                         </div>
                     </div>
 
-                    <!-- Boutons post-ajout -->
+                    <!-- Boutons après ajout -->
                     @if (stageAjoute) {
-                    <div class="d-flex justify-content-center gap-3 mt-4 mb-2">
+                    <div class="d-flex justify-content-center gap-3 mt-4 mb-2 flex-wrap">
                         <button type="button" class="btn pill-btn-orange" (click)="ajouterAutreStage()">
-                            ➕ Ajouter un autre stage
+                            <i class="bi bi-plus-lg" aria-hidden="true"></i> Ajouter un autre stage
                         </button>
                         <button type="button" class="btn pill-btn-outline-dark" (click)="rechercherAutreResident()">
-                            🔍 Rechercher un autre résident
+                            <i class="bi bi-search" aria-hidden="true"></i> Rechercher un autre résident
                         </button>
                     </div>
                     }

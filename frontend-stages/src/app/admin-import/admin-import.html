@@ -3,8 +3,8 @@
         <div class="col-lg-10">
 
             <div class="admin-page-header">
-                <h2 class="admin-page-title">📥 Import de stages</h2>
-                <button type="button" class="btn-back" (click)="retour()">← Retour</button>
+                <h2 class="admin-page-title"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Import de stages</h2>
+                <button type="button" class="btn-back" (click)="retour()"><i class="bi bi-arrow-left" aria-hidden="true"></i> Retour</button>
             </div>
 
             <div class="card dashboard-card">
@@ -29,11 +29,13 @@
                         </div>
                         <div class="col-md-3">
                             <button type="button" class="btn pill-btn-orange w-100" (click)="importerExcel()"
-                                [disabled]="isImporting">{{ isImporting ? 'Import…' : 'Importer' }}</button>
+                                [disabled]="isImporting">
+                                @if (isImporting) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Import… }
+                                @else { <i class="bi bi-upload" aria-hidden="true"></i> Importer }
+                            </button>
                         </div>
                     </div>
 
-                    @if (messageImport) { <div class="alert alert-info mt-3 mb-0">{{ messageImport }}</div> }
 
                     @if (rapport.length) {
                     <div class="table-responsive mt-3">
@@ -63,7 +65,7 @@
                     }
 
                     @if (bilan) {
-                    <ul class="small text-muted mb-0 bilan-import">
+                    <ul class="small text-muted mb-0">
                         @if (bilan.residentsExistants) { <li>{{ bilan.residentsExistants }} résidents déjà inscrits complétés</li> }
                         @if (bilan.fichesExistantes) { <li>{{ bilan.fichesExistantes }} fiches existaient déjà et n'ont pas été modifiées</li> }
                         @if (bilan.sansStage) { <li>{{ bilan.sansStage }} résidents sans stage ce semestre (mutation, mobilité, report…)</li> }
@@ -77,8 +79,8 @@
 
                     @if (isImportSuccess) {
                         <div class="d-flex justify-content-center gap-3 mt-4">
-                            <button type="button" class="btn pill-btn-outline-dark" (click)="annulerImport()">❌ Annuler l'import</button>
-                            <button type="button" class="btn pill-btn-orange" (click)="validerImport()">✅ Valider définitivement</button>
+                            <button type="button" class="btn pill-btn-outline-dark" (click)="annulerImport()"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Annuler l'import</button>
+                            <button type="button" class="btn pill-btn-orange" (click)="validerImport()"><i class="bi bi-check2-circle" aria-hidden="true"></i> Valider définitivement</button>
                         </div>
                     }
                 </div>
@@ -90,9 +92,9 @@
 <!-- Custom Confirmation Modal -->
 @if (showConfirmModal) {
 <div class="custom-modal-overlay">
-    <div class="custom-modal-card">
-        <span class="custom-modal-icon">⚠️</span>
-        <h3 class="custom-modal-title">{{ confirmTitle }}</h3>
+    <div class="custom-modal-card" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitre">
+        <i class="bi bi-file-earmark-arrow-up custom-modal-icon" aria-hidden="true"></i>
+        <h3 class="custom-modal-title" id="confirmTitre">{{ confirmTitle }}</h3>
         <p class="custom-modal-text">{{ confirmMessage }}</p>
         <div class="d-flex justify-content-center gap-3">
             <button class="btn pill-btn-outline-dark px-4" (click)="annulerConfirm()">Annuler</button>

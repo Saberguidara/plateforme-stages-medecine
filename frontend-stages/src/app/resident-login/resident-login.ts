@@ -64,7 +64,7 @@ import { environment } from '../../environments/environment';
                 </div>
                 <div class="flat-input-group mt-5 mb-5 text-center">
                   <input type="text" [(ngModel)]="otpCode" (keyup.enter)="verifyOtp()" class="flat-input text-center code-input" id="flatOTP" placeholder=" " maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" />
-                  <label for="flatOTP" class="flat-label fw-normal" style="left:50%; transform:translateX(-50%);">Code de sécurité (6 chiffres)</label>
+                  <label for="flatOTP" class="flat-label flat-label-centre fw-normal">Code de sécurité (6 chiffres)</label>
                 </div>
                 <button class="pill-btn-orange w-100 mt-4 interactive-btn" (click)="verifyOtp()" [disabled]="isLoading">
                   {{ isLoading ? '...' : 'SE CONNECTER' }}
@@ -72,7 +72,7 @@ import { environment } from '../../environments/environment';
                 
                 <div class="text-center mt-4 mb-3">
                   <p class="text-muted small mb-2" *ngIf="countdown > 0">
-                    Nouveau code disponible dans <strong class="text-primary">{{ formatCountdown() }}</strong>
+                    Nouveau code disponible dans <strong class="compte-a-rebours">{{ formatCountdown() }}</strong>
                   </p>
                   <button class="btn btn-link text-secondary text-decoration-none small interactive-btn" *ngIf="countdown === 0" (click)="resendOtp()" [disabled]="isLoading">
                     Renvoyer un nouveau code
@@ -86,9 +86,14 @@ import { environment } from '../../environments/environment';
                 </div>
               </div>
 
-              <div *ngIf="errorMessage" class="alert alert-danger mt-4 border-0 bg-danger bg-opacity-10 text-danger fade-in text-center">
+              <div *ngIf="errorMessage" class="alert alert-danger mt-4 border-0 bg-danger bg-opacity-10 text-danger fade-in text-center" role="alert">
                 {{ errorMessage }}
               </div>
+
+              <p class="contact-service">
+                Un problème de connexion ? Service des stages :
+                <a href="mailto:saber_guidara@medecinesfax.org">saber_guidara@medecinesfax.org</a>
+              </p>
             </div>
           </div>
         </div>
@@ -139,6 +144,11 @@ import { environment } from '../../environments/environment';
     .interactive-btn:active:not(:disabled) { transform: translateY(0); }
     
     .fade-in { animation: simpleFadeIn 0.5s ease-out; }
+    .flat-label-centre { left: 50%; transform: translateX(-50%); }
+    .compte-a-rebours { color: #b5521f; font-variant-numeric: tabular-nums; }
+    .contact-service { margin: 24px 0 0; text-align: center; font-size: 0.85rem; color: #555; overflow-wrap: anywhere; }
+    .contact-service a { color: #b5521f; font-weight: 600; text-decoration: none; }
+    .contact-service a:hover { text-decoration: underline; }
 
     @keyframes logoEntrance { 0% { opacity: 0; transform: scale(0.85) translateY(-20px); filter: blur(5px) drop-shadow(0 0 0 rgba(245, 240, 230, 0)); } 100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px) drop-shadow(0 0 25px rgba(245, 240, 230, 0.5)); } }
     @keyframes subtlePulse { 0% { filter: drop-shadow(0 0 15px rgba(245, 240, 230, 0.4)); transform: scale(1); } 100% { filter: drop-shadow(0 0 35px rgba(245, 240, 230, 0.8)); transform: scale(1.02); } }

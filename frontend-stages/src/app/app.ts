@@ -2,16 +2,18 @@ import { Component, inject } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './services/auth';
+import { Toasts } from './shell/toasts';
+import { PdfViewer } from './shell/pdf-viewer';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule],
+  imports: [RouterOutlet, CommonModule, Toasts, PdfViewer],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
 export class App {
-  title = 'frontend-stages';
+  readonly annee = new Date().getFullYear();
   router = inject(Router);
   authService = inject(AuthService);
 

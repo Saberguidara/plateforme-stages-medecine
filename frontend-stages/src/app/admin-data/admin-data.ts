@@ -1,20 +1,22 @@
 import { Component, ChangeDetectorRef, DestroyRef, inject, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../services/api';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ToastService } from '../services/toast';
 
 @Component({
     selector: 'app-admin-data',
     standalone: true,
-    imports: [FormsModule, CommonModule],
+    imports: [FormsModule, CommonModule, RouterLink],
     templateUrl: './admin-data.html',
     styleUrls: ['../admin-dashboard/admin-dashboard.css']
 })
 export class AdminData implements OnInit {
     private cdr = inject(ChangeDetectorRef);
     private destroyRef = inject(DestroyRef);
+    private toast = inject(ToastService);
 
     residents: any[] = [];
     specialites: string[] = [];
@@ -23,6 +25,18 @@ export class AdminData implements OnInit {
     searchText: string = '';
     filterSpecialite: string = '';
     filterPromo: string = '';
+    filterEmail: string = '';
+    sansEmail: number = 0;
+    isLoading: boolean = true;
+    readonly lignesChargement = [1, 2, 3, 4, 5, 6];
+    readonly colonnes = [
+        { cle: 'cin', libelle: 'CIN' },
+        { cle: 'nom_prenom', libelle: 'Nom et Prénom' },
+        { cle: 'specialite', libelle: 'Spécialité' },
+        { cle: 'faculte_origine', libelle: 'Faculté' },
+        { cle: 'promotion', libelle: 'Promo' },
+        { cle: 'nb_fiches', libelle: 'Stages' }
+    ];
     promos: number[] = [];
     
     sortCol: string = '';
@@ -37,9 +51,6 @@ export class AdminData implements OnInit {
     expandedFiches: any[] = [];
     editingResident: any = null;
     periodes: string[] = ['S1', 'S2', 'T1', 'T2', 'T3', 'T4', 'R1', 'R2'];
-
-    messageSucces: string = '';
-    messageErreur: string = '';
 
     constructor(private apiService: ApiService, private router: Router) { }
 
@@ -57,16 +68,20 @@ export class AdminData implements OnInit {
 
     charger(resetPage = false) {
         if (resetPage) this.page = 1;
-        this.apiService.getAllResidents(this.page, this.limit, this.searchText, this.filterSpecialite, this.filterPromo, this.sortCol, this.sortDesc)
+        this.isLoading = true;
+        this.apiService.getAllResidents(this.page, this.limit, this.searchText, this.filterSpecialite, this.filterPromo, this.sortCol, this.sortDesc, this.filterEmail)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (res) => {
                     this.residents = res.data;
                     this.total = res.total;
+                    this.sansEmail = res.sansEmail ?? 0;
+                    this.isLoading = false;
                     this.cdr.markForCheck();
                 },
                 error: () => {
-                    this.messageErreur = "Erreur lors du chargement des données.";
+                    this.isLoading = false;
+                    this.toast.erreur("Erreur lors du chargement des données.");
                     this.cdr.markForCheck();
                 }
             });
@@ -74,6 +89,27 @@ export class AdminData implements OnInit {
 
     appliquerFiltres() {
         this.charger(true); // Always reset page to 1 when filters change
+    }
+
+    get nbPages(): number {
+        return Math.max(1, Math.ceil(this.total / this.limit));
+    }
+
+    filtresActifs(): boolean {
+        return Boolean(this.searchText || this.filterSpecialite || this.filterPromo || this.filterEmail);
+    }
+
+    reinitialiserFiltres() {
+        this.searchText = '';
+        this.filterSpecialite = '';
+        this.filterPromo = '';
+        this.filterEmail = '';
+        this.charger(true);
+    }
+
+    basculerFiltreEmail() {
+        this.filterEmail = this.filterEmail === 'sans' ? '' : 'sans';
+        this.charger(true);
     }
 
     sortBy(col: string) {
@@ -140,20 +176,18 @@ export class AdminData implements OnInit {
 
     saveEditResident() {
         if (!this.editingResident) return;
-        this.messageSucces = '';
-        this.messageErreur = '';
 
         this.apiService.updateResident(this.editingResident.id, this.editingResident)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: () => {
-                    this.messageSucces = "Résident mis à jour.";
+                    this.toast.succes("Résident mis à jour.");
                     this.editingResident = null;
                     this.charger();
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
-                    this.messageErreur = err.error?.message || "Erreur de mise à jour.";
+                    this.toast.erreur(err.error?.message || "Erreur de mise à jour.");
                     this.cdr.markForCheck();
                 }
             });
@@ -179,13 +213,13 @@ export class AdminData implements OnInit {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: () => {
-                    this.messageSucces = "Résident supprimé.";
+                    this.toast.succes("Résident supprimé.");
                     this.expandedId = null;
                     this.charger();
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
-                    this.messageErreur = err.error?.message || "Erreur de suppression.";
+                    this.toast.erreur(err.error?.message || "Erreur de suppression.");
                     this.cdr.markForCheck();
                 }
             });
@@ -198,8 +232,6 @@ export class AdminData implements OnInit {
     // ===== Fiches =====
 
     sauvegarderFiche(fiche: any) {
-        this.messageSucces = '';
-        this.messageErreur = '';
 
         this.apiService.updateFiche(fiche.id, {
             periode: fiche.periode,
@@ -210,11 +242,11 @@ export class AdminData implements OnInit {
         }).pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: () => {
-                    this.messageSucces = "Fiche mise à jour.";
+                    this.toast.succes("Fiche mise à jour.");
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
-                    this.messageErreur = err.error?.message || "Erreur.";
+                    this.toast.erreur(err.error?.message || "La fiche n'a pas pu être enregistrée.");
                     this.cdr.markForCheck();
                 }
             });
@@ -233,13 +265,13 @@ export class AdminData implements OnInit {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: () => {
-                    this.messageSucces = "Fiche supprimée.";
+                    this.toast.succes("Fiche supprimée.");
                     this.expandedFiches = this.expandedFiches.filter((f: any) => f.id !== id);
                     this.charger();
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
-                    this.messageErreur = err.error?.message || "Erreur.";
+                    this.toast.erreur(err.error?.message || "La fiche n'a pas pu être supprimée.");
                     this.cdr.markForCheck();
                 }
             });

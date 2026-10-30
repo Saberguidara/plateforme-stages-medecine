@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../services/api';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ToastService } from '../services/toast';
 
 @Component({
     selector: 'app-admin-add',
@@ -15,13 +16,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 export class AdminAdd implements OnInit {
     private cdr = inject(ChangeDetectorRef);
     private destroyRef = inject(DestroyRef);
+    private toast = inject(ToastService);
 
     specialites: string[] = [];
     periodes: string[] = ['S1', 'S2', 'T1', 'T2', 'T3', 'T4', 'R1', 'R2'];
     facultes: string[] = ['FMSfax', 'FMSousse', 'FMMonastir', 'FMTunis', 'Autre'];
-
-    messageSucces: string = '';
-    messageErreur: string = '';
 
     nouveauResident: any = {
         cin: '',
@@ -45,8 +44,6 @@ export class AdminAdd implements OnInit {
     }
 
     creerResident() {
-        this.messageSucces = '';
-        this.messageErreur = '';
         this.isSaving = true;
 
         this.apiService.createResident(this.nouveauResident)
@@ -54,16 +51,16 @@ export class AdminAdd implements OnInit {
             .subscribe({
                 next: (res) => {
                     this.isSaving = false;
-                    this.messageSucces = res.message || "Résident créé avec succès !";
+                    this.toast.succes(res.message || "Résident créé. Ajoutez maintenant ses stages.");
                     // Rediriger vers la page de recherche pour ce CIN afin de lui ajouter des stages
                     setTimeout(() => {
                         this.router.navigate(['/admin/dashboard/search'], { queryParams: { cin: this.nouveauResident.cin } });
-                    }, 1500);
+                    }, 800);
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
                     this.isSaving = false;
-                    this.messageErreur = err.error?.message || "Erreur lors de la création.";
+                    this.toast.erreur(err.error?.message || "Erreur lors de la création.");
                     this.cdr.markForCheck();
                 }
             });
