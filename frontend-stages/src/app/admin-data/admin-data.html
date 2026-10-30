@@ -37,7 +37,7 @@
       <input type="search" class="form-control" id="rechercheResident" aria-label="Filtrer par CIN ou nom"
         placeholder="Filtrer par CIN ou nom…" [ngModel]="filtres.search" (ngModelChange)="rechercher($event)">
     </div>
-    <select class="form-select filtre-promo" aria-label="Filtrer par promotion" [ngModel]="filtres.promo" (ngModelChange)="appliquer('promo', $event)">
+    <select class="form-select filtre-specialite" aria-label="Filtrer par promotion" [ngModel]="filtres.promo" (ngModelChange)="appliquer('promo', $event)">
       <option value="">Toutes les promotions</option>
       @for (p of promos(); track p) { <option [value]="'' + p">Promotion {{ p }}</option> }
     </select>

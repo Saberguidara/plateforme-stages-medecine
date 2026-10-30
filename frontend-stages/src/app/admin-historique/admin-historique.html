@@ -52,7 +52,7 @@
             <tr>
               <td class="chiffres text-nowrap">{{ i.imported_at | date: 'dd/MM/yyyy' }}<div class="small text-muted">{{ i.imported_at | date: 'HH:mm' }}
                 @if (i.admin_login) { · {{ i.admin_login }} }</div></td>
-              <td class="text-break">{{ i.filename }}<div class="small text-muted d-sm-none chiffres">{{ i.fiches_created }} fiche(s)</div></td>
+              <td class="text-break colonne-fichier">{{ i.filename }}<div class="small text-muted d-sm-none chiffres">{{ i.fiches_created }} fiche(s)</div></td>
               <td class="d-none d-md-table-cell chiffres">{{ i.semestre ? i.semestre + ' ' + i.annee : '—' }}</td>
               <td class="text-end chiffres d-none d-sm-table-cell">{{ i.residents_created }}</td>
               <td class="text-end chiffres d-none d-sm-table-cell">{{ i.fiches_created }}</td>

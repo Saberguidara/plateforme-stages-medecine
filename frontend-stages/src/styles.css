@@ -1201,6 +1201,10 @@ a.lien-alerte:hover {
     white-space: nowrap;
 }
 
+.colonne-fichier {
+    min-width: 150px;
+}
+
 .min-w-0 {
     min-width: 0;
 }

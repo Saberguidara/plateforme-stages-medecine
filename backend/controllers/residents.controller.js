@@ -56,7 +56,7 @@ exports.getResidentById = async (req, res) => {
     try {
         const [residents] = await db.query(
             `SELECT r.id, r.cin, r.nom_prenom, r.email, r.specialite, r.faculte_origine, r.promotion, r.niveau AS niveau_saisi,
-                    ${NIVEAU_COURANT} AS niveau
+                    CAST(${NIVEAU_COURANT} AS SIGNED) AS niveau
              FROM residents r WHERE r.id = ?`,
             [id]
         );
@@ -65,7 +65,7 @@ exports.getResidentById = async (req, res) => {
 
         const [fiches] = await db.query(
             `SELECT f.id, f.periode, f.annee, f.service, f.hopital, f.import_id, f.modifie_le,
-                    IF(? > 0, f.annee - ? + 1, ?) AS annee_residanat,
+                    CAST(IF(? > 0, f.annee - ? + 1, ?) AS SIGNED) AS annee_residanat,
                     (SELECT COUNT(*) FROM telechargements t WHERE t.fiche_id = f.id) AS nb_telechargements,
                     (SELECT MAX(t.telecharge_le) FROM telechargements t WHERE t.fiche_id = f.id) AS dernier_telechargement
              FROM formulaires_stage f WHERE f.resident_id = ? ${ORDRE_FICHES_F}`,

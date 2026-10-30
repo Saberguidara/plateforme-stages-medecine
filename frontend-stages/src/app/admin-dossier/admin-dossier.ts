@@ -59,7 +59,7 @@ export class AdminDossier implements OnInit {
     if (!d) return [];
     const groupes = new Map<string, AnneeParcours>();
     for (const f of trierStages(d.fiches)) {
-      const niveau = f.annee_residanat;
+      const niveau = Number(f.annee_residanat) || null;
       const cle = niveau && niveau > 0 ? `n${niveau}` : `a${f.annee}`;
       if (!groupes.has(cle)) {
         groupes.set(cle, {

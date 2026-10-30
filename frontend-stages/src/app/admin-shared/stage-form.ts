@@ -33,7 +33,7 @@ import {
             <span>La période {{ modele.periode }} {{ modele.annee }} est déjà occupée ({{ f.hopital || 'hôpital non renseigné' }}, {{ f.service || 'service non renseigné' }}).</span></div>
           } @else if (conflits().chevauchements.length) {
           <div class="alerte-saisie"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-            <span>Attention : {{ listeChevauchements() }} {{ modele.annee }} couvre déjà ces mois.</span></div>
+            <span>Attention : {{ listeChevauchements() }} {{ modele.annee }} {{ conflits().chevauchements.length > 1 ? 'couvrent' : 'couvre' }} déjà ces mois.</span></div>
           }
           @if (anneeImprimee()) {
           <div class="indication-calcul"><i class="bi bi-printer" aria-hidden="true"></i> Imprimé sur la fiche : {{ anneeImprimee() }}</div>

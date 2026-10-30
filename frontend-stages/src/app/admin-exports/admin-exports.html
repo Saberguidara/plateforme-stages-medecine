@@ -1,0 +1,105 @@
+<div class="largeur-page">
+  <div class="admin-page-header">
+    <h2 class="admin-page-title"><i class="bi bi-download" aria-hidden="true"></i> Exports</h2>
+  </div>
+
+  <div class="row g-4">
+    <!-- Excel des résidents -->
+    <div class="col-xl-6">
+      <section class="card dashboard-card h-100" aria-labelledby="titreExcel">
+        <div class="dashboard-card-header">
+          <h5 id="titreExcel"><i class="bi bi-file-earmark-spreadsheet text-muted" aria-hidden="true"></i> Liste des résidents (Excel)</h5>
+        </div>
+        <div class="card-body p-4">
+          <p class="text-muted small">CIN, nom, e-mail, promotion, année de résidanat, nombre de fiches et récupération de la fiche du semestre.
+            La <a routerLink="/admin/residents">liste des résidents</a> exporte aussi exactement ses filtres en cours.</p>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label text-muted small fw-bold" for="exPopulation">Résidents</label>
+              <select class="form-select elegant-input" id="exPopulation" [(ngModel)]="excel.population">
+                @for (p of populations; track p.valeur) { <option [value]="p.valeur">{{ p.libelle }}</option> }
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label text-muted small fw-bold" for="exPromo">Promotion</label>
+              <select class="form-select elegant-input" id="exPromo" [(ngModel)]="excel.promo">
+                <option value="">Toutes</option>
+                @for (p of promos(); track p) { <option [value]="'' + p">{{ p }}</option> }
+              </select>
+            </div>
+            <div class="col-sm-6 d-flex align-items-end">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="exEmail" [(ngModel)]="excel.email">
+                <label class="form-check-label" for="exEmail">Seulement sans e-mail</label>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-end">
+            <button type="button" class="btn pill-btn-orange" (click)="telechargerExcel()" [disabled]="exportExcel()">
+              @if (exportExcel()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Préparation… }
+              @else { <i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i> Télécharger l'Excel }
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ZIP des fiches -->
+    <div class="col-xl-6">
+      <section class="card dashboard-card h-100" aria-labelledby="titreZip">
+        <div class="dashboard-card-header">
+          <h5 id="titreZip"><i class="bi bi-file-earmark-zip text-muted" aria-hidden="true"></i> Fiches d'un semestre (ZIP)</h5>
+        </div>
+        <div class="card-body p-4">
+          <p class="text-muted small">Toutes les fiches de validation du semestre en PDF, rangées par année de résidanat (1A, 2A, 3A).</p>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label text-muted small fw-bold" for="zipSemestre">Semestre</label>
+              <select class="form-select elegant-input" id="zipSemestre" [(ngModel)]="zip.semestre" (ngModelChange)="recompter()">
+                <option value="S1">S1 (janv. à juin)</option>
+                <option value="S2">S2 (juil. à déc.)</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label text-muted small fw-bold" for="zipAnnee">Année</label>
+              <input type="number" class="form-control elegant-input chiffres" id="zipAnnee" min="2000" max="2100"
+                [(ngModel)]="zip.annee" (ngModelChange)="recompter()">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label text-muted small fw-bold" for="zipPromo">Promotion</label>
+              <select class="form-select elegant-input" id="zipPromo" [(ngModel)]="zip.promo" (ngModelChange)="recompter()">
+                <option value="">Toutes</option>
+                @for (p of promos(); track p) { <option [value]="'' + p">{{ p }}</option> }
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label text-muted small fw-bold" for="zipHopital">Hôpital</label>
+              <input type="text" class="form-control elegant-input" id="zipHopital" list="zipHopitaux" placeholder="Tous" autocomplete="off"
+                [(ngModel)]="zip.hopital" (ngModelChange)="hopitaux.chercher($event); recompter()" (focus)="hopitaux.chercher(zip.hopital)">
+              <datalist id="zipHopitaux">
+                @for (h of hopitaux.valeurs(); track h) { <option [value]="h"></option> }
+              </datalist>
+            </div>
+          </div>
+          <div class="mt-4 d-flex justify-content-between align-items-center gap-3 flex-wrap">
+            <span class="small chiffres" aria-live="polite">
+              @if (compte(); as c) {
+                @if (c.total === 0) { <span class="text-muted">Aucune fiche pour ces critères.</span> }
+                @else if (c.total > c.maximum) { <span class="text-danger">{{ c.total }} fiches : affinez par promotion ou hôpital ({{ c.maximum }} au plus).</span> }
+                @else { <strong>{{ c.total }}</strong> fiche(s) à générer }
+              } @else { <span class="text-muted"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Comptage…</span> }
+            </span>
+            <button type="button" class="btn pill-btn-orange" (click)="telechargerZip()"
+              [disabled]="exportZip() || !compte() || compte()!.total === 0 || compte()!.total > compte()!.maximum">
+              @if (exportZip()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Génération… }
+              @else { <i class="bi bi-file-earmark-zip" aria-hidden="true"></i> Télécharger le ZIP }
+            </button>
+          </div>
+          @if (exportZip()) {
+          <p class="text-muted small mt-2 mb-0">La génération peut prendre une minute pour un semestre complet.</p>
+          }
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

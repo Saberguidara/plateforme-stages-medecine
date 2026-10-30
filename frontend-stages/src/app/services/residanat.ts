@@ -36,13 +36,15 @@ export function niveauEn(promotion: number | null | undefined, annee: number): n
   return niveau > 0 ? niveau : null;
 }
 
-export function libelleNiveau(niveau: number | null | undefined): string {
-  if (!niveau || niveau < 1) return '';
-  return niveau === 1 ? '1ère année' : `${niveau}ème année`;
+export function libelleNiveau(niveau: number | string | null | undefined): string {
+  const n = Number(niveau);
+  if (!n || n < 1) return '';
+  return n === 1 ? '1ère année' : `${n}ème année`;
 }
 
-export function libelleNiveauCourt(niveau: number | null | undefined): string {
-  return niveau && niveau > 0 ? `${niveau}A` : '—';
+export function libelleNiveauCourt(niveau: number | string | null | undefined): string {
+  const n = Number(niveau);
+  return n > 0 ? `${n}A` : '—';
 }
 
 // « Promotion 2024 → 3ème année en 2026 »

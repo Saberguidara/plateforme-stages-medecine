@@ -17,6 +17,8 @@ interface LienMenu {
   selector: 'app-admin-layout',
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, RechercheGlobale],
+  // Occupe toute la hauteur entre l'en-tête et le pied de page
+  host: { class: 'd-flex flex-grow-1' },
   template: `
     <div class="admin-shell">
       <aside class="admin-nav" [class.ouvert]="menuOuvert()" id="menuAdmin">

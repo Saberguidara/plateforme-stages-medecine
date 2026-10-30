@@ -7,6 +7,16 @@
                 <a class="btn pill-btn-outline-dark" routerLink="/admin/historique"><i class="bi bi-clock-history" aria-hidden="true"></i> Historique des imports</a>
             </div>
 
+            @if (!peutModifier) {
+            <div class="card dashboard-card">
+                <div class="etat-vide">
+                    <i class="bi bi-eye etat-vide-icone" aria-hidden="true"></i>
+                    <div class="etat-vide-titre">Compte en lecture seule</div>
+                    <p class="etat-vide-texte">L'import de registres est réservé aux administrateurs. Consultez les imports déjà faits dans l'historique.</p>
+                    <a class="btn pill-btn-dark" routerLink="/admin/historique"><i class="bi bi-clock-history" aria-hidden="true"></i> Historique des imports</a>
+                </div>
+            </div>
+            } @else {
             <div class="card dashboard-card">
                 <div class="card-body p-4">
 
@@ -86,6 +96,7 @@
                     }
                 </div>
             </div>
+            }
         </div>
     </div>
 </div>

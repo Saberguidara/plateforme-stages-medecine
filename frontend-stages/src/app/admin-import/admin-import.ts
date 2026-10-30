@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { environment } from '../../environments/environment';
 import { ToastService } from '../services/toast';
+import { AuthService } from '../services/auth';
 
 @Component({
     selector: 'app-admin-import',
@@ -17,6 +18,7 @@ export class AdminImport {
     private cdr = inject(ChangeDetectorRef);
     private destroyRef = inject(DestroyRef);
     private toast = inject(ToastService);
+    readonly peutModifier = inject(AuthService).peutModifier();
 
     specialite: string = 'medecine-famille';
     fichierSelectionne: File | null = null;

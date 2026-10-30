@@ -85,6 +85,17 @@ export const routes: Routes = [
         path: 'referentiels',
         title: 'Hôpitaux et services',
         loadComponent: () => import('./admin-referentiels/admin-referentiels').then((m) => m.AdminReferentiels)
+      },
+      {
+        path: 'exports',
+        title: 'Exports',
+        loadComponent: () => import('./admin-exports/admin-exports').then((m) => m.AdminExports)
+      },
+      {
+        path: 'comptes',
+        title: 'Comptes administrateurs',
+        canActivate: [gestionComptesGuard],
+        loadComponent: () => import('./admin-comptes/admin-comptes').then((m) => m.AdminComptes)
       }
     ]
   },

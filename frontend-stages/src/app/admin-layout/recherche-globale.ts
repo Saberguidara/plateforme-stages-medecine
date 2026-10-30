@@ -15,7 +15,7 @@ import { libelleNiveauCourt } from '../services/residanat';
   template: `
     <div class="recherche-globale" role="search">
       <i class="bi bi-search" aria-hidden="true"></i>
-      <input type="search" class="form-control" placeholder="Rechercher un résident (CIN ou nom)…"
+      <input type="search" class="form-control" placeholder="CIN ou nom du résident…"
         aria-label="Rechercher un résident par CIN ou par nom" autocomplete="off"
         role="combobox" aria-autocomplete="list" aria-controls="suggestionsResidents"
         [attr.aria-expanded]="ouvert()" [attr.aria-activedescendant]="indexActif() >= 0 ? 'suggestion-' + indexActif() : null"
