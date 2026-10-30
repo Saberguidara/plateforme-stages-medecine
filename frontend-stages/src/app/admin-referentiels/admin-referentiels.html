@@ -1,0 +1,135 @@
+<div class="largeur-page">
+  <div class="admin-page-header">
+    <h2 class="admin-page-title"><i class="bi bi-hospital" aria-hidden="true"></i> Hôpitaux et services</h2>
+    <div class="onglets" role="tablist" aria-label="Référentiel">
+      <button type="button" class="onglet" role="tab" [attr.aria-selected]="type() === 'hopital'" (click)="changerType('hopital')">Hôpitaux</button>
+      <button type="button" class="onglet" role="tab" [attr.aria-selected]="type() === 'service'" (click)="changerType('service')">Services</button>
+    </div>
+  </div>
+
+  <p class="text-muted small">Ces listes viennent des fiches enregistrées ; elles alimentent les suggestions de saisie.
+    Fusionner des variantes remplace l'écriture choisie dans toutes les fiches concernées (action journalisée).</p>
+
+  @if (erreur()) {
+  <div class="card dashboard-card">
+    <div class="etat-vide">
+      <i class="bi bi-wifi-off etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Liste indisponible</div>
+      <button type="button" class="btn pill-btn-dark" (click)="charger()"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Réessayer</button>
+    </div>
+  </div>
+  } @else if (valeurs() === null) {
+  <div class="card dashboard-card"><div class="card-body" aria-busy="true" aria-label="Chargement">
+    @for (n of [1, 2, 3, 4, 5]; track n) { <span class="skeleton skeleton-ligne my-3"></span> }
+  </div></div>
+  } @else if (valeurs()!.length === 0) {
+  <div class="card dashboard-card">
+    <div class="etat-vide">
+      <i class="bi bi-hospital etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Aucun {{ libelleType() }} enregistré</div>
+      <p class="etat-vide-texte">La liste se remplit avec les fiches importées ou saisies.</p>
+    </div>
+  </div>
+  } @else {
+
+  <!-- Variantes probables -->
+  <h3 class="section-titre-page mt-0"><i class="bi bi-intersect" aria-hidden="true"></i> Variantes probables
+    <small class="text-muted fw-normal fs-6 chiffres">{{ groupes().length }}</small></h3>
+  @if (groupes().length === 0) {
+  <div class="card dashboard-card mb-4">
+    <div class="etat-vide py-4">
+      <i class="bi bi-check2-circle etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Aucune variante détectée</div>
+      <p class="etat-vide-texte mb-0">Les écritures proches (une ou deux lettres d'écart, accents, espaces) apparaîtront ici.</p>
+    </div>
+  </div>
+  } @else {
+  <div class="row g-3 mb-4">
+    @for (g of groupes(); track g.cible; let i = $index) {
+    <div class="col-md-6">
+      <div class="card dashboard-card h-100">
+        <div class="card-body">
+          <ul class="list-unstyled mb-3">
+            @for (v of g.variantes; track v.valeur) {
+            <li class="d-flex justify-content-between gap-2 py-1">
+              <span class="text-break" [class.fw-semibold]="v.valeur === ciblesGroupes[i]">{{ v.valeur }}</span>
+              <span class="text-muted small chiffres text-nowrap">{{ v.nb_fiches }} fiche(s)</span>
+            </li>
+            }
+          </ul>
+          @if (peutModifier) {
+          <label class="form-label text-muted small" [for]="'cible' + i">Écriture à conserver</label>
+          <div class="d-flex gap-2 flex-wrap">
+            <input type="text" class="form-control form-control-sm flex-grow-1 min-w-0" [id]="'cible' + i" [attr.list]="'variantes' + i"
+              [(ngModel)]="ciblesGroupes[i]">
+            <datalist [id]="'variantes' + i">
+              @for (v of g.variantes; track v.valeur) { <option [value]="v.valeur"></option> }
+            </datalist>
+            <button type="button" class="btn btn-sm pill-btn-orange" [disabled]="!ciblesGroupes[i].trim()" (click)="proposerFusionGroupe(i)">
+              <i class="bi bi-intersect" aria-hidden="true"></i> Fusionner</button>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Toutes les valeurs -->
+  <h3 class="section-titre-page"><i class="bi bi-list-ul" aria-hidden="true"></i> Toutes les écritures
+    <small class="text-muted fw-normal fs-6 chiffres">{{ valeurs()!.length }}</small></h3>
+  <div class="data-toolbar">
+    <div class="champ-recherche">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input type="search" class="form-control" [attr.aria-label]="'Filtrer les ' + (type() === 'hopital' ? 'hôpitaux' : 'services')"
+        placeholder="Filtrer…" [ngModel]="filtre()" (ngModelChange)="filtre.set($event)">
+    </div>
+    @if (peutModifier && selection().size >= 1) {
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+      <span class="small text-muted chiffres">{{ selection().size }} sélectionnée(s) →</span>
+      <input type="text" class="form-control form-control-sm filtre-specialite" aria-label="Écriture à conserver" placeholder="Écriture à conserver"
+        [(ngModel)]="cibleManuelle">
+      <button type="button" class="btn btn-sm pill-btn-orange" [disabled]="!cibleManuelle.trim() || (selection().size === 1 && selection().has(cibleManuelle.trim()))"
+        (click)="proposerFusionSelection()"><i class="bi bi-intersect" aria-hidden="true"></i> Fusionner</button>
+    </div>
+    }
+  </div>
+  <div class="card dashboard-card">
+    <div class="table-responsive table-defilante">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            @if (peutModifier) { <th scope="col"><span class="visually-hidden">Sélection</span></th> }
+            <th scope="col">{{ type() === 'hopital' ? 'Hôpital' : 'Service' }}</th>
+            <th scope="col" class="text-end">Fiches</th>
+            @if (type() === 'hopital') { <th scope="col" class="text-end"><span class="visually-hidden">Résidents</span></th> }
+          </tr>
+        </thead>
+        <tbody>
+          @for (v of valeursFiltrees(); track v.valeur) {
+          <tr>
+            @if (peutModifier) {
+            <td class="text-center"><input type="checkbox" class="form-check-input" [checked]="selection().has(v.valeur)"
+              (change)="basculer(v.valeur)" [attr.aria-label]="'Sélectionner ' + v.valeur"></td>
+            }
+            <td class="text-break">{{ v.valeur }}</td>
+            <td class="text-end chiffres">{{ v.nb_fiches }}</td>
+            @if (type() === 'hopital') {
+            <td class="text-end"><a class="small text-nowrap" routerLink="/admin/residents" [queryParams]="{ hopital: v.valeur }">Résidents</a></td>
+            }
+          </tr>
+          } @empty {
+          <tr><td colspan="4" class="text-center text-muted py-4">Aucune écriture ne correspond à « {{ filtre() }} ».</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+  }
+</div>
+
+@if (fusion(); as f) {
+<app-confirmation titre="Fusionner ces écritures ?" icone="bi-intersect" libelleConfirmer="Oui, fusionner" [danger]="false"
+  [message]="messageFusion(f)" [enCours]="fusionEnCours()" (confirmer)="fusionner()" (annuler)="fusion.set(null)"></app-confirmation>
+}

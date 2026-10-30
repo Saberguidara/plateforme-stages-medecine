@@ -80,6 +80,11 @@ export const routes: Routes = [
         path: 'historique',
         title: 'Historique',
         loadComponent: () => import('./admin-historique/admin-historique').then((m) => m.AdminHistorique)
+      },
+      {
+        path: 'referentiels',
+        title: 'Hôpitaux et services',
+        loadComponent: () => import('./admin-referentiels/admin-referentiels').then((m) => m.AdminReferentiels)
       }
     ]
   },
