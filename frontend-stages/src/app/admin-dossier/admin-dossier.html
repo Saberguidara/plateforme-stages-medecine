@@ -1,0 +1,193 @@
+<div class="largeur-page">
+  @if (introuvable()) {
+  <div class="card dashboard-card">
+    <div class="etat-vide">
+      <i class="bi bi-person-x etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Dossier introuvable</div>
+      <p class="etat-vide-texte">Ce résident n'existe pas ou a été supprimé. Retrouvez-le avec la recherche ci-dessus.</p>
+      <a class="btn pill-btn-dark" routerLink="/admin/residents"><i class="bi bi-people" aria-hidden="true"></i> Liste des résidents</a>
+    </div>
+  </div>
+  } @else if (erreur()) {
+  <div class="card dashboard-card">
+    <div class="etat-vide">
+      <i class="bi bi-wifi-off etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Dossier indisponible</div>
+      <p class="etat-vide-texte">Le serveur n'a pas répondu.</p>
+      <button type="button" class="btn pill-btn-dark" (click)="charger()"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Réessayer</button>
+    </div>
+  </div>
+  } @else if (!dossier()) {
+  <div class="card dashboard-card mb-4" aria-busy="true" aria-label="Chargement du dossier">
+    <div class="card-body p-4">
+      <span class="skeleton skeleton-titre"></span>
+      <span class="skeleton skeleton-ligne w-75"></span>
+      <span class="skeleton skeleton-ligne w-50"></span>
+    </div>
+  </div>
+  <div class="card dashboard-card"><div class="card-body p-4"><span class="skeleton skeleton-carte"></span></div></div>
+  } @else {
+  @let d = dossier()!;
+
+  <!-- Identité -->
+  <section class="card dashboard-card mb-4" aria-labelledby="titreDossier">
+    <div class="dashboard-card-header-dark d-flex justify-content-between align-items-center gap-3 flex-wrap">
+      <h2 class="h4 mb-0 text-break" id="titreDossier">{{ d.nom_prenom }}</h2>
+      @if (peutModifier) {
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm pill-btn-orange" (click)="editionResident.set(true)">
+          <i class="bi bi-pencil" aria-hidden="true"></i> Modifier
+        </button>
+        <button type="button" class="btn-icone btn-icone-danger bg-white" (click)="demanderSuppressionResident()"
+          title="Supprimer le résident" aria-label="Supprimer le résident"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+      </div>
+      }
+    </div>
+    <div class="card-body p-4">
+      <div class="identite-grille">
+        <div>
+          <div class="identite-libelle">{{ estCin(d.cin) ? 'CIN' : 'Passeport' }}</div>
+          <div class="identite-valeur chiffres">{{ d.cin }}</div>
+        </div>
+        <div>
+          <div class="identite-libelle">Promotion</div>
+          <div class="identite-valeur">
+            @if (d.promotion) { {{ descriptionPromotion(d.promotion) }} }
+            @else if (d.niveau_saisi) { Inconnue · {{ libelleNiveau(d.niveau_saisi) }} (ancien dossier) }
+            @else { <span class="pastille pastille-alerte">Non renseignée</span> }
+          </div>
+        </div>
+        <div>
+          <div class="identite-libelle">Faculté · spécialité</div>
+          <div class="identite-valeur">{{ d.faculte_origine || '—' }} · {{ d.specialite }}</div>
+        </div>
+        <div>
+          <div class="identite-libelle">E-mail de connexion</div>
+          <div class="identite-valeur">
+            @if (d.email) { {{ d.email }} }
+            @else { <span class="pastille pastille-alerte" title="Ce résident ne peut pas se connecter"><i class="bi bi-envelope-slash" aria-hidden="true"></i> Sans e-mail</span> }
+          </div>
+        </div>
+        <div>
+          <div class="identite-libelle">Semestre en cours ({{ d.semestreCourant.semestre }} {{ d.semestreCourant.annee }})</div>
+          <div class="identite-valeur">
+            @if (d.semestreCourant.fiches === 0) { <span class="pastille pastille-neutre">Aucune fiche</span> }
+            @else if (d.semestreCourant.recuperee) { <span class="pastille pastille-succes"><i class="bi bi-check2" aria-hidden="true"></i> Fiche récupérée</span> }
+            @else { <span class="pastille pastille-alerte"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Pas encore récupérée</span> }
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Parcours -->
+  <section class="card dashboard-card mb-4" aria-labelledby="titreParcours">
+    <div class="dashboard-card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
+      <h5 id="titreParcours"><i class="bi bi-signpost-split text-muted" aria-hidden="true"></i> Parcours de stages
+        <small class="text-muted fw-normal chiffres">({{ d.fiches.length }})</small></h5>
+      @if (peutModifier) {
+      <button type="button" class="btn btn-sm pill-btn-orange" (click)="editionStage.set({ fiche: null })">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Ajouter un stage
+      </button>
+      }
+    </div>
+    <div class="card-body p-4">
+      @if (d.fiches.length === 0) {
+      <div class="etat-vide py-3">
+        <i class="bi bi-journal-plus etat-vide-icone" aria-hidden="true"></i>
+        <div class="etat-vide-titre">Aucun stage enregistré</div>
+        <p class="etat-vide-texte">Ajoutez le premier stage de ce résident, ou importez le registre de choix du semestre.</p>
+        @if (peutModifier) {
+        <button type="button" class="btn pill-btn-orange" (click)="editionStage.set({ fiche: null })"><i class="bi bi-plus-lg" aria-hidden="true"></i> Ajouter un stage</button>
+        }
+      </div>
+      } @else {
+      @for (annee of parcours(); track annee.cle) {
+      <div class="frise-annee">
+        <h3 class="frise-annee-titre">{{ annee.titre }} <small class="chiffres">{{ annee.detail }}</small></h3>
+        <ol class="frise">
+          @for (f of annee.fiches; track f.id) {
+          <li class="frise-item" [class.rattrapage]="f.periode.startsWith('R')">
+            <div class="frise-carte">
+              <div>
+                <div class="mb-1"><span class="frise-periode">{{ f.periode }}</span>
+                  <span class="text-muted small">{{ libellesPeriodes[f.periode] }} {{ f.annee }}</span></div>
+                <div class="frise-lieu">{{ f.hopital || 'Hôpital non renseigné' }}</div>
+                <div class="text-muted small text-break">{{ f.service || 'Service non renseigné' }}</div>
+                <div class="d-flex gap-2 flex-wrap mt-2">
+                  @if (f.nb_telechargements > 0) {
+                  <span class="pastille pastille-succes" [title]="'Dernier téléchargement le ' + (f.dernier_telechargement | date: 'dd/MM/yyyy à HH:mm')">
+                    <i class="bi bi-download" aria-hidden="true"></i> Récupérée {{ f.nb_telechargements }} fois · {{ f.dernier_telechargement | date: 'dd/MM/yyyy' }}</span>
+                  } @else {
+                  <span class="pastille pastille-neutre">Jamais récupérée par le résident</span>
+                  }
+                  @if (f.import_id) { <span class="pastille pastille-neutre" title="Fiche créée par un import de registre">Import n° {{ f.import_id }}</span> }
+                  @if (f.modifie_le) { <span class="pastille pastille-neutre">Modifiée le {{ f.modifie_le | date: 'dd/MM/yyyy' }}</span> }
+                </div>
+              </div>
+              <div class="frise-actions">
+                <button type="button" class="btn-icone" (click)="pdf(f, 'apercu')" [disabled]="pdfEnCours() === f.id"
+                  title="Aperçu" [attr.aria-label]="'Aperçu de la fiche ' + f.periode + ' ' + f.annee">
+                  @if (pdfEnCours() === f.id) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+                  @else { <i class="bi bi-eye" aria-hidden="true"></i> }
+                </button>
+                <button type="button" class="btn-icone" (click)="pdf(f, 'telecharger')" [disabled]="pdfEnCours() === f.id"
+                  title="Télécharger" [attr.aria-label]="'Télécharger la fiche ' + f.periode + ' ' + f.annee"><i class="bi bi-download" aria-hidden="true"></i></button>
+                @if (peutModifier) {
+                <button type="button" class="btn-icone" (click)="editionStage.set({ fiche: f })"
+                  title="Modifier" [attr.aria-label]="'Modifier le stage ' + f.periode + ' ' + f.annee"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+                <button type="button" class="btn-icone btn-icone-danger" (click)="demanderSuppressionFiche(f)"
+                  title="Supprimer" [attr.aria-label]="'Supprimer le stage ' + f.periode + ' ' + f.annee"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                }
+              </div>
+            </div>
+          </li>
+          }
+        </ol>
+      </div>
+      }
+      }
+    </div>
+  </section>
+
+  <!-- Journal -->
+  <section class="card dashboard-card" aria-labelledby="titreJournal">
+    <div class="dashboard-card-header">
+      <h5 id="titreJournal"><i class="bi bi-journal-text text-muted" aria-hidden="true"></i> Journal du dossier</h5>
+    </div>
+    <div class="card-body px-4 py-2">
+      <app-journal-liste [residentId]="d.id" [version]="versionJournal()"></app-journal-liste>
+    </div>
+  </section>
+
+  <!-- Fenêtre : modifier le résident -->
+  @if (editionResident()) {
+  <div class="custom-modal-overlay">
+    <div class="custom-modal-card fenetre-formulaire" role="dialog" aria-modal="true" aria-labelledby="titreEditionResident">
+      <h3 class="custom-modal-title" id="titreEditionResident"><i class="bi bi-person-vcard" aria-hidden="true"></i> Modifier le résident</h3>
+      <app-resident-form [resident]="d" (enregistre)="residentEnregistre($event)" (annule)="editionResident.set(false)"></app-resident-form>
+    </div>
+  </div>
+  }
+
+  <!-- Fenêtre : ajouter ou modifier un stage -->
+  @if (editionStage(); as edition) {
+  <div class="custom-modal-overlay">
+    <div class="custom-modal-card fenetre-formulaire" role="dialog" aria-modal="true" aria-labelledby="titreEditionStage">
+      <h3 class="custom-modal-title" id="titreEditionStage">
+        <i class="bi" [class.bi-plus-circle]="!edition.fiche" [class.bi-pencil]="edition.fiche" aria-hidden="true"></i>
+        {{ edition.fiche ? 'Modifier le stage ' + edition.fiche.periode + ' ' + edition.fiche.annee : 'Ajouter un stage' }}
+      </h3>
+      <p class="text-muted small">{{ d.nom_prenom }}</p>
+      <app-stage-form [resident]="d" [fiche]="edition.fiche" [periodes]="periodes()"
+        (enregistre)="stageEnregistre()" (annule)="editionStage.set(null)"></app-stage-form>
+    </div>
+  </div>
+  }
+  }
+
+  @if (confirmation(); as c) {
+  <app-confirmation [titre]="c.titre" [message]="c.message" libelleConfirmer="Oui, supprimer" [enCours]="suppressionEnCours()"
+    (confirmer)="confirmer()" (annuler)="fermerConfirmation()"></app-confirmation>
+  }
+</div>

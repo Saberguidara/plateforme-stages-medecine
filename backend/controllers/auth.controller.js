@@ -59,9 +59,14 @@ exports.adminLogin = async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ success: false, message: 'Identifiants incorrects' });
         }
+        if (admin.actif === 0) {
+            return res.status(403).json({ success: false, message: 'Ce compte a été désactivé. Contactez un administrateur.' });
+        }
 
+        await db.query('UPDATE administrateurs SET derniere_connexion = NOW() WHERE id = ?', [admin.id]);
+        // `droits` sert à l'affichage ; le serveur relit le rôle en base à chaque requête.
         const token = jwt.sign(
-            { id: admin.id, login: admin.login, role: 'admin' },
+            { id: admin.id, login: admin.login, nom: admin.nom || null, role: 'admin', droits: admin.role || 'admin' },
             process.env.JWT_SECRET,
             { expiresIn: '8h' }
         );

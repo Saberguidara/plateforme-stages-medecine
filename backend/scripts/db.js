@@ -2,7 +2,8 @@
 //   npm run db:init                     crée les tables d'une base vide (db/schema.sql)
 //   npm run db:migrate -- <fichier.sql> applique une migration de db/migrations/
 //   npm run admin:create                crée ou met à jour un administrateur
-//                                       (ADMIN_LOGIN et ADMIN_PASSWORD dans l'environnement)
+//                                       (ADMIN_LOGIN et ADMIN_PASSWORD dans l'environnement,
+//                                       ADMIN_NOM facultatif) ; le compte est réactivé avec le rôle admin
 require('dotenv').config({ quiet: true });
 const fs = require('fs');
 const path = require('path');
@@ -42,8 +43,9 @@ async function creerAdmin() {
     try {
         const hash = await bcrypt.hash(motDePasse, 12);
         await conn.query(
-            'INSERT INTO administrateurs (login, mot_de_passe) VALUES (?, ?) ON DUPLICATE KEY UPDATE mot_de_passe = VALUES(mot_de_passe)',
-            [login, hash]
+            `INSERT INTO administrateurs (login, nom, mot_de_passe, role) VALUES (?, ?, ?, 'admin')
+             ON DUPLICATE KEY UPDATE mot_de_passe = VALUES(mot_de_passe), role = 'admin', actif = 1`,
+            [login, process.env.ADMIN_NOM || null, hash]
         );
         console.log(`✅ Administrateur « ${login} » enregistré.`);
     } finally {

@@ -1,46 +1,156 @@
-<div class="h-100 d-flex flex-column dashboard-hub">
-
-  <!-- Titre exactement centré dans l'espace disponible au-dessus des cartes -->
-  <div class="flex-grow-1 d-flex align-items-center justify-content-center">
-    <div class="admin-page-header m-0 border-0">
-      <h2 class="admin-page-title dashboard-titre">Espace Administration</h2>
+<div class="largeur-page">
+  <div class="admin-page-header">
+    <h2 class="admin-page-title"><i class="bi bi-speedometer2" aria-hidden="true"></i> Tableau de bord</h2>
+    @if (peutModifier) {
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn pill-btn-outline-dark" routerLink="/admin/residents/nouveau"><i class="bi bi-person-plus" aria-hidden="true"></i> Nouveau résident</a>
+      <a class="btn pill-btn-orange" routerLink="/admin/imports"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Importer un registre</a>
     </div>
+    }
   </div>
 
-  <!-- Grille de cartes en bas : de vrais liens, utilisables au clavier -->
-  <nav class="container pb-5" aria-label="Rubriques d'administration">
-    <div class="row justify-content-center w-100 m-0">
-      <div class="col-lg-10 px-0">
+  @if (erreur()) {
+  <div class="card dashboard-card">
+    <div class="etat-vide">
+      <i class="bi bi-wifi-off etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Statistiques indisponibles</div>
+      <p class="etat-vide-texte">Le serveur n'a pas répondu. Vérifiez la connexion puis réessayez.</p>
+      <button type="button" class="btn pill-btn-dark" (click)="charger()"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Réessayer</button>
+    </div>
+  </div>
+  } @else if (!stats()) {
+  <div class="tuiles-grille" aria-busy="true" aria-label="Chargement des statistiques">
+    @for (n of tuilesChargement; track n) { <span class="skeleton skeleton-carte"></span> }
+  </div>
+  <span class="skeleton skeleton-titre mt-4"></span>
+  <div class="tuiles-grille">
+    @for (n of tuilesChargement; track n) { <span class="skeleton skeleton-carte"></span> }
+  </div>
+  } @else {
+  @let s = stats()!;
 
-        <div class="hub-grid">
+  @if (s.actifs === 0 && s.derniersImports.length === 0) {
+  <div class="card dashboard-card mb-4">
+    <div class="etat-vide">
+      <i class="bi bi-inboxes etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Aucun résident pour l'instant</div>
+      <p class="etat-vide-texte">Importez le registre de choix du semestre : les résidents et leurs fiches seront créés automatiquement.</p>
+      @if (peutModifier) {
+      <a class="btn pill-btn-orange" routerLink="/admin/imports"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Importer un registre</a>
+      }
+    </div>
+  </div>
+  }
 
-          <a class="hub-card" routerLink="/admin/dashboard/import">
-            <span class="hub-card-icon"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i></span>
-            <div class="hub-card-title">Import de stages</div>
-            <p class="hub-card-desc">Importer un fichier Excel d'affectations de stages</p>
-          </a>
+  <!-- Résidents en cours de résidanat, par promotion -->
+  <h3 class="section-titre-page mt-0"><i class="bi bi-people" aria-hidden="true"></i> Résidents en cours
+    <small class="text-muted fw-normal fs-6 chiffres">{{ s.actifs }} au total</small></h3>
+  <div class="tuiles-grille">
+    @for (p of s.promotions; track p.niveau) {
+    <a class="tuile" routerLink="/admin/residents" [queryParams]="{ promo: p.promotion, actifs: 1 }">
+      <div class="tuile-chiffre">{{ p.total }}</div>
+      <div class="tuile-libelle">{{ libelleNiveau(p.niveau) }}</div>
+      <div class="tuile-detail">Promotion {{ p.promotion }}</div>
+    </a>
+    }
+    <a class="tuile" [class.tuile-alerte]="s.sansEmail > 0" routerLink="/admin/residents" [queryParams]="{ email: 'sans', actifs: 1 }">
+      <div class="tuile-chiffre">{{ s.sansEmail }}</div>
+      <div class="tuile-libelle">Sans e-mail</div>
+      <div class="tuile-detail">Ne peuvent pas se connecter</div>
+    </a>
+  </div>
 
-          <a class="hub-card" routerLink="/admin/dashboard/data">
-            <span class="hub-card-icon"><i class="bi bi-table" aria-hidden="true"></i></span>
-            <div class="hub-card-title">Visualisation des données</div>
-            <p class="hub-card-desc">Consulter, filtrer, modifier ou supprimer les données</p>
-          </a>
+  <!-- Semestre en cours -->
+  <h3 class="section-titre-page"><i class="bi bi-calendar3" aria-hidden="true"></i> Semestre en cours · {{ s.semestre.semestre }} {{ s.semestre.annee }}</h3>
+  <div class="tuiles-grille">
+    <a class="tuile" routerLink="/admin/residents" [queryParams]="{ alerte: 'avec-fiche-semestre' }">
+      <div class="tuile-chiffre">{{ s.fichesSemestre }}</div>
+      <div class="tuile-libelle">Fiches du semestre</div>
+      <div class="tuile-detail">{{ s.residentsAvecFiche }} résident(s) concerné(s)</div>
+    </a>
+    <a class="tuile" [class.tuile-alerte]="s.sansFicheSemestre > 0" routerLink="/admin/residents" [queryParams]="{ alerte: 'sans-fiche-semestre' }">
+      <div class="tuile-chiffre">{{ s.sansFicheSemestre }}</div>
+      <div class="tuile-libelle">Sans fiche ce semestre</div>
+      <div class="tuile-detail">Résidents en cours sans stage enregistré</div>
+    </a>
+    <a class="tuile" routerLink="/admin/residents" [queryParams]="{ alerte: 'fiche-recuperee', actifs: 1 }">
+      <div class="tuile-chiffre">{{ s.ficheRecuperee }}</div>
+      <div class="tuile-libelle">Fiche récupérée</div>
+      <div class="tuile-detail">{{ pourcentage(s.ficheRecuperee, s.residentsAvecFiche) }} % des résidents ayant une fiche</div>
+    </a>
+    <a class="tuile" [class.tuile-alerte]="s.aRelancer > 0" routerLink="/admin/residents" [queryParams]="{ alerte: 'a-relancer' }">
+      <div class="tuile-chiffre">{{ s.aRelancer }}</div>
+      <div class="tuile-libelle">À relancer</div>
+      <div class="tuile-detail">Fiche disponible, jamais téléchargée</div>
+    </a>
+  </div>
 
-          <a class="hub-card" routerLink="/admin/dashboard/search">
-            <span class="hub-card-icon"><i class="bi bi-search" aria-hidden="true"></i></span>
-            <div class="hub-card-title">Rechercher un résident</div>
-            <p class="hub-card-desc">Trouver un résident par CIN et gérer ses stages</p>
-          </a>
-
-          <a class="hub-card" routerLink="/admin/dashboard/add">
-            <span class="hub-card-icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
-            <div class="hub-card-title">Ajouter un résident</div>
-            <p class="hub-card-desc">Créer un nouveau résident et lui affecter un stage</p>
-          </a>
-
+  <div class="row g-4 mt-1">
+    <!-- Alertes -->
+    <div class="col-lg-6">
+      <h3 class="section-titre-page"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Alertes</h3>
+      <div class="card dashboard-card">
+        @if (s.sansStage === 0 && (!s.absentsRegistre || s.absentsRegistre.total === 0)) {
+        <div class="etat-vide py-4">
+          <i class="bi bi-check2-circle etat-vide-icone" aria-hidden="true"></i>
+          <div class="etat-vide-titre">Rien à signaler</div>
+          <p class="etat-vide-texte mb-0">Tous les résidents en cours ont au moins un stage et figurent dans le dernier registre.</p>
         </div>
-
+        } @else {
+        <ul class="liste-alertes">
+          @if (s.sansStage > 0) {
+          <li>
+            <a class="lien-alerte" routerLink="/admin/residents" [queryParams]="{ alerte: 'sans-stage' }">
+              <i class="bi bi-journal-x" aria-hidden="true"></i>
+              <span><strong>Résidents sans aucun stage</strong><br><small class="text-muted">Mutation, mobilité, report… à vérifier</small></span>
+              <span class="chiffre-alerte">{{ s.sansStage }}</span>
+            </a>
+          </li>
+          }
+          @if (s.absentsRegistre && s.absentsRegistre.total > 0) {
+          <li>
+            <a class="lien-alerte" routerLink="/admin/residents" [queryParams]="{ alerte: 'absents-registre' }">
+              <i class="bi bi-person-dash" aria-hidden="true"></i>
+              <span class="text-break"><strong>Absents du dernier registre</strong><br>
+                <small class="text-muted">{{ s.absentsRegistre.import.filename }}
+                  @if (s.absentsRegistre.import.semestre) { ({{ s.absentsRegistre.import.semestre }} {{ s.absentsRegistre.import.annee }}) }</small></span>
+              <span class="chiffre-alerte">{{ s.absentsRegistre.total }}</span>
+            </a>
+          </li>
+          }
+        </ul>
+        }
       </div>
     </div>
-  </nav>
+
+    <!-- Derniers imports -->
+    <div class="col-lg-6">
+      <h3 class="section-titre-page"><i class="bi bi-clock-history" aria-hidden="true"></i> Derniers imports
+        <a class="ms-auto small fw-normal" routerLink="/admin/historique">Tout l'historique</a></h3>
+      <div class="card dashboard-card">
+        @if (s.derniersImports.length === 0) {
+        <div class="etat-vide py-4">
+          <i class="bi bi-cloud-arrow-up etat-vide-icone" aria-hidden="true"></i>
+          <div class="etat-vide-titre">Aucun import</div>
+          <p class="etat-vide-texte mb-0">Les registres importés apparaîtront ici.</p>
+        </div>
+        } @else {
+        <ul class="liste-alertes">
+          @for (i of s.derniersImports; track i.id) {
+          <li class="lien-alerte">
+            <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
+            <span class="min-w-0 flex-grow-1">
+              <span class="d-block texte-tronque fw-semibold" [title]="i.filename">{{ i.filename }}</span>
+              <small class="text-muted chiffres">{{ i.imported_at | date: 'dd/MM/yyyy HH:mm' }}
+                @if (i.semestre) { · {{ i.semestre }} {{ i.annee }} } · {{ i.fiches_created }} fiche(s)</small>
+            </span>
+            @if (i.undone) { <span class="pastille pastille-neutre">Annulé</span> }
+          </li>
+          }
+        </ul>
+        }
+      </div>
+    </div>
+  </div>
+  }
 </div>

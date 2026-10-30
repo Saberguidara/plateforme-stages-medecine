@@ -37,16 +37,25 @@ describe('Fiches Controller', () => {
     it('updates a fiche', async () => {
         req.params.id = '12';
         req.body = { periode: 'T1', annee: 2026, service: 'Onco', hopital: 'CHU', url_pdf: '' };
-        db.query.mockResolvedValueOnce([{ affectedRows: 1 }]);
+        db.query
+            .mockResolvedValueOnce([[{ id: 12, resident_id: 3, periode: 'S1', annee: 2026, service: 'Cardio', hopital: 'CHU' }]])
+            .mockResolvedValueOnce([{ affectedRows: 1 }]);
 
         await updateFiche(req, res);
 
         expect(res.json).toHaveBeenCalledWith({ success: true, message: 'Fiche mise à jour avec succès.' });
+        const journal = db.query.mock.calls[2];
+        expect(journal[0]).toContain('INSERT INTO journal_actions');
+        expect(journal[1]).toEqual([null, null, 'modification', 'fiche', 12, 3,
+            JSON.stringify({ periode: 'S1', annee: 2026, service: 'Cardio', hopital: 'CHU' }),
+            JSON.stringify({ periode: 'T1', annee: 2026, service: 'Onco', hopital: 'CHU' })]);
     });
 
     it('deletes a fiche', async () => {
         req.params.id = '12';
-        db.query.mockResolvedValueOnce([{ affectedRows: 1 }]);
+        db.query
+            .mockResolvedValueOnce([[{ id: 12, resident_id: 3, periode: 'S1', annee: 2026, service: 'Cardio', hopital: 'CHU' }]])
+            .mockResolvedValueOnce([{ affectedRows: 1 }]);
 
         await deleteFiche(req, res);
 
@@ -75,11 +84,23 @@ describe('Fiches Controller', () => {
     it('returns 404 when fiche does not exist on update', async () => {
         req.params.id = '404';
         req.body = { periode: 'S1', annee: 2026, service: '', hopital: '', url_pdf: '' };
-        db.query.mockResolvedValueOnce([{ affectedRows: 0 }]);
+        db.query.mockResolvedValueOnce([[]]);
 
         await updateFiche(req, res);
 
         expect(res.status).toHaveBeenCalledWith(404);
         expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Fiche introuvable.' });
+    });
+
+    it('signale une période déjà occupée par un conflit 409', async () => {
+        req.body = { resident_id: 3, periode: 'T1', annee: 2026, service: 'A', hopital: 'B' };
+        db.query
+            .mockResolvedValueOnce([[{ id: 3 }]])
+            .mockRejectedValueOnce(Object.assign(new Error('Duplicate'), { code: 'ER_DUP_ENTRY' }));
+
+        await createFiche(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(409);
+        expect(res.json).toHaveBeenCalledWith({ success: false, message: 'La période T1 2026 est déjà occupée pour ce résident.' });
     });
 });

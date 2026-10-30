@@ -14,27 +14,37 @@ function niveauPourAnnee(resident, annee) {
     return resident.niveau;
 }
 
-async function envoyerFiche(res, resident, fiche) {
+// Données imprimées sur la fiche, ou null si la spécialité n'a pas de modèle.
+function preparerFiche(resident, fiche) {
     const specialite = specialiteDe(resident.specialite);
-    if (!specialite) {
+    if (!specialite) return null;
+    return {
+        modele: specialite.modele,
+        donnees: {
+            nomPrenom: resident.nom_prenom,
+            niveau: niveauPourAnnee(resident, fiche.annee),
+            periode: libellePeriode(specialite, fiche.periode, fiche.annee),
+            hopital: fiche.hopital,
+            service: fiche.service
+        },
+        nomFichier: `Fiche_${resident.cin}_${fiche.periode}_${fiche.annee}.pdf`.replace(/[^\w.-]/g, '_')
+    };
+}
+
+async function envoyerFiche(res, resident, fiche) {
+    const preparation = preparerFiche(resident, fiche);
+    if (!preparation) {
         return res.status(422).json({ message: `Aucun modèle de fiche pour la spécialité « ${resident.specialite} ».` });
     }
 
-    const pdf = await genererFiche(specialite.modele, {
-        nomPrenom: resident.nom_prenom,
-        niveau: niveauPourAnnee(resident, fiche.annee),
-        periode: libellePeriode(specialite, fiche.periode, fiche.annee),
-        hopital: fiche.hopital,
-        service: fiche.service
-    });
-
-    const nomFichier = `Fiche_${resident.cin}_${fiche.periode}_${fiche.annee}.pdf`.replace(/[^\w.-]/g, '_');
+    const pdf = await genererFiche(preparation.modele, preparation.donnees);
     res.set({
         'Content-Type': 'application/pdf',
         'Content-Length': pdf.length,
-        'Content-Disposition': `inline; filename="${nomFichier}"`
+        'Content-Disposition': `inline; filename="${preparation.nomFichier}"`
     });
     res.send(Buffer.from(pdf));
+    return true;
 }
 
 // Fiche enregistrée : toutes les données viennent de la base.
@@ -61,7 +71,15 @@ exports.generatePdf = async (req, res) => {
             return res.status(403).json({ message: 'Accès non autorisé à cette fiche.' });
         }
 
-        await envoyerFiche(res, ligne, ligne);
+        const envoyee = await envoyerFiche(res, ligne, ligne);
+        // Suivi des téléchargements : seules les fiches récupérées par le résident lui-même comptent.
+        if (envoyee === true && user.role === 'resident') {
+            try {
+                await db.query('INSERT INTO telechargements (fiche_id, resident_id) VALUES (?, ?)', [ligne.id, ligne.resident_id]);
+            } catch (err) {
+                logger.error('Enregistrement du téléchargement : ' + err);
+            }
+        }
     } catch (error) {
         logger.error('Erreur génération PDF : ' + error.stack);
         res.status(500).json({ message: 'Erreur lors de la génération du PDF' });
@@ -87,3 +105,5 @@ exports.apercuPdf = async (req, res) => {
         res.status(500).json({ message: "Erreur lors de la génération de l'aperçu" });
     }
 };
+
+exports.preparerFiche = preparerFiche;

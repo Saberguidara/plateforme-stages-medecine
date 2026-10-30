@@ -20,14 +20,33 @@ export class AuthService {
     localStorage.removeItem('resident_cin');
   }
 
-  getUserName(): string {
+  private payload(): any {
     const token = this.getToken();
-    if (!token) return '';
+    if (!token) return null;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.nom_prenom || payload.login || (this.isAdmin() ? 'Administrateur' : 'Résident');
+      return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
     } catch (e) {
-      return '';
+      return null;
     }
+  }
+
+  getUserName(): string {
+    const payload = this.payload();
+    if (!payload) return '';
+    return payload.nom_prenom || payload.nom || payload.login || (this.isAdmin() ? 'Administrateur' : 'Résident');
+  }
+
+  // Rôle de l'administrateur connecté : « admin » (tout) ou « lecture » (consultation seule).
+  // Simple affichage : le serveur contrôle lui-même chaque modification.
+  droits(): 'admin' | 'lecture' {
+    return this.payload()?.droits === 'lecture' ? 'lecture' : 'admin';
+  }
+
+  peutModifier(): boolean {
+    return this.isAdmin() && this.droits() === 'admin';
+  }
+
+  idAdmin(): number | null {
+    return this.isAdmin() ? this.payload()?.id ?? null : null;
   }
 }

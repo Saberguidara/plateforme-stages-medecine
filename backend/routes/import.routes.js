@@ -12,6 +12,7 @@ const undoLimiter = rateLimit({
 });
 
 router.post('/import', requireAdmin, upload.single('fichierExcel'), importController.importExcel);
+router.get('/imports', requireAdmin, importController.listerImports);
 router.post('/import/undo', requireAdmin, undoLimiter, importController.undoImport);
 
 module.exports = router;

@@ -20,12 +20,30 @@ const SPECIALITES = {
         // Semestres (S1, S2) : stages aux urgences et en 1re / 2e ligne.
         // Trimestres (T1 à T4) : les autres stages, deux par semestre.
         periodes: ['S1', 'S2', 'T1', 'T2', 'T3', 'T4', 'R1', 'R2'],
+        // Durée du résidanat : 1re à 3e année
+        duree: 3,
         // Rattrapages : R1 couvre le 1er semestre, R2 le 2nd
         datesPeriodes: { ...DATES_PERIODES, R1: DATES_PERIODES.S1, R2: DATES_PERIODES.S2 }
     }
 };
 
 const SPECIALITE_PAR_DEFAUT = 'medecine-famille';
+
+// Ordre d'affichage des périodes dans une année de résidanat (rattrapages en dernier)
+const ORDRE_PERIODES = ['T1', 'T2', 'S1', 'T3', 'T4', 'S2', 'R1', 'R2'];
+
+// Périodes rattachées à chaque semestre civil
+const PERIODES_DU_SEMESTRE = {
+    S1: ['S1', 'T1', 'T2', 'R1'],
+    S2: ['S2', 'T3', 'T4', 'R2']
+};
+
+function semestreCourant(date = new Date()) {
+    return { semestre: date.getMonth() < 6 ? 'S1' : 'S2', annee: date.getFullYear() };
+}
+
+const LIBELLES_SPECIALITES = Object.values(SPECIALITES).map((s) => s.libelle);
+const DUREE_MAX = Math.max(...Object.values(SPECIALITES).map((s) => s.duree));
 
 function normaliser(valeur) {
     return String(valeur || '').trim().toUpperCase();
@@ -46,4 +64,7 @@ function libellePeriode(specialite, periode, annee) {
     return `Du ${dates[0]}/${annee} au ${dates[1]}/${annee}`;
 }
 
-module.exports = { SPECIALITES, SPECIALITE_PAR_DEFAUT, specialiteDe, libellePeriode };
+module.exports = {
+    SPECIALITES, SPECIALITE_PAR_DEFAUT, ORDRE_PERIODES, PERIODES_DU_SEMESTRE, LIBELLES_SPECIALITES, DUREE_MAX,
+    specialiteDe, libellePeriode, semestreCourant
+};

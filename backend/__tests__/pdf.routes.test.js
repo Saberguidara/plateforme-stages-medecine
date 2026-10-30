@@ -44,6 +44,21 @@ describe('Génération des fiches PDF', () => {
         expect(db.query).toHaveBeenCalledWith(expect.stringContaining('WHERE f.id = ?'), [10]);
     });
 
+    it('enregistre la récupération de la fiche par le résident, pas les aperçus admin', async () => {
+        db.query.mockResolvedValueOnce([[FICHE_EN_BASE]]).mockResolvedValueOnce([{ insertId: 1 }]);
+        await request(app).post('/api/generate-pdf')
+            .set('Authorization', jeton({ id: 5, cin: '12345678', role: 'resident' }))
+            .send({ ficheId: 10 });
+        expect(db.query).toHaveBeenCalledWith('INSERT INTO telechargements (fiche_id, resident_id) VALUES (?, ?)', [10, 5]);
+
+        db.query.mockClear();
+        db.query.mockResolvedValueOnce([[FICHE_EN_BASE]]);
+        await request(app).post('/api/generate-pdf')
+            .set('Authorization', jeton({ id: 1, role: 'admin' }))
+            .send({ ficheId: 10 });
+        expect(db.query).toHaveBeenCalledTimes(1);
+    });
+
     it("refuse la fiche d'un autre résident", async () => {
         db.query.mockResolvedValueOnce([[FICHE_EN_BASE]]);
 

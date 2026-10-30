@@ -34,7 +34,7 @@ export class AdminLogin {
             localStorage.removeItem('resident_token');
             localStorage.removeItem('resident_cin');
             localStorage.setItem('admin_token', reponse.token);
-            this.router.navigate(['/admin/dashboard']);
+            this.router.navigate(['/admin/tableau-de-bord']);
           } else {
             this.messageErreur = "Identifiants incorrects.";
           }

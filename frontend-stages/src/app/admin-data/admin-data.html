@@ -1,233 +1,167 @@
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-11">
+<div class="largeur-page">
+  <div class="admin-page-header">
+    <h2 class="admin-page-title"><i class="bi bi-people" aria-hidden="true"></i> Résidents</h2>
+    <div class="d-flex gap-2 flex-wrap">
+      <button type="button" class="btn pill-btn-outline-dark" (click)="exporter()" [disabled]="export() || total() === 0">
+        @if (export()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
+        @else { <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> } Exporter en Excel
+      </button>
+      @if (peutModifier) {
+      <a class="btn pill-btn-orange" routerLink="/admin/residents/nouveau"><i class="bi bi-person-plus" aria-hidden="true"></i> Nouveau résident</a>
+      }
+    </div>
+  </div>
 
-            <div class="admin-page-header">
-                <h2 class="admin-page-title"><i class="bi bi-table" aria-hidden="true"></i> Visualisation des données</h2>
-                <button type="button" class="btn-back" (click)="retour()"><i class="bi bi-arrow-left" aria-hidden="true"></i> Retour</button>
-            </div>
+  <!-- Filtres ouverts depuis le tableau de bord -->
+  @if (filtres.alerte || filtres.actifs || filtres.hopital) {
+  <div class="d-flex gap-2 flex-wrap mb-3">
+    @if (filtres.alerte) {
+    <span class="filtre-actif"><i class="bi bi-funnel" aria-hidden="true"></i> {{ libelleAlerte() }}
+      <button type="button" (click)="retirerFiltre('alerte')" aria-label="Retirer ce filtre"><i class="bi bi-x" aria-hidden="true"></i></button></span>
+    }
+    @if (filtres.actifs) {
+    <span class="filtre-actif">Résidents en cours ({{ semestre.annee }})
+      <button type="button" (click)="retirerFiltre('actifs')" aria-label="Retirer ce filtre"><i class="bi bi-x" aria-hidden="true"></i></button></span>
+    }
+    @if (filtres.hopital) {
+    <span class="filtre-actif">Hôpital : {{ filtres.hopital }}
+      <button type="button" (click)="retirerFiltre('hopital')" aria-label="Retirer ce filtre"><i class="bi bi-x" aria-hidden="true"></i></button></span>
+    }
+  </div>
+  }
 
-            <!-- Barre de filtres -->
-            <div class="data-toolbar mb-3">
-                <div class="champ-recherche">
-                    <i class="bi bi-search" aria-hidden="true"></i>
-                    <input type="text" class="form-control" id="rechercheResident" aria-label="Rechercher un CIN ou un nom"
-                        placeholder="Rechercher CIN ou nom…" [(ngModel)]="searchText" (input)="appliquerFiltres()">
-                </div>
-                <select class="form-select filtre-specialite" id="filtreSpecialite" aria-label="Filtrer par spécialité"
-                    [(ngModel)]="filterSpecialite" (change)="appliquerFiltres()">
-                    <option value="">Toutes les spécialités</option>
-                    @for (spec of specialites; track spec) {
-                    <option [value]="spec">{{ spec }}</option>
-                    }
-                </select>
-                <select class="form-select filtre-promo" id="filtrePromo" aria-label="Filtrer par promotion"
-                    [(ngModel)]="filterPromo" (change)="appliquerFiltres()">
-                    <option value="">Toutes les promos</option>
-                    @for (p of promos; track p) {
-                    <option [value]="p">{{ p }}</option>
-                    }
-                </select>
-                @if (sansEmail > 0) {
-                <button type="button" class="compteur-alerte" [attr.aria-pressed]="filterEmail === 'sans'"
-                    (click)="basculerFiltreEmail()"
-                    [title]="filterEmail === 'sans' ? 'Afficher tous les résidents' : 'Afficher seulement les résidents sans e-mail'">
-                    <i class="bi bi-envelope-exclamation" aria-hidden="true"></i>
-                    {{ sansEmail }} sans e-mail
-                    @if (filterEmail === 'sans') { <i class="bi bi-x-circle" aria-hidden="true"></i> }
-                </button>
-                }
-                <span class="text-muted small ms-auto chiffres">{{ total }} résident(s) trouvé(s)</span>
-            </div>
+  <!-- Barre de filtres -->
+  <div class="data-toolbar">
+    <div class="champ-recherche">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input type="search" class="form-control" id="rechercheResident" aria-label="Filtrer par CIN ou nom"
+        placeholder="Filtrer par CIN ou nom…" [ngModel]="filtres.search" (ngModelChange)="rechercher($event)">
+    </div>
+    <select class="form-select filtre-promo" aria-label="Filtrer par promotion" [ngModel]="filtres.promo" (ngModelChange)="appliquer('promo', $event)">
+      <option value="">Toutes les promotions</option>
+      @for (p of promos(); track p) { <option [value]="'' + p">Promotion {{ p }}</option> }
+    </select>
+    @if (specialites().length > 1) {
+    <select class="form-select filtre-specialite" aria-label="Filtrer par spécialité" [ngModel]="filtres.specialite" (ngModelChange)="appliquer('specialite', $event)">
+      <option value="">Toutes les spécialités</option>
+      @for (spec of specialites(); track spec) { <option [value]="spec">{{ spec }}</option> }
+    </select>
+    }
+    @if (sansEmail() > 0 || filtres.email) {
+    <button type="button" class="compteur-alerte" [attr.aria-pressed]="filtres.email === 'sans'" (click)="basculerFiltreEmail()"
+      [title]="filtres.email === 'sans' ? 'Afficher tous les résidents' : 'Afficher seulement les résidents sans e-mail'">
+      <i class="bi bi-envelope-exclamation" aria-hidden="true"></i> {{ sansEmail() }} sans e-mail
+      @if (filtres.email === 'sans') { <i class="bi bi-x-circle" aria-hidden="true"></i> }
+    </button>
+    }
+    <span class="text-muted small ms-auto chiffres">{{ total() }} résident(s)</span>
+  </div>
 
-            <!-- Tableau -->
-            <div class="card dashboard-card">
-                <div class="table-responsive table-defilante">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col">N°</th>
-                                @for (col of colonnes; track col.cle) {
-                                <th scope="col" class="th-triable" [class.text-center]="col.cle === 'nb_fiches'"
-                                    tabindex="0" (click)="sortBy(col.cle)" (keydown.enter)="sortBy(col.cle)"
-                                    [attr.aria-sort]="sortCol === col.cle ? (sortDesc ? 'descending' : 'ascending') : null">
-                                    {{ col.libelle }}
-                                    @if (sortCol === col.cle) {
-                                    <i class="bi" [class.bi-caret-down-fill]="sortDesc" [class.bi-caret-up-fill]="!sortDesc" aria-hidden="true"></i>
-                                    }
-                                </th>
-                                }
-                                <th scope="col" class="text-end">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (isLoading) {
-                            @for (n of lignesChargement; track n) {
-                            <tr aria-hidden="true">
-                                @for (c of [1, 2, 3, 4, 5, 6, 7, 8]; track c) {
-                                <td><span class="skeleton skeleton-ligne"></span></td>
-                                }
-                            </tr>
-                            }
-                            } @else {
-                            @for (r of residents; track r.id; let i = $index) {
-
-                            <!-- Si en mode édition -->
-                            @if (editingResident && editingResident.id === r.id) {
-                            <tr class="ligne-edition">
-                                <td class="text-muted chiffres">{{ (page - 1) * limit + i + 1 }}</td>
-                                <td><input type="text" class="form-control form-control-sm" aria-label="CIN"
-                                        [(ngModel)]="editingResident.cin"></td>
-                                <td><input type="text" class="form-control form-control-sm" aria-label="Nom et prénom"
-                                        [(ngModel)]="editingResident.nom_prenom">
-                                    <input type="email" class="form-control form-control-sm mt-1" aria-label="E-mail de connexion"
-                                        [(ngModel)]="editingResident.email" placeholder="E-mail de connexion"></td>
-                                <td>{{ r.specialite }}</td>
-                                <td>
-                                    <select class="form-select form-select-sm" aria-label="Faculté d'origine"
-                                        [(ngModel)]="editingResident.faculte_origine">
-                                        @for (fac of facultes; track fac) {
-                                        <option [value]="fac">{{ fac }}</option>
-                                        }
-                                    </select>
-                                </td>
-                                <td>
-                                    <input type="number" class="form-control form-control-sm" aria-label="Promotion" [(ngModel)]="editingResident.promotion">
-                                </td>
-                                <td class="text-center"><span class="badge-count">{{ r.nb_fiches }}</span></td>
-                                <td class="text-end text-nowrap">
-                                    <button class="btn-icone btn-icone-orange me-1" (click)="saveEditResident()"
-                                        title="Enregistrer" aria-label="Enregistrer"><i class="bi bi-check-lg" aria-hidden="true"></i></button>
-                                    <button class="btn-icone" (click)="cancelEditResident()"
-                                        title="Annuler" aria-label="Annuler la modification"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
-                                </td>
-                            </tr>
-                            } @else {
-
-                            <!-- Mode affichage normal -->
-                            <tr class="ligne-cliquable" (click)="toggleExpand(r)" [attr.aria-expanded]="expandedId === r.id">
-                                <td class="text-muted chiffres">{{ (page - 1) * limit + i + 1 }}</td>
-                                <td class="chiffres"><strong>{{ r.cin }}</strong></td>
-                                <td>{{ r.nom_prenom }}
-                                    @if (r.email) {
-                                    <div class="small text-muted">{{ r.email }}</div>
-                                    } @else {
-                                    <div><span class="pastille pastille-alerte" title="Ce résident ne peut pas se connecter">
-                                        <i class="bi bi-envelope-slash" aria-hidden="true"></i> Sans e-mail</span></div>
-                                    }
-                                </td>
-                                <td>{{ r.specialite }}</td>
-                                <td>{{ r.faculte_origine }}</td>
-                                <td class="chiffres">{{ r.promotion }}</td>
-                                <td class="text-center"><span class="badge-count">{{ r.nb_fiches }}</span></td>
-                                <td class="text-end text-nowrap" (click)="$event.stopPropagation()">
-                                    <button class="btn-icone me-1" (click)="startEditResident(r)"
-                                        title="Modifier" [attr.aria-label]="'Modifier ' + r.nom_prenom"><i class="bi bi-pencil" aria-hidden="true"></i></button>
-                                    <button class="btn-icone btn-icone-danger" (click)="demanderSuppressionResident(r)"
-                                        title="Supprimer" [attr.aria-label]="'Supprimer ' + r.nom_prenom"><i class="bi bi-trash3" aria-hidden="true"></i></button>
-                                </td>
-                            </tr>
-
-                            <!-- Ligne dépliée : fiches du résident -->
-                            @if (expandedId === r.id) {
-                            <tr>
-                                <td colspan="8" class="p-0 border-top-0">
-                                    <div class="resident-expand mx-3 mb-3">
-                                        <h6 class="section-titre mb-2"><i class="bi bi-journal-medical" aria-hidden="true"></i> Stages de {{ r.nom_prenom }}</h6>
-                                        @if (expandedFiches.length === 0) {
-                                        <p class="text-muted small mb-0">Aucun stage enregistré pour ce résident.</p>
-                                        } @else {
-                                        <table class="table table-sm table-bordered align-middle mb-0">
-                                            <thead>
-                                                <tr class="table-light">
-                                                    <th scope="col">Période</th>
-                                                    <th scope="col">Année</th>
-                                                    <th scope="col">Service</th>
-                                                    <th scope="col">Hôpital</th>
-                                                    <th scope="col" class="text-end">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @for (f of expandedFiches; track f.id) {
-                                                <tr>
-                                                    <td><input type="text" class="form-control form-control-sm champ-periode" aria-label="Période"
-                                                            [(ngModel)]="f.periode"></td>
-                                                    <td><input type="number" class="form-control form-control-sm champ-annee" aria-label="Année"
-                                                            [(ngModel)]="f.annee"></td>
-                                                    <td><input type="text" class="form-control form-control-sm" aria-label="Service"
-                                                            [(ngModel)]="f.service"></td>
-                                                    <td><input type="text" class="form-control form-control-sm" aria-label="Hôpital"
-                                                            [(ngModel)]="f.hopital"></td>
-                                                    <td class="text-end text-nowrap">
-                                                        <button class="btn-icone btn-icone-orange" (click)="sauvegarderFiche(f)"
-                                                            title="Enregistrer la fiche" aria-label="Enregistrer la fiche"><i class="bi bi-floppy" aria-hidden="true"></i></button>
-                                                        <button class="btn-icone btn-icone-danger ms-1" (click)="demanderSuppressionFiche(f)"
-                                                            title="Supprimer la fiche" aria-label="Supprimer la fiche"><i class="bi bi-trash3" aria-hidden="true"></i></button>
-                                                    </td>
-                                                </tr>
-                                                }
-                                            </tbody>
-                                        </table>
-                                        }
-                                    </div>
-                                </td>
-                            </tr>
-                            }
-                            }
-                            } @empty {
-                            <tr>
-                                <td colspan="8">
-                                    <div class="etat-vide">
-                                        <i class="bi bi-people etat-vide-icone" aria-hidden="true"></i>
-                                        <div class="etat-vide-titre">Aucun résident trouvé</div>
-                                        @if (filtresActifs()) {
-                                        <p class="etat-vide-texte">Aucun résident ne correspond à ces filtres.</p>
-                                        <button type="button" class="btn pill-btn-outline-dark" (click)="reinitialiserFiltres()">Effacer les filtres</button>
-                                        } @else {
-                                        <p class="etat-vide-texte">La base est vide. Importez un registre de choix pour créer les résidents et leurs fiches.</p>
-                                        <a class="btn pill-btn-orange" routerLink="/admin/dashboard/import"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Importer un registre</a>
-                                        }
-                                    </div>
-                                </td>
-                            </tr>
-                            }
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Pagination -->
-            @if (total > 0) {
-            <div class="pagination-fms mt-3 mb-5">
-                <span class="text-muted small chiffres">
-                    {{ (page - 1) * limit + 1 }}–{{ Math.min(page * limit, total) }} sur {{ total }}
-                </span>
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-sm pill-btn-outline-dark" [disabled]="page === 1" (click)="prevPage()">
-                        <i class="bi bi-chevron-left" aria-hidden="true"></i> Précédent</button>
-                    <span class="small text-muted chiffres px-1">Page {{ page }} / {{ nbPages }}</span>
-                    <button class="btn btn-sm pill-btn-outline-dark" [disabled]="page * limit >= total" (click)="nextPage()">
-                        Suivant <i class="bi bi-chevron-right ms-1" aria-hidden="true"></i></button>
-                </div>
-            </div>
+  <!-- Tableau -->
+  <div class="card dashboard-card">
+    <div class="table-responsive table-defilante">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            @for (col of colonnes; track col.cle) {
+            <th scope="col" class="th-triable" [class]="'th-triable ' + col.classe" tabindex="0"
+              (click)="trierPar(col.cle)" (keydown.enter)="trierPar(col.cle)"
+              [attr.aria-sort]="filtres.sortCol === col.cle ? (filtres.sortDesc ? 'descending' : 'ascending') : null">
+              {{ col.libelle }}
+              @if (filtres.sortCol === col.cle) {
+              <i class="bi" [class.bi-caret-down-fill]="filtres.sortDesc" [class.bi-caret-up-fill]="!filtres.sortDesc" aria-hidden="true"></i>
+              }
+            </th>
             }
-
-        </div>
+            <th scope="col" class="d-none d-md-table-cell">{{ semestre.semestre }} {{ semestre.annee }}</th>
+            <th scope="col" class="text-end"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (chargement()) {
+          @for (n of lignesChargement; track n) {
+          <tr aria-hidden="true">
+            <td><span class="skeleton skeleton-ligne"></span></td>
+            <td><span class="skeleton skeleton-ligne"></span></td>
+            <td class="d-none d-sm-table-cell"><span class="skeleton skeleton-ligne"></span></td>
+            <td class="d-none d-lg-table-cell"><span class="skeleton skeleton-ligne"></span></td>
+            <td class="d-none d-md-table-cell"><span class="skeleton skeleton-ligne"></span></td>
+            <td class="d-none d-md-table-cell"><span class="skeleton skeleton-ligne"></span></td>
+            <td><span class="skeleton skeleton-ligne"></span></td>
+          </tr>
+          }
+          } @else {
+          @for (r of residents(); track r.id) {
+          <tr class="ligne-cliquable" (click)="ouvrir(r)">
+            <td class="chiffres"><strong>{{ r.cin }}</strong></td>
+            <td>
+              <a class="text-reset text-decoration-none fw-semibold" [routerLink]="['/admin/residents', r.id]" (click)="$event.stopPropagation()">{{ r.nom_prenom }}</a>
+              @if (specialites().length > 1) { <div class="small text-muted">{{ r.specialite }}</div> }
+              @if (!r.email) {
+              <div><span class="pastille pastille-alerte" title="Ce résident ne peut pas se connecter">
+                <i class="bi bi-envelope-slash" aria-hidden="true"></i> Sans e-mail</span></div>
+              }
+            </td>
+            <td class="chiffres d-none d-sm-table-cell">
+              @if (r.promotion) { {{ r.promotion }} <span class="text-muted small">· {{ niveauCourt(r.niveau) }}</span> } @else { — }
+            </td>
+            <td class="d-none d-lg-table-cell">{{ r.faculte_origine }}</td>
+            <td class="text-center d-none d-md-table-cell"><span class="badge-count">{{ r.nb_fiches }}</span></td>
+            <td class="d-none d-md-table-cell">
+              @if (r.fiches_semestre === 0) { <span class="pastille pastille-neutre">Aucune fiche</span> }
+              @else if (r.telechargements_semestre > 0) { <span class="pastille pastille-succes"><i class="bi bi-check2" aria-hidden="true"></i> Récupérée</span> }
+              @else { <span class="pastille pastille-alerte">Non récupérée</span> }
+            </td>
+            <td class="text-end text-nowrap" (click)="$event.stopPropagation()">
+              @if (peutModifier) {
+              <button type="button" class="btn-icone btn-icone-danger me-1" (click)="suppression.set(r)"
+                title="Supprimer" [attr.aria-label]="'Supprimer ' + r.nom_prenom"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+              }
+              <a class="btn-icone" [routerLink]="['/admin/residents', r.id]" title="Ouvrir le dossier"
+                [attr.aria-label]="'Ouvrir le dossier de ' + r.nom_prenom"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="7">
+              <div class="etat-vide">
+                <i class="bi bi-people etat-vide-icone" aria-hidden="true"></i>
+                <div class="etat-vide-titre">Aucun résident trouvé</div>
+                @if (filtresActifs()) {
+                <p class="etat-vide-texte">Aucun résident ne correspond à ces filtres.</p>
+                <button type="button" class="btn pill-btn-outline-dark" (click)="reinitialiserFiltres()">Effacer les filtres</button>
+                } @else {
+                <p class="etat-vide-texte">La base est vide. Importez un registre de choix pour créer les résidents et leurs fiches.</p>
+                @if (peutModifier) {
+                <a class="btn pill-btn-orange" routerLink="/admin/imports"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Importer un registre</a>
+                }
+                }
+              </div>
+            </td>
+          </tr>
+          }
+          }
+        </tbody>
+      </table>
     </div>
+  </div>
+
+  @if (total() > 0) {
+  <div class="pagination-fms mt-3">
+    <span class="text-muted small chiffres">{{ premier }}–{{ dernier }} sur {{ total() }}</span>
+    <div class="d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-sm pill-btn-outline-dark" [disabled]="filtres.page === 1" (click)="changerPage(-1)">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i> Précédent</button>
+      <span class="small text-muted chiffres px-1">Page {{ filtres.page }} / {{ nbPages }}</span>
+      <button type="button" class="btn btn-sm pill-btn-outline-dark" [disabled]="filtres.page >= nbPages" (click)="changerPage(1)">
+        Suivant <i class="bi bi-chevron-right ms-1" aria-hidden="true"></i></button>
+    </div>
+  </div>
+  }
 </div>
 
-<!-- Fenêtre de confirmation -->
-@if (showConfirmModal) {
-<div class="custom-modal-overlay">
-    <div class="custom-modal-card" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitre">
-        <i class="bi bi-exclamation-triangle custom-modal-icon" aria-hidden="true"></i>
-        <h3 class="custom-modal-title" id="confirmTitre">{{ confirmTitle }}</h3>
-        <p class="custom-modal-text">{{ confirmMessage }}</p>
-        <div class="d-flex justify-content-center gap-3">
-            <button class="btn pill-btn-outline-dark px-4" (click)="annulerSuppression()">Annuler</button>
-            <button class="btn btn-danger-pill px-4" (click)="confirmAction()">Oui, supprimer</button>
-        </div>
-    </div>
-</div>
+@if (suppression(); as r) {
+<app-confirmation titre="Supprimer ce résident ?" libelleConfirmer="Oui, supprimer" [enCours]="suppressionEnCours()"
+  [message]="r.nom_prenom + ' et ses ' + r.nb_fiches + ' fiche(s) seront supprimés définitivement. L\'action reste visible dans le journal.'"
+  (confirmer)="supprimer()" (annuler)="suppression.set(null)"></app-confirmation>
 }

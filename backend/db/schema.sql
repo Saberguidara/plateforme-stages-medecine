@@ -6,7 +6,12 @@
 CREATE TABLE IF NOT EXISTS administrateurs (
     id INT NOT NULL AUTO_INCREMENT,
     login VARCHAR(50) NOT NULL,
+    nom VARCHAR(100) DEFAULT NULL,
     mot_de_passe VARCHAR(255) NOT NULL COMMENT 'hash bcrypt',
+    role ENUM('admin', 'lecture') NOT NULL DEFAULT 'admin' COMMENT 'lecture : consultation seule',
+    actif TINYINT(1) NOT NULL DEFAULT 1,
+    cree_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    derniere_connexion DATETIME DEFAULT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_administrateurs_login (login)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -37,6 +42,8 @@ CREATE TABLE IF NOT EXISTS formulaires_stage (
     hopital VARCHAR(150) DEFAULT NULL,
     url_pdf VARCHAR(255) DEFAULT NULL,
     import_id INT DEFAULT NULL COMMENT 'import Excel qui a créé la fiche',
+    modifie_le DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+        COMMENT 'dernière modification ; NULL si la fiche est telle qu''importée',
     PRIMARY KEY (id),
     UNIQUE KEY uq_stage_par_resident (resident_id, periode, annee),
     KEY idx_formulaires_import (import_id),
@@ -48,9 +55,42 @@ CREATE TABLE IF NOT EXISTS historique_imports (
     id INT NOT NULL AUTO_INCREMENT,
     filename VARCHAR(255) NOT NULL,
     imported_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    admin_login VARCHAR(50) DEFAULT NULL,
+    semestre VARCHAR(2) DEFAULT NULL COMMENT 'S1 ou S2, détecté dans le fichier',
+    annee YEAR DEFAULT NULL,
     residents_created INT NOT NULL DEFAULT 0,
     fiches_created INT NOT NULL DEFAULT 0,
-    undo_data TEXT NOT NULL COMMENT 'JSON : identifiants des résidents créés par cet import',
+    residents_vus INT NOT NULL DEFAULT 0 COMMENT 'résidents présents dans le registre',
+    undo_data TEXT NOT NULL COMMENT 'JSON : résidents créés et résidents présents dans le registre',
     undone TINYINT(1) NOT NULL DEFAULT 0,
     PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS journal_actions (
+    id INT NOT NULL AUTO_INCREMENT,
+    cree_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    admin_id INT DEFAULT NULL,
+    admin_login VARCHAR(50) DEFAULT NULL COMMENT 'conservé si le compte est supprimé',
+    action VARCHAR(30) NOT NULL COMMENT 'creation, modification, suppression, import, annulation, fusion',
+    entite VARCHAR(30) NOT NULL COMMENT 'resident, fiche, import, administrateur, referentiel',
+    entite_id INT DEFAULT NULL,
+    resident_id INT DEFAULT NULL COMMENT 'dossier concerné, pour l''afficher dans le dossier résident',
+    avant JSON DEFAULT NULL,
+    apres JSON DEFAULT NULL,
+    PRIMARY KEY (id),
+    KEY idx_journal_resident (resident_id, cree_le),
+    KEY idx_journal_date (cree_le)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Chaque fiche générée par un résident lui-même (POST /api/generate-pdf)
+CREATE TABLE IF NOT EXISTS telechargements (
+    id INT NOT NULL AUTO_INCREMENT,
+    fiche_id INT NOT NULL,
+    resident_id INT NOT NULL,
+    telecharge_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_telechargements_resident (resident_id),
+    KEY idx_telechargements_fiche (fiche_id),
+    CONSTRAINT fk_telechargements_fiche FOREIGN KEY (fiche_id)
+        REFERENCES formulaires_stage (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

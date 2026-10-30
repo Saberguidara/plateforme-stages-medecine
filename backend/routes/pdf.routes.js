@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const pdfController = require('../controllers/pdf.controller');
-const { requireAnyAuth, requireAdmin } = require('../middlewares/auth.middleware');
+const { requireAnyAuth, requireAdminConsultation } = require('../middlewares/auth.middleware');
 
 const pdfLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -13,6 +13,7 @@ const pdfLimiter = rateLimit({
 });
 
 router.post('/generate-pdf', requireAnyAuth, pdfLimiter, pdfController.generatePdf);
-router.post('/admin/apercu-pdf', requireAdmin, pdfLimiter, pdfController.apercuPdf);
+// Aperçu : simple consultation, permis au rôle « lecture »
+router.post('/admin/apercu-pdf', requireAdminConsultation, pdfLimiter, pdfController.apercuPdf);
 
 module.exports = router;

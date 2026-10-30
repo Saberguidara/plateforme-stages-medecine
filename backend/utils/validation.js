@@ -14,13 +14,26 @@ function parseBoundedYear(value) {
     return year;
 }
 
-function validateResidentPayload(payload = {}) {
-    const cin = normalizeString(payload.cin);
-    const nomPrenom = normalizeString(payload.nom_prenom);
+// CIN tunisien : 8 chiffres. Passeport (résidents étrangers) : 5 à 20 lettres ou chiffres.
+function validateIdentifiant(value, typePiece) {
+    const cin = normalizeString(value).replace(/\s/g, '').toUpperCase();
+    if (!cin) return { valid: false, message: 'CIN ou numéro de passeport requis.' };
+    if (typePiece === 'cin' && !/^\d{8}$/.test(cin)) {
+        return { valid: false, message: 'Un CIN tunisien comporte exactement 8 chiffres.' };
+    }
+    if (!/^[A-Z0-9]{5,20}$/.test(cin)) {
+        return { valid: false, message: 'Identifiant invalide : 8 chiffres pour un CIN, 5 à 20 lettres ou chiffres pour un passeport.' };
+    }
+    return { valid: true, value: cin };
+}
 
-    if (!cin || !nomPrenom) {
+function validateResidentPayload(payload = {}) {
+    const nomPrenom = normalizeString(payload.nom_prenom);
+    if (!normalizeString(payload.cin) || !nomPrenom) {
         return { valid: false, message: 'CIN et Nom/Prénom sont obligatoires.' };
     }
+    const identifiant = validateIdentifiant(payload.cin, payload.type_piece);
+    if (!identifiant.valid) return identifiant;
 
     const email = normalizeString(payload.email).toLowerCase();
     if (email && !validateEmail(email).valid) {
@@ -32,18 +45,28 @@ function validateResidentPayload(payload = {}) {
         return { valid: false, message: 'Spécialité non prise en charge par la plateforme.' };
     }
 
+    // La promotion (année d'entrée en 1re année) détermine l'année imprimée sur les fiches ;
+    // le niveau n'est conservé que pour les anciens dossiers sans promotion.
+    const promotionSaisie = normalizeString(payload.promotion);
+    const promotion = promotionSaisie ? parseBoundedYear(promotionSaisie) : null;
+    if (promotionSaisie && promotion === null) {
+        return { valid: false, message: 'Promotion invalide (année entre 2000 et 2100).' };
+    }
+    const niveau = parseInt(String(payload.niveau ?? ''), 10) || null;
+    if (promotion === null && niveau === null) {
+        return { valid: false, message: "La promotion (année d'entrée en 1re année) est obligatoire." };
+    }
+
     return {
         valid: true,
         data: {
-            cin,
+            cin: identifiant.value,
             nom_prenom: nomPrenom,
             email: email || null,
             specialite: specialite.libelle,
             faculte_origine: normalizeString(payload.faculte_origine) || 'FMSfax',
-            niveau: parseInt(String(payload.niveau || 1), 10) || 1,
-            promotion: payload.promotion === '' || payload.promotion === undefined || payload.promotion === null
-                ? null
-                : parseInt(String(payload.promotion), 10) || null
+            niveau,
+            promotion
         }
     };
 }
@@ -100,5 +123,6 @@ module.exports = {
     validateResidentPayload,
     validateFichePayload,
     validateCin,
+    validateIdentifiant,
     validateEmail
 };

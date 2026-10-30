@@ -19,7 +19,7 @@ export class App {
 
   isLoginPage(): boolean {
     const url = this.router.url.split('?')[0];
-    return url === '/login' || url === '/admin' || url === '/';
+    return url === '/login' || url === '/admin/connexion' || url === '/';
   }
 
   getUserName(): string {
@@ -29,6 +29,6 @@ export class App {
   logout() {
     const isAdmin = this.authService.isAdmin();
     this.authService.logout();
-    this.router.navigate([isAdmin ? '/admin' : '/login']);
+    this.router.navigate([isAdmin ? '/admin/connexion' : '/login']);
   }
 }

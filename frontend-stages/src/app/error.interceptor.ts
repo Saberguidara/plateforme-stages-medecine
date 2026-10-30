@@ -20,8 +20,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
                 
                 // Avoid redirecting if already on login pages
                 const currentUrl = router.url.split('?')[0];
-                if (currentUrl !== '/login' && currentUrl !== '/admin') {
-                    router.navigate([isAdmin ? '/admin' : '/login']);
+                if (currentUrl !== '/login' && currentUrl !== '/admin/connexion') {
+                    router.navigate([isAdmin ? '/admin/connexion' : '/login']);
                 }
             }
             return throwError(() => error);

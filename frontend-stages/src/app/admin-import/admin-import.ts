@@ -1,5 +1,5 @@
 import { Component, ChangeDetectorRef, DestroyRef, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -10,9 +10,8 @@ import { ToastService } from '../services/toast';
 @Component({
     selector: 'app-admin-import',
     standalone: true,
-    imports: [FormsModule, CommonModule],
-    templateUrl: './admin-import.html',
-    styleUrls: ['../admin-dashboard/admin-dashboard.css']
+    imports: [FormsModule, CommonModule, RouterLink],
+    templateUrl: './admin-import.html'
 })
 export class AdminImport {
     private cdr = inject(ChangeDetectorRef);
@@ -94,7 +93,7 @@ export class AdminImport {
     }
 
     validerImport() {
-        this.toast.succes("Import validé définitivement.");
+        this.toast.succes("Import enregistré.");
         this.isImportSuccess = false;
         this.importUndoData = null;
         this.cdr.markForCheck();
@@ -119,6 +118,4 @@ export class AdminImport {
                 }
             });
     }
-
-    retour() { this.router.navigate(['/admin/dashboard']); }
 }

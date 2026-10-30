@@ -1,0 +1,100 @@
+<div class="largeur-page">
+  <div class="admin-page-header">
+    <h2 class="admin-page-title"><i class="bi bi-clock-history" aria-hidden="true"></i> Historique</h2>
+    <div class="onglets" role="tablist" aria-label="Type d'historique">
+      <button type="button" class="onglet" role="tab" id="ongletImports" aria-controls="panneauImports"
+        [attr.aria-selected]="onglet() === 'imports'" (click)="changerOnglet('imports')">Imports</button>
+      <button type="button" class="onglet" role="tab" id="ongletJournal" aria-controls="panneauJournal"
+        [attr.aria-selected]="onglet() === 'journal'" (click)="changerOnglet('journal')">Journal des actions</button>
+    </div>
+  </div>
+
+  @if (onglet() === 'imports') {
+  <section id="panneauImports" role="tabpanel" aria-labelledby="ongletImports">
+    <p class="text-muted small">Un import peut être annulé tant qu'aucune de ses fiches n'a été modifiée depuis :
+      ses fiches sont supprimées, ainsi que les résidents qu'il a créés et qui n'ont pas d'autre fiche.</p>
+    <div class="card dashboard-card">
+      @if (erreur()) {
+      <div class="etat-vide">
+        <i class="bi bi-wifi-off etat-vide-icone" aria-hidden="true"></i>
+        <div class="etat-vide-titre">Historique indisponible</div>
+        <button type="button" class="btn pill-btn-dark" (click)="charger()"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Réessayer</button>
+      </div>
+      } @else if (imports() === null) {
+      <div class="card-body" aria-busy="true" aria-label="Chargement de l'historique">
+        @for (n of [1, 2, 3, 4]; track n) { <span class="skeleton skeleton-ligne my-3"></span> }
+      </div>
+      } @else if (imports()!.length === 0) {
+      <div class="etat-vide">
+        <i class="bi bi-cloud-arrow-up etat-vide-icone" aria-hidden="true"></i>
+        <div class="etat-vide-titre">Aucun import pour l'instant</div>
+        <p class="etat-vide-texte">Les registres importés et leur bilan apparaîtront ici.</p>
+        @if (peutModifier) {
+        <a class="btn pill-btn-orange" routerLink="/admin/imports"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Importer un registre</a>
+        }
+      </div>
+      } @else {
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Fichier</th>
+              <th scope="col" class="d-none d-md-table-cell">Semestre</th>
+              <th scope="col" class="text-end d-none d-sm-table-cell">Résidents créés</th>
+              <th scope="col" class="text-end d-none d-sm-table-cell">Fiches créées</th>
+              <th scope="col">État</th>
+              <th scope="col" class="text-end"><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (i of imports(); track i.id) {
+            <tr>
+              <td class="chiffres text-nowrap">{{ i.imported_at | date: 'dd/MM/yyyy' }}<div class="small text-muted">{{ i.imported_at | date: 'HH:mm' }}
+                @if (i.admin_login) { · {{ i.admin_login }} }</div></td>
+              <td class="text-break">{{ i.filename }}<div class="small text-muted d-sm-none chiffres">{{ i.fiches_created }} fiche(s)</div></td>
+              <td class="d-none d-md-table-cell chiffres">{{ i.semestre ? i.semestre + ' ' + i.annee : '—' }}</td>
+              <td class="text-end chiffres d-none d-sm-table-cell">{{ i.residents_created }}</td>
+              <td class="text-end chiffres d-none d-sm-table-cell">{{ i.fiches_created }}</td>
+              <td>
+                @if (i.undone) { <span class="pastille pastille-neutre">Annulé</span> }
+                @else if (i.fiches_modifiees) { <span class="pastille pastille-alerte" [title]="raisonNonAnnulable(i)"><i class="bi bi-pencil" aria-hidden="true"></i> {{ i.fiches_modifiees }} modifiée(s)</span> }
+                @else { <span class="pastille pastille-succes">Actif</span> }
+              </td>
+              <td class="text-end">
+                @if (peutModifier && i.annulable) {
+                <button type="button" class="btn btn-sm pill-btn-outline-dark text-nowrap" (click)="aAnnuler.set(i)">
+                  <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Annuler</button>
+                } @else if (!i.undone && !i.annulable) {
+                <span class="small text-muted" [title]="raisonNonAnnulable(i)">Non annulable</span>
+                }
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      }
+    </div>
+  </section>
+  } @else {
+  <section id="panneauJournal" role="tabpanel" aria-labelledby="ongletJournal">
+    <div class="data-toolbar">
+      <select class="form-select filtre-specialite" aria-label="Filtrer le journal" [value]="entite()" (change)="entite.set($any($event.target).value)">
+        @for (f of filtresJournal; track f.valeur) { <option [value]="f.valeur">{{ f.libelle }}</option> }
+      </select>
+    </div>
+    <div class="card dashboard-card">
+      <div class="card-body px-4 py-2">
+        <app-journal-liste [entite]="entite()" [afficherResident]="true" [version]="versionJournal()"></app-journal-liste>
+      </div>
+    </div>
+  </section>
+  }
+</div>
+
+@if (aAnnuler(); as i) {
+<app-confirmation titre="Annuler cet import ?" icone="bi-arrow-counterclockwise" libelleConfirmer="Oui, annuler l'import"
+  [message]="'Les ' + (i.fiches_restantes ?? i.fiches_created) + ' fiche(s) de « ' + i.filename + ' » seront supprimées, ainsi que les résidents créés par cet import qui n\'ont pas d\'autre fiche.'"
+  [enCours]="annulationEnCours()" (confirmer)="annuler()" (annuler)="aAnnuler.set(null)"></app-confirmation>
+}

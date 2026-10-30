@@ -1,10 +1,10 @@
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
+<div class="largeur-page">
+    <div>
+        <div>
 
             <div class="admin-page-header">
                 <h2 class="admin-page-title"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Import de stages</h2>
-                <button type="button" class="btn-back" (click)="retour()"><i class="bi bi-arrow-left" aria-hidden="true"></i> Retour</button>
+                <a class="btn pill-btn-outline-dark" routerLink="/admin/historique"><i class="bi bi-clock-history" aria-hidden="true"></i> Historique des imports</a>
             </div>
 
             <div class="card dashboard-card">
@@ -78,10 +78,11 @@
                     }
 
                     @if (isImportSuccess) {
-                        <div class="d-flex justify-content-center gap-3 mt-4">
+                        <div class="d-flex justify-content-center gap-3 mt-4 flex-wrap">
                             <button type="button" class="btn pill-btn-outline-dark" (click)="annulerImport()"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Annuler l'import</button>
-                            <button type="button" class="btn pill-btn-orange" (click)="validerImport()"><i class="bi bi-check2-circle" aria-hidden="true"></i> Valider définitivement</button>
+                            <button type="button" class="btn pill-btn-orange" (click)="validerImport()"><i class="bi bi-check2-circle" aria-hidden="true"></i> Valider</button>
                         </div>
+                        <p class="text-muted small text-center mt-2 mb-0">L'import reste annulable depuis l'historique tant qu'aucune de ses fiches n'a été modifiée.</p>
                     }
                 </div>
             </div>

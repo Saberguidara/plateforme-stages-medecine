@@ -2,12 +2,18 @@ import { Routes, CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
 
 import { ResidentLoginComponent } from './resident-login/resident-login';
+import { AuthService } from './services/auth';
 
 export const adminGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
   const token = localStorage.getItem('admin_token');
   if (token) return true;
-  return router.parseUrl('/admin');
+  return router.parseUrl('/admin/connexion');
+};
+
+// Gestion des comptes : réservée aux administrateurs complets (le serveur le vérifie aussi).
+export const gestionComptesGuard: CanActivateFn = () => {
+  return inject(AuthService).peutModifier() || inject(Router).parseUrl('/admin/tableau-de-bord');
 };
 
 export const residentGuard: CanActivateFn = (route, state) => {
@@ -29,39 +35,53 @@ export const routes: Routes = [
     loadComponent: () => import('./resident-search/resident-search').then((m) => m.ResidentSearchComponent)
   },
   {
-    path: 'admin',
+    path: 'admin/connexion',
     title: 'Connexion administration',
     loadComponent: () => import('./admin-login/admin-login').then((m) => m.AdminLogin)
   },
+  // Anciennes adresses de l'administration (favoris)
+  { path: 'admin/dashboard', redirectTo: 'admin/tableau-de-bord', pathMatch: 'full' },
+  { path: 'admin/dashboard/import', redirectTo: 'admin/imports' },
+  { path: 'admin/dashboard/data', redirectTo: 'admin/residents' },
+  { path: 'admin/dashboard/search', redirectTo: 'admin/residents' },
+  { path: 'admin/dashboard/add', redirectTo: 'admin/residents/nouveau' },
   {
-    path: 'admin/dashboard',
+    path: 'admin',
     canActivate: [adminGuard],
-    title: 'Administration',
-    loadComponent: () => import('./admin-dashboard/admin-dashboard').then((m) => m.AdminDashboard)
-  },
-  {
-    path: 'admin/dashboard/import',
-    canActivate: [adminGuard],
-    title: 'Import de stages',
-    loadComponent: () => import('./admin-import/admin-import').then((m) => m.AdminImport)
-  },
-  {
-    path: 'admin/dashboard/data',
-    canActivate: [adminGuard],
-    title: 'Résidents et fiches',
-    loadComponent: () => import('./admin-data/admin-data').then((m) => m.AdminData)
-  },
-  {
-    path: 'admin/dashboard/search',
-    canActivate: [adminGuard],
-    title: 'Rechercher un résident',
-    loadComponent: () => import('./admin-search/admin-search').then((m) => m.AdminSearch)
-  },
-  {
-    path: 'admin/dashboard/add',
-    canActivate: [adminGuard],
-    title: 'Ajouter un résident',
-    loadComponent: () => import('./admin-add/admin-add').then((m) => m.AdminAdd)
+    loadComponent: () => import('./admin-layout/admin-layout').then((m) => m.AdminLayout),
+    children: [
+      { path: '', redirectTo: 'tableau-de-bord', pathMatch: 'full' },
+      {
+        path: 'tableau-de-bord',
+        title: 'Tableau de bord',
+        loadComponent: () => import('./admin-dashboard/admin-dashboard').then((m) => m.AdminDashboard)
+      },
+      {
+        path: 'residents',
+        title: 'Résidents',
+        loadComponent: () => import('./admin-data/admin-data').then((m) => m.AdminData)
+      },
+      {
+        path: 'residents/nouveau',
+        title: 'Nouveau résident',
+        loadComponent: () => import('./admin-add/admin-add').then((m) => m.AdminAdd)
+      },
+      {
+        path: 'residents/:id',
+        title: 'Dossier résident',
+        loadComponent: () => import('./admin-dossier/admin-dossier').then((m) => m.AdminDossier)
+      },
+      {
+        path: 'imports',
+        title: 'Import de stages',
+        loadComponent: () => import('./admin-import/admin-import').then((m) => m.AdminImport)
+      },
+      {
+        path: 'historique',
+        title: 'Historique',
+        loadComponent: () => import('./admin-historique/admin-historique').then((m) => m.AdminHistorique)
+      }
+    ]
   },
   { path: '**', redirectTo: 'login' }
 ];
