@@ -17,12 +17,13 @@ export class AdminImport {
     private cdr = inject(ChangeDetectorRef);
     private destroyRef = inject(DestroyRef);
 
-    typeSpecialite: string = 'famille';
-    anneeImport: number = new Date().getFullYear();
-    semestreImport: string = 'S1';
+    specialite: string = 'medecine-famille';
     fichierSelectionne: File | null = null;
     messageImport: string = '';
-    
+    isImporting: boolean = false;
+    rapport: any[] = [];
+    bilan: any = null;
+
     isImportSuccess: boolean = false;
     importUndoData: any = null;
 
@@ -45,7 +46,7 @@ export class AdminImport {
         }
 
         this.confirmTitle = "Confirmer l'importation";
-        this.confirmMessage = `Êtes-vous sûr de vouloir importer le fichier "${this.fichierSelectionne.name}" pour l'année ${this.anneeImport} (${this.semestreImport}) ?`;
+        this.confirmMessage = `Importer le fichier "${this.fichierSelectionne.name}" ? Le semestre et l'année seront lus dans le fichier.`;
         this.confirmAction = () => this.executerImport();
         this.showConfirmModal = true;
         this.cdr.markForCheck();
@@ -61,26 +62,32 @@ export class AdminImport {
         if (!this.fichierSelectionne) return;
 
         this.messageImport = "⏳ Importation en cours, veuillez patienter...";
+        this.isImporting = true;
+        this.rapport = [];
+        this.bilan = null;
         this.cdr.markForCheck();
 
         const formData = new FormData();
         formData.append('fichierExcel', this.fichierSelectionne);
-        formData.append('typeSpecialite', this.typeSpecialite);
-        formData.append('annee', this.anneeImport.toString());
-        formData.append('semestre', this.semestreImport);
+        formData.append('specialite', this.specialite);
 
         this.http.post<any>(`${environment.apiUrl}/admin/import`, formData)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: (res) => {
+                    this.isImporting = false;
                     this.messageImport = "✅ " + (res.message || "Importation réussie");
+                    this.rapport = res.rapport || [];
+                    this.bilan = res.bilan || null;
                     this.importUndoData = { importId: res.importId };
                     this.isImportSuccess = true;
                     this.fichierSelectionne = null;
                     this.cdr.markForCheck();
                 },
                 error: (err) => {
+                    this.isImporting = false;
                     this.messageImport = "❌ " + (err.error?.message || "Erreur lors de l'importation.");
+                    this.rapport = err.error?.rapport || [];
                     this.isImportSuccess = false;
                     this.cdr.markForCheck();
                 }
@@ -102,6 +109,8 @@ export class AdminImport {
             .subscribe({
                 next: (res) => {
                     this.messageImport = "✅ " + (res.message || "Importation annulée et données supprimées avec succès.");
+                    this.rapport = [];
+                    this.bilan = null;
                     this.isImportSuccess = false;
                     this.importUndoData = null;
                     this.cdr.markForCheck();

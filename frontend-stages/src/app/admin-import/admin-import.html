@@ -10,47 +10,70 @@
             <div class="card dashboard-card">
                 <div class="card-body p-4">
 
-                    <div class="alert alert-warning py-2 mb-3 shadow-sm border-warning">
-                        <strong>⚠️ Format Médecine de famille :</strong><br>
-                        <span class="small">
-                            Respectez cet ordre : <b>A:</b> CIN | <b>B:</b> Nom et prénom | <b>C:</b> Spécialité |
-                            <b>D:</b> Faculté d'origine | <b>E:</b> Hopital 1 | <b>F:</b> Service 1 | <b>G:</b> Hopital
-                            2 | <b>H:</b> Service 2 | <b>I:</b> Année<br>
-                            Hôpital 2 et Service 2 vides : une fiche semestrielle (S1/S2, urgences, 1re et 2e ligne).
-                            Sinon : deux fiches trimestrielles (T1+T2 ou T3+T4).
-                        </span>
-                    </div>
+                    <p class="text-muted small mb-3">
+                        Déposez le registre de choix tel quel (registre de la faculté, choix national ou liste CIN + e-mail).
+                        Le semestre, l'année et le type de stage sont détectés automatiquement.
+                    </p>
 
                     <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label text-muted small">Spécialité</label>
-                            <select class="form-select" [(ngModel)]="typeSpecialite">
-                                <option value="famille">Médecine de famille</option>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small" for="specialiteImport">Spécialité</label>
+                            <select class="form-select" id="specialiteImport" [(ngModel)]="specialite">
+                                <option value="medecine-famille">Médecine de famille</option>
                             </select>
                         </div>
-                        <div class="col-md-2">
-                            <label class="form-label text-muted small">Année</label>
-                            <input type="number" class="form-control" [(ngModel)]="anneeImport">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label text-muted small">Période</label>
-                            <select class="form-select" [(ngModel)]="semestreImport">
-                                <option value="S1">S1</option>
-                                <option value="S2">S2</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label text-muted small">Fichier (.xlsx)</label>
-                            <input type="file" class="form-control" accept=".xlsx, .xls"
+                        <div class="col-md-5">
+                            <label class="form-label text-muted small" for="fichierImport">Fichier (.xlsx)</label>
+                            <input type="file" class="form-control" id="fichierImport" accept=".xlsx"
                                 (change)="onFileSelected($event)">
                         </div>
-                        <div class="col-md-2">
-                            <button type="button" class="btn pill-btn-orange w-100"
-                                (click)="importerExcel()">Importer</button>
+                        <div class="col-md-3">
+                            <button type="button" class="btn pill-btn-orange w-100" (click)="importerExcel()"
+                                [disabled]="isImporting">{{ isImporting ? 'Import…' : 'Importer' }}</button>
                         </div>
                     </div>
 
                     @if (messageImport) { <div class="alert alert-info mt-3 mb-0">{{ messageImport }}</div> }
+
+                    @if (rapport.length) {
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm align-middle mb-2">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Feuille</th>
+                                    <th>Format détecté</th>
+                                    <th>Période</th>
+                                    <th class="text-end">Lignes</th>
+                                    <th class="text-end">Retenues</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (f of rapport; track f.feuille) {
+                                <tr>
+                                    <td>{{ f.feuille }}</td>
+                                    <td>{{ f.format }}</td>
+                                    <td [title]="f.source || ''">{{ f.semestre ? f.semestre + ' ' + f.annee : '—' }}</td>
+                                    <td class="text-end">{{ f.lignes ?? '—' }}</td>
+                                    <td class="text-end">{{ f.retenues ?? '—' }}</td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+
+                    @if (bilan) {
+                    <ul class="small text-muted mb-0 bilan-import">
+                        @if (bilan.residentsExistants) { <li>{{ bilan.residentsExistants }} résidents déjà inscrits complétés</li> }
+                        @if (bilan.fichesExistantes) { <li>{{ bilan.fichesExistantes }} fiches existaient déjà et n'ont pas été modifiées</li> }
+                        @if (bilan.sansStage) { <li>{{ bilan.sansStage }} résidents sans stage ce semestre (mutation, mobilité, report…)</li> }
+                        @if (bilan.autresFacultes) { <li>{{ bilan.autresFacultes }} résidents d'autres facultés ignorés (choix national)</li> }
+                        @if (bilan.doublons) { <li>{{ bilan.doublons }} lignes en double entre les feuilles ignorées</li> }
+                        @if (bilan.sansCin) { <li>{{ bilan.sansCin }} lignes sans CIN ignorées</li> }
+                        @if (bilan.autresSpecialites) { <li>{{ bilan.autresSpecialites }} lignes d'une autre spécialité ignorées</li> }
+                        @if (bilan.emailsInconnus) { <li>{{ bilan.emailsInconnus }} e-mails pour des CIN inconnus ignorés</li> }
+                    </ul>
+                    }
 
                     @if (isImportSuccess) {
                         <div class="d-flex justify-content-center gap-3 mt-4">
