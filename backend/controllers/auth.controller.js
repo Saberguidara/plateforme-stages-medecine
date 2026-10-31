@@ -1,10 +1,10 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const bcrypt = require('bcrypt');
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { validateCin, validateEmail, normalizeString } = require('../utils/validation');
+const { envoyerMail, mailConfigure } = require('../services/mail');
 
 const OTP_VALIDITE_MS = 10 * 60 * 1000;
 const OTP_DELAI_RENVOI_S = 120;
@@ -13,16 +13,6 @@ const OTP_ESSAIS_MAX = 5;
 // Même réponse que le dossier existe ou non, pour ne pas révéler quels CIN sont inscrits.
 const MESSAGE_OTP_ENVOYE = "Si ce CIN et cet e-mail correspondent à un dossier, un code vient d'être envoyé. "
     + "Sans e-mail sous 5 minutes, contactez le service des stages pour vérifier l'adresse enregistrée.";
-
-const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false,
-    auth: {
-        user: process.env.BREVO_USER,
-        pass: process.env.BREVO_PASS
-    }
-});
 
 function hacherOtp(code) {
     const secret = process.env.OTP_SECRET || process.env.JWT_SECRET;
@@ -120,15 +110,14 @@ exports.requestOTP = async (req, res) => {
             [hacherOtp(otpCode), new Date(Date.now() + OTP_VALIDITE_MS), resident.id]
         );
 
-        if (!process.env.BREVO_USER || process.env.BREVO_USER.startsWith('REMPLACER')) {
-            // Le code n'est stocké que haché : en développement sans SMTP, on l'affiche dans les logs.
+        if (!mailConfigure()) {
+            // Le code n'est stocké que haché : en développement sans Brevo, on l'affiche dans les logs.
             if (process.env.NODE_ENV !== 'production') logger.info(`[DEV] Code OTP pour ${cin} : ${otpCode}`);
-            else logger.error('BREVO_USER non configuré : aucun e-mail OTP ne peut partir.');
+            else logger.error('Brevo non configuré (BREVO_API_KEY) : aucun e-mail OTP ne peut partir.');
             return res.json({ success: true, message: MESSAGE_OTP_ENVOYE });
         }
 
-        transporter.sendMail({
-            from: `"${process.env.EMAIL_FROM_NAME || 'Plateforme Stages'}" <${process.env.EMAIL_FROM}>`,
+        envoyerMail({
             to: resident.email,
             subject: 'Code de connexion OTP',
             html: `

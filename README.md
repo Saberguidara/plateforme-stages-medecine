@@ -104,7 +104,7 @@ Variables d'environnement à définir (voir [`backend/.env.example`](backend/.en
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`, `DB_SSL=true`, `DB_POOL_SIZE` (5 à 10 sur une base gratuite)
 - `TRUST_PROXY=1` : indispensable derrière l'hébergeur, sinon tous les visiteurs partagent les mêmes limites de requêtes
 - `NODE_ENV=production`, `APP_URL` (adresse publique, utilisée dans les e-mails)
-- `BREVO_USER`, `BREVO_PASS`, `EMAIL_FROM`, `EMAIL_FROM_NAME`
+- `BREVO_API_KEY` (clé API Brevo : Render gratuit bloque les ports SMTP), `EMAIL_FROM` (expéditeur validé dans Brevo), `EMAIL_FROM_NAME`
 - `CONTACT_EMAIL`, `CONTACT_TELEPHONE`, `CONTACT_ADRESSE`, `CONTACT_HORAIRES` (page d'aide)
 
 La base distante s'initialise une fois avec `npm run db:init` (depuis un poste dont le `.env` pointe vers elle).
