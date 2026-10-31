@@ -1669,10 +1669,10 @@ a.lien-alerte:hover {
 
     .tableau-residents tbody tr:not(.ligne-vide) {
         display: grid;
-        grid-template-columns: 32px 1fr auto;
+        grid-template-columns: 32px 1fr auto 40px;
         grid-template-areas:
-            'case identite actions'
-            'case promotion statut';
+            'case identite identite actions'
+            'case promotion statut statut';
         align-items: center;
         padding: 10px 6px 10px 14px;
         border-bottom: 1px solid rgba(0, 0, 0, 0.06);
@@ -1699,4 +1699,13 @@ a.lien-alerte:hover {
     .tableau-residents .col-fiches { display: none; }
 
     .actions-ligne { opacity: 1; }
+
+    /* Sur téléphone : nom complet sur plusieurs lignes, suppression depuis la sélection ou le dossier */
+    .tableau-residents .nom-resident { white-space: normal; }
+    .tableau-residents .sous-texte { flex-wrap: wrap; gap: 4px; }
+    .tableau-residents .avatar-initiales { width: 32px; height: 32px; font-size: 0.75rem; }
+    .tableau-residents .col-promotion { padding-left: 48px !important; }
+    .actions-ligne .btn-icone-danger { display: none; }
+    .tableau-carte .table-defilante { max-height: none; overflow: visible; }
+    .tableau-residents thead th { position: static; }
 }
