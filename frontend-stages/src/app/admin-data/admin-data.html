@@ -1,6 +1,7 @@
 <div class="largeur-page">
   <div class="admin-page-header">
-    <h2 class="admin-page-title"><i class="bi bi-people" aria-hidden="true"></i> Résidents</h2>
+    <h2 class="admin-page-title"><i class="bi bi-people" aria-hidden="true"></i> Résidents
+      <span class="compteur-titre chiffres">{{ total() }}</span></h2>
     <div class="d-flex gap-2 flex-wrap">
       <button type="button" class="btn pill-btn-outline-dark" (click)="exporter()" [disabled]="export() || total() === 0">
         @if (export()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
@@ -12,117 +13,153 @@
     </div>
   </div>
 
-  <!-- Filtres ouverts depuis le tableau de bord -->
-  @if (filtres.alerte || filtres.actifs || filtres.hopital) {
-  <div class="d-flex gap-2 flex-wrap mb-3">
-    @if (filtres.alerte) {
-    <span class="filtre-actif"><i class="bi bi-funnel" aria-hidden="true"></i> {{ libelleAlerte() }}
-      <button type="button" (click)="retirerFiltre('alerte')" aria-label="Retirer ce filtre"><i class="bi bi-x" aria-hidden="true"></i></button></span>
-    }
-    @if (filtres.actifs) {
-    <span class="filtre-actif">Résidents en cours ({{ semestre.annee }})
-      <button type="button" (click)="retirerFiltre('actifs')" aria-label="Retirer ce filtre"><i class="bi bi-x" aria-hidden="true"></i></button></span>
-    }
-    @if (filtres.hopital) {
-    <span class="filtre-actif">Hôpital : {{ filtres.hopital }}
-      <button type="button" (click)="retirerFiltre('hopital')" aria-label="Retirer ce filtre"><i class="bi bi-x" aria-hidden="true"></i></button></span>
-    }
-  </div>
-  }
-
-  <!-- Barre de filtres -->
-  <div class="data-toolbar">
-    <div class="champ-recherche">
-      <i class="bi bi-search" aria-hidden="true"></i>
-      <input type="search" class="form-control" id="rechercheResident" aria-label="Filtrer par CIN ou nom"
-        placeholder="Filtrer par CIN ou nom…" [ngModel]="filtres.search" (ngModelChange)="rechercher($event)">
+  <div class="card dashboard-card tableau-carte">
+    <!-- Filtres rapides et recherche -->
+    <div class="tableau-entete">
+      <div class="filtres-rapides" role="group" aria-label="Filtres rapides">
+        @for (f of filtresRapides; track f.cle) {
+        <button type="button" class="puce-filtre" [attr.aria-pressed]="filtreRapideActif() === f.cle" (click)="choisirFiltreRapide(f)">
+          {{ f.libelle }}
+          @if (f.cle === 'email' && sansEmail() > 0) { <span class="puce-compteur chiffres">{{ sansEmail() }}</span> }
+        </button>
+        }
+      </div>
+      <div class="tableau-outils">
+        <div class="champ-recherche">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <input type="search" class="form-control" id="rechercheResident" aria-label="Filtrer par CIN ou nom"
+            placeholder="Filtrer par CIN ou nom…" [ngModel]="filtres.search" (ngModelChange)="rechercher($event)">
+        </div>
+        <select class="form-select filtre-specialite" aria-label="Filtrer par promotion" [ngModel]="filtres.promo" (ngModelChange)="appliquer('promo', $event)">
+          <option value="">Toutes les promotions</option>
+          @for (p of promos(); track p) { <option [value]="'' + p">Promotion {{ p }}</option> }
+        </select>
+        @if (specialites().length > 1) {
+        <select class="form-select filtre-specialite" aria-label="Filtrer par spécialité" [ngModel]="filtres.specialite" (ngModelChange)="appliquer('specialite', $event)">
+          <option value="">Toutes les spécialités</option>
+          @for (spec of specialites(); track spec) { <option [value]="spec">{{ spec }}</option> }
+        </select>
+        }
+        @if (filtresActifs()) {
+        <button type="button" class="btn btn-sm btn-lien-discret" (click)="reinitialiserFiltres()">
+          <i class="bi bi-x-circle" aria-hidden="true"></i> Effacer les filtres</button>
+        }
+      </div>
+      @if (filtreSpecial()) {
+      <div class="d-flex gap-2 flex-wrap">
+        @if (filtres.alerte && filtreRapideActif() === '') {
+        <span class="filtre-actif"><i class="bi bi-funnel" aria-hidden="true"></i> {{ libelleAlerte() }}
+          <button type="button" (click)="retirerFiltre('alerte')" aria-label="Retirer ce filtre"><i class="bi bi-x" aria-hidden="true"></i></button></span>
+        }
+        @if (filtres.hopital) {
+        <span class="filtre-actif"><i class="bi bi-hospital" aria-hidden="true"></i> {{ filtres.hopital }}
+          <button type="button" (click)="retirerFiltre('hopital')" aria-label="Retirer ce filtre"><i class="bi bi-x" aria-hidden="true"></i></button></span>
+        }
+      </div>
+      }
     </div>
-    <select class="form-select filtre-specialite" aria-label="Filtrer par promotion" [ngModel]="filtres.promo" (ngModelChange)="appliquer('promo', $event)">
-      <option value="">Toutes les promotions</option>
-      @for (p of promos(); track p) { <option [value]="'' + p">Promotion {{ p }}</option> }
-    </select>
-    @if (specialites().length > 1) {
-    <select class="form-select filtre-specialite" aria-label="Filtrer par spécialité" [ngModel]="filtres.specialite" (ngModelChange)="appliquer('specialite', $event)">
-      <option value="">Toutes les spécialités</option>
-      @for (spec of specialites(); track spec) { <option [value]="spec">{{ spec }}</option> }
-    </select>
-    }
-    @if (sansEmail() > 0 || filtres.email) {
-    <button type="button" class="compteur-alerte" [attr.aria-pressed]="filtres.email === 'sans'" (click)="basculerFiltreEmail()"
-      [title]="filtres.email === 'sans' ? 'Afficher tous les résidents' : 'Afficher seulement les résidents sans e-mail'">
-      <i class="bi bi-envelope-exclamation" aria-hidden="true"></i> {{ sansEmail() }} sans e-mail
-      @if (filtres.email === 'sans') { <i class="bi bi-x-circle" aria-hidden="true"></i> }
-    </button>
-    }
-    <span class="text-muted small ms-auto chiffres">{{ total() }} résident(s)</span>
-  </div>
 
-  <!-- Tableau -->
-  <div class="card dashboard-card">
-    <div class="table-responsive table-defilante">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
+    <!-- Actions sur la sélection -->
+    @if (selection().size > 0) {
+    <div class="barre-selection" role="region" aria-label="Actions sur la sélection">
+      <span class="chiffres"><strong>{{ selection().size }}</strong> sélectionné(s)</span>
+      <div class="d-flex gap-2 flex-wrap ms-auto">
+        <button type="button" class="btn btn-sm pill-btn-orange" (click)="exporter(true)" [disabled]="export()">
+          <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Exporter</button>
+        @if (peutModifier) {
+        <button type="button" class="btn btn-sm btn-selection-danger" (click)="supprimerSelection()">
+          <i class="bi bi-trash3" aria-hidden="true"></i> Supprimer</button>
+        }
+        <button type="button" class="btn btn-sm btn-selection-fermer" (click)="viderSelection()" aria-label="Annuler la sélection">
+          <i class="bi bi-x-lg" aria-hidden="true"></i></button>
+      </div>
+    </div>
+    }
+
+    <!-- Tableau -->
+    <div class="table-defilante">
+      <table class="tableau-residents" [attr.aria-busy]="chargement()">
+        <thead>
           <tr>
+            <th scope="col" class="col-case">
+              <input type="checkbox" class="form-check-input" aria-label="Tout sélectionner sur cette page"
+                [checked]="toutSelectionne()" [indeterminate]="selectionPartielle()" [disabled]="chargement() || residents().length === 0"
+                (change)="basculerTout()">
+            </th>
             @for (col of colonnes; track col.cle) {
-            <th scope="col" class="th-triable" [class]="'th-triable ' + col.classe" tabindex="0"
-              (click)="trierPar(col.cle)" (keydown.enter)="trierPar(col.cle)"
-              [attr.aria-sort]="filtres.sortCol === col.cle ? (filtres.sortDesc ? 'descending' : 'ascending') : null">
-              {{ col.libelle }}
-              @if (filtres.sortCol === col.cle) {
-              <i class="bi" [class.bi-caret-down-fill]="filtres.sortDesc" [class.bi-caret-up-fill]="!filtres.sortDesc" aria-hidden="true"></i>
-              }
+            <th scope="col" [class]="col.classe" [attr.aria-sort]="filtres.sortCol === col.cle ? (filtres.sortDesc ? 'descending' : 'ascending') : null">
+              <button type="button" class="tri-entete" [class.trie]="filtres.sortCol === col.cle" (click)="trierPar(col.cle)">
+                {{ col.libelle }}
+                <i class="bi" [class.bi-arrow-down]="filtres.sortCol === col.cle && filtres.sortDesc"
+                  [class.bi-arrow-up]="filtres.sortCol === col.cle && !filtres.sortDesc"
+                  [class.bi-arrow-down-up]="filtres.sortCol !== col.cle" aria-hidden="true"></i>
+              </button>
             </th>
             }
-            <th scope="col" class="d-none d-md-table-cell">{{ semestre.semestre }} {{ semestre.annee }}</th>
-            <th scope="col" class="text-end"><span class="visually-hidden">Actions</span></th>
+            <th scope="col" class="col-statut">{{ semestre.semestre }} {{ semestre.annee }}</th>
+            <th scope="col" class="col-actions"><span class="visually-hidden">Actions</span></th>
           </tr>
         </thead>
         <tbody>
           @if (chargement()) {
           @for (n of lignesChargement; track n) {
-          <tr aria-hidden="true">
-            <td><span class="skeleton skeleton-ligne"></span></td>
-            <td><span class="skeleton skeleton-ligne"></span></td>
-            <td class="d-none d-sm-table-cell"><span class="skeleton skeleton-ligne"></span></td>
-            <td class="d-none d-lg-table-cell"><span class="skeleton skeleton-ligne"></span></td>
-            <td class="d-none d-md-table-cell"><span class="skeleton skeleton-ligne"></span></td>
-            <td class="d-none d-md-table-cell"><span class="skeleton skeleton-ligne"></span></td>
-            <td><span class="skeleton skeleton-ligne"></span></td>
+          <tr class="ligne-chargement" aria-hidden="true">
+            <td class="col-case"></td>
+            <td class="col-identite">
+              <div class="cellule-identite"><span class="avatar-initiales skeleton"></span>
+                <div class="flex-grow-1"><span class="skeleton skeleton-ligne w-75"></span><span class="skeleton skeleton-ligne w-50"></span></div></div>
+            </td>
+            <td class="col-promotion"><span class="skeleton skeleton-ligne"></span></td>
+            <td class="col-faculte"><span class="skeleton skeleton-ligne"></span></td>
+            <td class="col-fiches"><span class="skeleton skeleton-ligne"></span></td>
+            <td class="col-statut"><span class="skeleton skeleton-ligne"></span></td>
+            <td class="col-actions"></td>
           </tr>
           }
           } @else {
           @for (r of residents(); track r.id) {
-          <tr class="ligne-cliquable" (click)="ouvrir(r)">
-            <td class="chiffres"><strong>{{ r.cin }}</strong></td>
-            <td>
-              <a class="text-reset text-decoration-none fw-semibold" [routerLink]="['/admin/residents', r.id]" (click)="$event.stopPropagation()">{{ r.nom_prenom }}</a>
-              @if (specialites().length > 1) { <div class="small text-muted">{{ r.specialite }}</div> }
-              @if (!r.email) {
-              <div><span class="pastille pastille-alerte" title="Ce résident ne peut pas se connecter">
-                <i class="bi bi-envelope-slash" aria-hidden="true"></i> Sans e-mail</span></div>
-              }
+          <tr [class.selectionnee]="selection().has(r.id)" (click)="ouvrir(r)">
+            <td class="col-case" (click)="$event.stopPropagation()">
+              <input type="checkbox" class="form-check-input" [checked]="selection().has(r.id)" (change)="basculerLigne(r.id)"
+                [attr.aria-label]="'Sélectionner ' + r.nom_prenom">
             </td>
-            <td class="chiffres d-none d-sm-table-cell">
-              @if (r.promotion) { {{ r.promotion }} <span class="text-muted small">· {{ niveauCourt(r.niveau) }}</span> } @else { — }
+            <td class="col-identite">
+              <div class="cellule-identite">
+                <span class="avatar-initiales" aria-hidden="true">{{ initiales(r.nom_prenom) }}</span>
+                <div class="min-w-0">
+                  <a class="nom-resident" [routerLink]="['/admin/residents', r.id]" (click)="$event.stopPropagation()">{{ r.nom_prenom }}</a>
+                  <div class="sous-texte">
+                    <span class="chiffres">{{ r.cin }}</span>
+                    @if (r.email) { <span class="d-none d-md-inline">&nbsp;·&nbsp;</span><span class="d-none d-md-inline email-resident" [title]="r.email">{{ r.email }}</span> }
+                    @else { <span class="pastille pastille-alerte ms-1" title="Ce résident ne peut pas se connecter"><i class="bi bi-envelope-slash" aria-hidden="true"></i> Sans e-mail</span> }
+                  </div>
+                  @if (specialites().length > 1) { <div class="sous-texte">{{ r.specialite }}</div> }
+                </div>
+              </div>
             </td>
-            <td class="d-none d-lg-table-cell">{{ r.faculte_origine }}</td>
-            <td class="text-center d-none d-md-table-cell"><span class="badge-count">{{ r.nb_fiches }}</span></td>
-            <td class="d-none d-md-table-cell">
-              @if (r.fiches_semestre === 0) { <span class="pastille pastille-neutre">Aucune fiche</span> }
-              @else if (r.telechargements_semestre > 0) { <span class="pastille pastille-succes"><i class="bi bi-check2" aria-hidden="true"></i> Récupérée</span> }
-              @else { <span class="pastille pastille-alerte">Non récupérée</span> }
+            <td class="col-promotion chiffres">
+              @if (r.promotion) { {{ r.promotion }} <span class="puce-annee">{{ niveauCourt(r.niveau) }}</span> }
+              @else { <span class="text-muted">—</span> }
             </td>
-            <td class="text-end text-nowrap" (click)="$event.stopPropagation()">
-              @if (peutModifier) {
-              <button type="button" class="btn-icone btn-icone-danger me-1" (click)="suppression.set(r)"
-                title="Supprimer" [attr.aria-label]="'Supprimer ' + r.nom_prenom"><i class="bi bi-trash3" aria-hidden="true"></i></button>
-              }
-              <a class="btn-icone" [routerLink]="['/admin/residents', r.id]" title="Ouvrir le dossier"
-                [attr.aria-label]="'Ouvrir le dossier de ' + r.nom_prenom"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+            <td class="col-faculte">{{ r.faculte_origine || '—' }}</td>
+            <td class="col-fiches text-center chiffres"><span class="nombre-fiches">{{ r.nb_fiches }}</span></td>
+            <td class="col-statut">
+              @let s = statut(r);
+              <span class="statut-point" [class]="'statut-point ' + s.classe">{{ s.libelle }}</span>
+            </td>
+            <td class="col-actions" (click)="$event.stopPropagation()">
+              <div class="actions-ligne">
+                @if (peutModifier) {
+                <button type="button" class="btn-icone btn-icone-discret btn-icone-danger" (click)="demanderSuppression([r])"
+                  title="Supprimer" [attr.aria-label]="'Supprimer ' + r.nom_prenom"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                }
+                <a class="btn-icone btn-icone-discret" [routerLink]="['/admin/residents', r.id]" title="Ouvrir le dossier"
+                  [attr.aria-label]="'Ouvrir le dossier de ' + r.nom_prenom"><i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+              </div>
             </td>
           </tr>
           } @empty {
-          <tr>
+          <tr class="ligne-vide">
             <td colspan="7">
               <div class="etat-vide">
                 <i class="bi bi-people etat-vide-icone" aria-hidden="true"></i>
@@ -144,24 +181,37 @@
         </tbody>
       </table>
     </div>
-  </div>
 
-  @if (total() > 0) {
-  <div class="pagination-fms mt-3">
-    <span class="text-muted small chiffres">{{ premier }}–{{ dernier }} sur {{ total() }}</span>
-    <div class="d-flex align-items-center gap-2">
-      <button type="button" class="btn btn-sm pill-btn-outline-dark" [disabled]="filtres.page === 1" (click)="changerPage(-1)">
-        <i class="bi bi-chevron-left" aria-hidden="true"></i> Précédent</button>
-      <span class="small text-muted chiffres px-1">Page {{ filtres.page }} / {{ nbPages }}</span>
-      <button type="button" class="btn btn-sm pill-btn-outline-dark" [disabled]="filtres.page >= nbPages" (click)="changerPage(1)">
-        Suivant <i class="bi bi-chevron-right ms-1" aria-hidden="true"></i></button>
+    <!-- Pagination -->
+    @if (total() > 0) {
+    <div class="tableau-pied">
+      <div class="d-flex align-items-center gap-2 text-muted small">
+        <label for="taillePage" class="text-nowrap">Lignes par page</label>
+        <select id="taillePage" class="form-select form-select-sm selecteur-taille" [ngModel]="'' + filtres.limit" (ngModelChange)="changerTaille($event)">
+          @for (t of taillesPage; track t) { <option [value]="'' + t">{{ t }}</option> }
+        </select>
+        <span class="chiffres text-nowrap ms-2">{{ premier }}–{{ dernier }} sur {{ total() }}</span>
+      </div>
+      <nav class="pagination-numeros" aria-label="Pages">
+        <button type="button" class="page-numero" [disabled]="filtres.page === 1" (click)="allerPage(filtres.page - 1)" aria-label="Page précédente">
+          <i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+        @for (p of pagesVisibles(); track $index) {
+        @if (p === null) { <span class="page-ellipse" aria-hidden="true">…</span> }
+        @else {
+        <button type="button" class="page-numero chiffres" [class.active]="p === filtres.page" [attr.aria-current]="p === filtres.page ? 'page' : null"
+          (click)="allerPage(p)">{{ p }}</button>
+        }
+        }
+        <button type="button" class="page-numero" [disabled]="filtres.page >= nbPages" (click)="allerPage(filtres.page + 1)" aria-label="Page suivante">
+          <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+      </nav>
     </div>
+    }
   </div>
-  }
 </div>
 
-@if (suppression(); as r) {
-<app-confirmation titre="Supprimer ce résident ?" libelleConfirmer="Oui, supprimer" [enCours]="suppressionEnCours()"
-  [message]="r.nom_prenom + ' et ses ' + r.nb_fiches + ' fiche(s) seront supprimés définitivement. L\'action reste visible dans le journal.'"
+@if (suppression(); as liste) {
+<app-confirmation [titre]="liste.length === 1 ? 'Supprimer ce résident ?' : 'Supprimer ' + liste.length + ' résidents ?'"
+  libelleConfirmer="Oui, supprimer" [enCours]="suppressionEnCours()" [message]="messageSuppression(liste)"
   (confirmer)="supprimer()" (annuler)="suppression.set(null)"></app-confirmation>
 }

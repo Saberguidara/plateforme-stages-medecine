@@ -251,6 +251,17 @@ describe("Routes de l'administration", () => {
             expect(sql).toContain("r.email IS NULL OR r.email = ''");
         });
 
+        it('exporte seulement les résidents sélectionnés', async () => {
+            repondre([[/SELECT COUNT\(\*\) as total/, [[{ total: 2 }]]]]);
+
+            const res = await binaire(request(app).get('/api/admin/exports/residents.xlsx?ids=4,9,abc').set('Authorization', jeton(ADMIN)));
+
+            expect(res.status).toBe(200);
+            const [sql, params] = db.query.mock.calls.find(([s]) => /SELECT COUNT\(\*\) as total/.test(s));
+            expect(sql).toContain('r.id IN (?)');
+            expect(params).toContainEqual([4, 9]);
+        });
+
         it("génère un ZIP des fiches d'un semestre filtré par promotion", async () => {
             db.query.mockResolvedValueOnce([[{
                 id: 1, periode: 'T3', annee: 2026, service: 'SERVICE', hopital: 'HOPITAL',

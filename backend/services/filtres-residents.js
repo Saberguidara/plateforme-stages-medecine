@@ -75,7 +75,7 @@ const ALERTES = {
 };
 
 /**
- * @param {object} query  paramètres de la liste : search, specialite, promo, email=sans, actifs=1, alerte
+ * @param {object} query  paramètres de la liste : search, specialite, promo, email=sans, actifs=1, alerte, hopital, ids
  * @returns {Promise<{ where: string, params: any[] }>}
  */
 async function construireFiltres(query = {}) {
@@ -90,6 +90,9 @@ async function construireFiltres(query = {}) {
     if (promo) ajouter('r.promotion = ?', [promo]);
     if (query.email === 'sans') ajouter("(r.email IS NULL OR r.email = '')");
     if (query.actifs === '1' || query.actifs === 'true') ajouter(ACTIF, paramsActif());
+    // Sélection faite dans le tableau (export des lignes cochées)
+    const ids = String(query.ids || '').split(',').map((id) => parseInt(id, 10)).filter((id) => id > 0).slice(0, 500);
+    if (ids.length > 0) ajouter('r.id IN (?)', [ids]);
     if (query.hopital) {
         ajouter('EXISTS (SELECT 1 FROM formulaires_stage fh WHERE fh.resident_id = r.id AND fh.hopital = ?)', [String(query.hopital)]);
     }
