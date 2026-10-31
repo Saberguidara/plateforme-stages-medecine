@@ -12,8 +12,9 @@
         <div class="card-header dashboard-card-header-dark d-flex justify-content-between align-items-center">
           <div>
             <h4 class="mb-0">Dossier de : {{ donneesResident.nom_prenom }}</h4>
-            <small>Spécialité : {{ donneesResident.specialite }} &nbsp;|&nbsp; {{ niveauLabel(donneesResident.niveau)
-              }}</small>
+            <small>Spécialité : {{ donneesResident.specialite }} &nbsp;|&nbsp;
+              @if (donneesResident.parcours_termine) { <i class="bi bi-mortarboard" aria-hidden="true"></i> Parcours terminé }
+              @else { {{ niveauLabel(donneesResident.niveau) }} }</small>
           </div>
         </div>
         <div class="card-body">

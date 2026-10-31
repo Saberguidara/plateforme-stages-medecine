@@ -41,6 +41,7 @@ export interface DossierResident {
   promotion: number | null;
   niveau_saisi: number | null;
   niveau: number | null;
+  parcours_termine: boolean;
   fiches: FicheDossier[];
   semestreCourant: { semestre: string; annee: number; fiches: number; recuperee: boolean };
 }
@@ -95,6 +96,7 @@ export interface SuggestionResident {
   nom_prenom: string;
   promotion: number | null;
   niveau: number | null;
+  parcours_termine?: boolean;
   specialite: string;
 }
 

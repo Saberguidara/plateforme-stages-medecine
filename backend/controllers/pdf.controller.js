@@ -1,7 +1,7 @@
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { genererFiche } = require('../services/pdf.service');
-const { specialiteDe, libellePeriode } = require('../config/specialites');
+const { specialiteDe, libellePeriode, dureeDe } = require('../config/specialites');
 const { validateFichePayload } = require('../utils/validation');
 
 // Niveau (année de résidanat) au moment du stage, déduit de la promotion.
@@ -9,7 +9,8 @@ function niveauPourAnnee(resident, annee) {
     const promotion = parseInt(resident.promotion, 10);
     if (promotion > 0 && annee) {
         const niveau = parseInt(annee, 10) - promotion + 1;
-        if (niveau > 0) return niveau;
+        // Jamais au-delà de la dernière année du résidanat (3e en médecine de famille)
+        if (niveau > 0) return Math.min(niveau, dureeDe(resident.specialite));
     }
     return resident.niveau;
 }

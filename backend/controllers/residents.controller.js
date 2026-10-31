@@ -1,9 +1,12 @@
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { validateResidentPayload, validateCin, normalizeString } = require('../utils/validation');
-const { SPECIALITES, PERIODES_DU_SEMESTRE, semestreCourant } = require('../config/specialites');
+const { SPECIALITES, PERIODES_DU_SEMESTRE, semestreCourant, etatResidanat } = require('../config/specialites');
 const { NIVEAU_COURANT, construireFiltres } = require('../services/filtres-residents');
 const { journaliser, extraire, CHAMPS_RESIDENT } = require('../utils/journal');
+
+// Remplace le niveau brut par l'année de résidanat en cours, ou « parcours terminé ».
+const avecEtat = (r) => ({ ...r, ...etatResidanat(r.specialite, r.niveau) });
 
 const ORDRE_FICHES = "ORDER BY annee ASC, FIELD(periode,'T1','T2','S1','T3','T4','S2','R1','R2',periode)";
 const ORDRE_FICHES_F = "ORDER BY f.annee ASC, FIELD(f.periode,'T1','T2','S1','T3','T4','S2','R1','R2',f.periode)";
@@ -22,9 +25,7 @@ exports.getResidentByCin = async (req, res) => {
     try {
         const [residents] = await db.query(
             `SELECT id, cin, nom_prenom, email, specialite, faculte_origine,
-                IF(promotion IS NOT NULL AND promotion > 0,
-                    LEAST(5, GREATEST(1, YEAR(CURRENT_DATE) - promotion + 1)),
-                    niveau) as niveau, promotion
+                IF(promotion IS NOT NULL AND promotion > 0, YEAR(CURRENT_DATE) - promotion + 1, niveau) as niveau, promotion
              FROM residents WHERE cin = ?`,
             [cin]
         );
@@ -33,7 +34,7 @@ exports.getResidentByCin = async (req, res) => {
             return res.status(404).json({ message: 'Résident introuvable' });
         }
 
-        const resident = residents[0];
+        const resident = avecEtat(residents[0]);
         const [fiches] = await db.query(
             `SELECT id, periode, annee, service, hopital, url_pdf FROM formulaires_stage
              WHERE resident_id = ? ${ORDRE_FICHES}`,
@@ -61,7 +62,7 @@ exports.getResidentById = async (req, res) => {
             [id]
         );
         if (residents.length === 0) return res.status(404).json({ message: 'Résident introuvable.' });
-        const resident = residents[0];
+        const resident = avecEtat(residents[0]);
 
         const [fiches] = await db.query(
             `SELECT f.id, f.periode, f.annee, f.service, f.hopital, f.import_id, f.modifie_le,
@@ -120,7 +121,7 @@ async function listerResidents(query, { pagination = true } = {}) {
     );
 
     const [countResult] = await db.query(`SELECT COUNT(*) as total FROM residents r ${where}`, params);
-    return { rows, total: countResult[0].total, page, limit };
+    return { rows: rows.map(avecEtat), total: countResult[0].total, page, limit };
 }
 exports.listerResidents = listerResidents;
 
@@ -149,7 +150,7 @@ exports.rechercheRapide = async (req, res) => {
              LIMIT 8`,
             [`${q}%`, `%${q}%`, q, `${q}%`]
         );
-        res.json(rows);
+        res.json(rows.map(avecEtat));
     } catch (error) {
         logger.error('Recherche rapide : ' + error);
         res.status(500).json({ error: 'Erreur lors de la recherche' });

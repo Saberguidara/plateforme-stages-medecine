@@ -1,6 +1,9 @@
 // Calculs liés au résidanat, identiques à ceux du serveur (config/specialites.js) :
 // l'année imprimée sur une fiche est déduite de la promotion (année d'entrée en 1re année).
 
+// Durée du résidanat en médecine de famille ; les autres spécialités seront configurées plus tard.
+export const DUREE_RESIDANAT = 3;
+
 export const ORDRE_PERIODES = ['T1', 'T2', 'S1', 'T3', 'T4', 'S2', 'R1', 'R2'];
 
 export const LIBELLES_PERIODES: Record<string, string> = {
@@ -47,12 +50,24 @@ export function libelleNiveauCourt(niveau: number | string | null | undefined): 
   return n > 0 ? `${n}A` : '—';
 }
 
-// « Promotion 2024 → 3ème année en 2026 »
-export function descriptionPromotion(promotion: number | null | undefined, annee = new Date().getFullYear()): string {
+// « Promotion 2024 → 3ème année en 2026 », ou « parcours terminé » après la dernière année
+export function descriptionPromotion(promotion: number | null | undefined, annee = new Date().getFullYear(), duree = DUREE_RESIDANAT): string {
   const niveau = niveauEn(promotion, annee);
   if (!promotion) return '';
   if (!niveau) return `Promotion ${promotion} → résidanat pas encore commencé en ${annee}`;
+  if (niveau > duree) return `Promotion ${promotion} → parcours terminé en ${Number(promotion) + duree - 1}`;
   return `Promotion ${promotion} → ${libelleNiveau(niveau)} en ${annee}`;
+}
+
+// Année de résidanat imprimée sur une fiche : jamais au-delà de la dernière année (comme le serveur)
+export function niveauImprime(promotion: number | null | undefined, annee: number, duree = DUREE_RESIDANAT): number | null {
+  const niveau = niveauEn(promotion, annee);
+  return niveau ? Math.min(niveau, duree) : null;
+}
+
+// Libellé court d'un résident renvoyé par le serveur : « 2A » ou « Terminé »
+export function anneeCourte(r: { niveau?: number | string | null; parcours_termine?: boolean }): string {
+  return r.parcours_termine ? 'Terminé' : libelleNiveauCourt(r.niveau);
 }
 
 function rang(stage: StageDate) {

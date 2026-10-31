@@ -5,7 +5,7 @@ import { ToastService } from '../services/toast';
 import { PdfViewerService } from '../services/pdf-viewer';
 import { SuggestionsReferentiel } from './suggestions-referentiel';
 import {
-  LIBELLES_PERIODES, ORDRE_PERIODES, conflitsPeriode, libelleNiveau, niveauEn, periodeSuivante
+  LIBELLES_PERIODES, ORDRE_PERIODES, conflitsPeriode, libelleNiveau, niveauImprime, periodeSuivante
 } from '../services/residanat';
 
 // Ajout ou modification d'un stage dans le dossier d'un résident.
@@ -116,7 +116,7 @@ export class StageForm implements OnInit {
 
   anneeImprimee() {
     const r = this.resident();
-    const niveau = r.promotion ? niveauEn(r.promotion, Number(this.modele.annee)) : r.niveau_saisi;
+    const niveau = r.promotion ? niveauImprime(r.promotion, Number(this.modele.annee)) : r.niveau_saisi;
     return libelleNiveau(niveau);
   }
 

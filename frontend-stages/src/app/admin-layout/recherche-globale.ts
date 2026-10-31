@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { ApiService, SuggestionResident } from '../services/api';
-import { libelleNiveauCourt } from '../services/residanat';
+import { anneeCourte } from '../services/residanat';
 
 // Recherche d'un résident par CIN ou par nom depuis n'importe quel écran de l'administration.
 @Component({
@@ -32,7 +32,7 @@ import { libelleNiveauCourt } from '../services/residanat';
               <li class="suggestion-item" role="option" [id]="'suggestion-' + i" [class.actif]="i === indexActif()"
                 [attr.aria-selected]="i === indexActif()" (mousedown)="$event.preventDefault()" (click)="ouvrir(r)">
                 <span class="suggestion-nom">{{ r.nom_prenom }}</span>
-                <span class="suggestion-detail chiffres">{{ r.cin }} · {{ niveauCourt(r.niveau) }}</span>
+                <span class="suggestion-detail chiffres">{{ r.cin }} · {{ anneeCourte(r) }}</span>
               </li>
             } @empty {
               <li class="suggestion-item" aria-disabled="true">Aucun résident pour « {{ texte }} »</li>
@@ -59,7 +59,7 @@ export class RechercheGlobale {
   readonly ouvert = signal(false);
   readonly chargement = signal(false);
   readonly indexActif = signal(-1);
-  readonly niveauCourt = libelleNiveauCourt;
+  readonly anneeCourte = anneeCourte;
 
   constructor() {
     this.saisie$.pipe(

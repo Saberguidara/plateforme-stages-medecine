@@ -1236,6 +1236,7 @@ a.lien-alerte:hover {
     flex-direction: column;
     gap: 14px;
     padding: 18px 20px 16px;
+    background: linear-gradient(180deg, #fbf8f2 0%, var(--fms-blanc) 100%);
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
@@ -1365,15 +1366,20 @@ a.lien-alerte:hover {
     position: sticky;
     top: 0;
     z-index: 2;
-    background: #faf8f4;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
-    padding: 10px 14px;
+    background: var(--fms-noir);
+    border-bottom: 3px solid var(--fms-orange);
+    padding: 12px 14px;
     font-size: 0.74rem;
     font-weight: 700;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.8px;
     text-transform: uppercase;
-    color: var(--fms-gris);
+    color: rgba(245, 240, 230, 0.7);
     white-space: nowrap;
+}
+
+.tableau-residents thead .form-check-input {
+    background-color: transparent;
+    border-color: rgba(245, 240, 230, 0.6);
 }
 
 .tri-entete {
@@ -1396,7 +1402,7 @@ a.lien-alerte:hover {
 
 .tri-entete:hover,
 .tri-entete.trie {
-    color: var(--fms-noir);
+    color: var(--fms-beige);
 }
 
 .tri-entete.trie .bi {
@@ -1405,11 +1411,24 @@ a.lien-alerte:hover {
 }
 
 .tableau-residents tbody td {
-    padding: 11px 14px;
+    padding: 12px 14px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     vertical-align: middle;
     transition: background 0.15s ease;
 }
+
+/* Lignes alternées et liseré gauche à la couleur du statut du semestre */
+.tableau-residents tbody tr:nth-child(even) td {
+    background: #fcfaf6;
+}
+
+.tableau-residents tbody tr[data-etat] td:first-child {
+    box-shadow: inset 4px 0 0 var(--liseret, transparent);
+}
+
+.tableau-residents tbody tr[data-etat='statut-succes'] { --liseret: var(--fms-succes); }
+.tableau-residents tbody tr[data-etat='statut-alerte'] { --liseret: var(--fms-orange); }
+.tableau-residents tbody tr[data-etat='statut-neutre'] { --liseret: #ddd6c9; }
 
 .tableau-residents tbody tr:not(.ligne-vide):not(.ligne-chargement) {
     cursor: pointer;
@@ -1419,8 +1438,8 @@ a.lien-alerte:hover {
     background: var(--fms-orange-pale);
 }
 
-.tableau-residents tbody tr:not(.ligne-vide):hover td:first-child {
-    box-shadow: inset 3px 0 0 var(--fms-orange);
+.tableau-residents tbody tr:not(.ligne-vide):hover .nom-resident {
+    color: var(--fms-orange-fonce);
 }
 
 .tableau-residents tbody tr.selectionnee td {
@@ -1448,7 +1467,7 @@ a.lien-alerte:hover {
     box-shadow: 0 0 0 0.2rem rgba(244, 123, 69, 0.2);
 }
 
-.tableau-residents .col-promotion { width: 130px; }
+.tableau-residents .col-promotion { width: 165px; white-space: nowrap; }
 .tableau-residents .col-faculte { width: 120px; }
 .tableau-residents .col-fiches { width: 90px; }
 .tableau-residents .col-statut { width: 150px; }
@@ -1462,12 +1481,13 @@ a.lien-alerte:hover {
 
 .avatar-initiales {
     flex: none;
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: var(--fms-orange-pale);
     color: var(--fms-orange-fonce);
-    border: 1px solid rgba(244, 123, 69, 0.25);
+    border: 2px solid var(--fms-blanc);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1475,6 +1495,12 @@ a.lien-alerte:hover {
     font-weight: 700;
     font-size: 0.85rem;
 }
+
+/* Couleur de l'avatar selon l'année de résidanat */
+.avatar-initiales[data-annee='1'] { background: var(--fms-orange); color: var(--fms-blanc); }
+.avatar-initiales[data-annee='2'] { background: var(--fms-orange-fonce); color: var(--fms-blanc); }
+.avatar-initiales[data-annee='3'] { background: var(--fms-noir); color: var(--fms-beige); }
+.avatar-initiales[data-annee='termine'] { background: #e9e4da; color: var(--fms-gris); }
 
 .nom-resident {
     display: block;
@@ -1523,21 +1549,28 @@ a.lien-alerte:hover {
 }
 
 .nombre-fiches {
-    display: inline-block;
-    min-width: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
     font-weight: 700;
-    background: #f3efe7;
-    border-radius: 8px;
-    padding: 2px 8px;
+    font-family: var(--fms-titre);
+    color: var(--fms-noir);
+    background: var(--fms-blanc);
+    border: 2px solid rgba(244, 123, 69, 0.35);
+    border-radius: 50%;
 }
 
 .statut-point {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    font-size: 0.84rem;
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 700;
     white-space: nowrap;
+    border-radius: 50px;
+    padding: 4px 12px 4px 10px;
 }
 
 .statut-point::before {
@@ -1548,9 +1581,14 @@ a.lien-alerte:hover {
     background: currentColor;
 }
 
-.statut-succes { color: var(--fms-succes); }
-.statut-alerte { color: var(--fms-orange-fonce); }
-.statut-neutre { color: #8a8a8a; }
+.statut-succes { color: var(--fms-succes); background: rgba(31, 122, 77, 0.1); }
+.statut-alerte { color: var(--fms-orange-fonce); background: rgba(244, 123, 69, 0.12); }
+.statut-neutre { color: #7a7a7a; background: rgba(0, 0, 0, 0.05); }
+
+.puce-annee.puce-terminee {
+    background: #e9e4da;
+    color: var(--fms-gris);
+}
 
 .col-actions {
     width: 96px;
@@ -1707,5 +1745,7 @@ a.lien-alerte:hover {
     .tableau-residents .col-promotion { padding-left: 48px !important; }
     .actions-ligne .btn-icone-danger { display: none; }
     .tableau-carte .table-defilante { max-height: none; overflow: visible; }
+    .tableau-residents tbody tr[data-etat] { box-shadow: inset 4px 0 0 var(--liseret, transparent); }
+    .tableau-residents tbody tr:nth-child(even) { background: #fcfaf6; }
     .tableau-residents thead th { position: static; }
 }

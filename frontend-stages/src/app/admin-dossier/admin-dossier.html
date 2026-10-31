@@ -52,7 +52,8 @@
         <div>
           <div class="identite-libelle">Promotion</div>
           <div class="identite-valeur">
-            @if (d.promotion) { {{ descriptionPromotion(d.promotion) }} }
+            @if (d.promotion) { {{ descriptionPromotion(d.promotion) }}
+              @if (d.parcours_termine) { <span class="pastille pastille-sombre ms-1"><i class="bi bi-mortarboard" aria-hidden="true"></i> Parcours terminé</span> } }
             @else if (d.niveau_saisi) { Inconnue · {{ libelleNiveau(d.niveau_saisi) }} (ancien dossier) }
             @else { <span class="pastille pastille-alerte">Non renseignée</span> }
           </div>

@@ -29,7 +29,7 @@ exports.exporterResidents = async (req, res) => {
             { header: 'Spécialité', key: 'specialite', width: 22 },
             { header: 'Faculté', key: 'faculte_origine', width: 14 },
             { header: 'Promotion', key: 'promotion', width: 11 },
-            { header: 'Année de résidanat', key: 'niveau', width: 12 },
+            { header: 'Année de résidanat', key: 'niveau', width: 16 },
             { header: 'Fiches', key: 'nb_fiches', width: 9 },
             { header: 'Fiches du semestre', key: 'fiches_semestre', width: 12 },
             { header: 'Fiche récupérée', key: 'recuperee', width: 12 }
@@ -39,7 +39,7 @@ exports.exporterResidents = async (req, res) => {
             feuille.addRow({
                 ...r,
                 email: r.email || '',
-                niveau: r.niveau > 0 ? `${r.niveau}A` : '',
+                niveau: r.parcours_termine ? 'Parcours terminé' : (r.niveau > 0 ? `${r.niveau}A` : ''),
                 recuperee: r.fiches_semestre > 0 ? (r.telechargements_semestre > 0 ? 'Oui' : 'Non') : ''
             });
         }

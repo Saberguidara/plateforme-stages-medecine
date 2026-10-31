@@ -118,14 +118,15 @@
           }
           } @else {
           @for (r of residents(); track r.id) {
-          <tr [class.selectionnee]="selection().has(r.id)" (click)="ouvrir(r)">
+          @let s = statut(r);
+          <tr [class.selectionnee]="selection().has(r.id)" [attr.data-etat]="s.classe" (click)="ouvrir(r)">
             <td class="col-case" (click)="$event.stopPropagation()">
               <input type="checkbox" class="form-check-input" [checked]="selection().has(r.id)" (change)="basculerLigne(r.id)"
                 [attr.aria-label]="'Sélectionner ' + r.nom_prenom">
             </td>
             <td class="col-identite">
               <div class="cellule-identite">
-                <span class="avatar-initiales" aria-hidden="true">{{ initiales(r.nom_prenom) }}</span>
+                <span class="avatar-initiales" [attr.data-annee]="r.parcours_termine ? 'termine' : r.niveau" aria-hidden="true">{{ initiales(r.nom_prenom) }}</span>
                 <div class="min-w-0">
                   <a class="nom-resident" [routerLink]="['/admin/residents', r.id]" (click)="$event.stopPropagation()">{{ r.nom_prenom }}</a>
                   <div class="sous-texte">
@@ -138,13 +139,12 @@
               </div>
             </td>
             <td class="col-promotion chiffres">
-              @if (r.promotion) { {{ r.promotion }} <span class="puce-annee">{{ niveauCourt(r.niveau) }}</span> }
+              @if (r.promotion) { {{ r.promotion }} <span class="puce-annee" [class.puce-terminee]="r.parcours_termine">{{ anneeCourte(r) }}</span> }
               @else { <span class="text-muted">—</span> }
             </td>
             <td class="col-faculte">{{ r.faculte_origine || '—' }}</td>
             <td class="col-fiches text-center chiffres"><span class="nombre-fiches">{{ r.nb_fiches }}</span></td>
             <td class="col-statut">
-              @let s = statut(r);
               <span class="statut-point" [class]="'statut-point ' + s.classe">{{ s.libelle }}</span>
             </td>
             <td class="col-actions" (click)="$event.stopPropagation()">

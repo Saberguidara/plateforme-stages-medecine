@@ -7,7 +7,7 @@ import { catchError, map } from 'rxjs/operators';
 import { ApiService, FiltresResidents, enregistrerFichier } from '../services/api';
 import { AuthService } from '../services/auth';
 import { ToastService } from '../services/toast';
-import { libelleNiveauCourt, semestreCourant } from '../services/residanat';
+import { anneeCourte, semestreCourant } from '../services/residanat';
 import { Confirmation } from '../admin-shared/confirmation';
 
 // Libellés des filtres ouverts depuis le tableau de bord
@@ -44,7 +44,7 @@ export class AdminData implements OnInit {
   private destroyRef = inject(DestroyRef);
 
   readonly peutModifier = inject(AuthService).peutModifier();
-  readonly niveauCourt = libelleNiveauCourt;
+  readonly anneeCourte = anneeCourte;
   readonly semestre = semestreCourant();
   readonly taillesPage = TAILLES_PAGE;
   readonly lignesChargement = [1, 2, 3, 4, 5, 6, 7, 8];

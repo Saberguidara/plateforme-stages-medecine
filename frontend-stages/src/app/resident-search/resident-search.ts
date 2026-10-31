@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { ToastService } from '../services/toast';
 import { PdfViewerService } from '../services/pdf-viewer';
+import { niveauImprime } from '../services/residanat';
 
 @Component({
   selector: 'app-resident-search',
@@ -62,7 +63,8 @@ export class ResidentSearchComponent implements OnInit {
       // Fallback sur le niveau statique du résident
       return this.niveauLabel(resident.niveau);
     }
-    const n = annee - promotion + 1;
+    // Jamais au-delà de la dernière année du résidanat, comme sur la fiche imprimée
+    const n = niveauImprime(promotion, annee) ?? 0;
     if (n <= 0) return '-';
     if (n === 1) return '1ère année';
     return `${n}ème année`;

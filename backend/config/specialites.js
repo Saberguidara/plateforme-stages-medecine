@@ -58,6 +58,22 @@ function specialiteDe(libelleResident) {
     return null;
 }
 
+// Durée du résidanat d'un résident. En attendant la configuration des autres spécialités,
+// celle de la médecine de famille s'applique à tous.
+function dureeDe(libelleResident) {
+    const specialite = specialiteDe(libelleResident);
+    return (specialite && specialite.duree) || SPECIALITES[SPECIALITE_PAR_DEFAUT].duree;
+}
+
+// Année de résidanat affichable : au-delà de la durée du résidanat, le parcours est terminé.
+function etatResidanat(libelleResident, niveau) {
+    const n = parseInt(niveau, 10);
+    const duree = dureeDe(libelleResident);
+    if (!n || n < 1) return { niveau: null, parcours_termine: false, duree };
+    if (n > duree) return { niveau: null, parcours_termine: true, duree };
+    return { niveau: n, parcours_termine: false, duree };
+}
+
 function libellePeriode(specialite, periode, annee) {
     const dates = specialite.datesPeriodes[periode];
     if (!dates) return periode;
@@ -66,5 +82,5 @@ function libellePeriode(specialite, periode, annee) {
 
 module.exports = {
     SPECIALITES, SPECIALITE_PAR_DEFAUT, ORDRE_PERIODES, PERIODES_DU_SEMESTRE, LIBELLES_SPECIALITES, DUREE_MAX,
-    specialiteDe, libellePeriode, semestreCourant
+    specialiteDe, libellePeriode, semestreCourant, dureeDe, etatResidanat
 };
