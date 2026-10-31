@@ -6,6 +6,12 @@ jest.mock('../config/db', () => ({
 }));
 jest.mock('../services/comptes', () => ({ compteActif: jest.fn(), invalider: jest.fn() }));
 jest.mock('../utils/logger', () => ({ error: jest.fn(), info: jest.fn() }));
+jest.mock('../services/mail', () => ({
+    envoyerMail: jest.fn(async () => {}),
+    envoiPossible: jest.fn(() => true),
+    gabarit: jest.fn(({ paragraphes }) => paragraphes.join('\n')),
+    echapper: (t) => String(t)
+}));
 
 const express = require('express');
 const request = require('supertest');
@@ -14,6 +20,7 @@ const JSZip = require('jszip');
 const ExcelJS = require('exceljs');
 const db = require('../config/db');
 const comptes = require('../services/comptes');
+const mail = require('../services/mail');
 
 const ADMIN = { id: 1, login: 'admin', role: 'admin' };
 const LECTEUR = { id: 2, login: 'consultation', role: 'lecture' };
@@ -218,21 +225,93 @@ describe("Routes de l'administration", () => {
             expect(db.query.mock.calls[0][0]).toMatch(/traite_le IS NULL/);
         });
 
-        it('marque un signalement comme traité et le journalise', async () => {
+        it('marque un signalement comme traité, enregistre la réponse et prévient le résident', async () => {
             repondre([
-                [/FROM signalements s JOIN formulaires_stage/, [[{ id: 3, fiche_id: 10, resident_id: 4, motif: 'hopital', traite_le: null, periode: 'S1', annee: 2026 }]]],
+                [/WHERE s\.id = \?/, [[{ id: 3, fiche_id: 10, resident_id: 4, motif: 'hopital', traite_le: null, periode: 'S1', annee: 2026,
+                    nom_prenom: 'Résident', email: 'resident@exemple.tn' }]]],
                 [/UPDATE signalements/, [{ affectedRows: 1 }]],
                 [/INSERT INTO journal_actions/, [{}]]
             ]);
+            const res = await request(app).put('/api/admin/signalements/3/traite').set('Authorization', jeton(ADMIN))
+                .send({ reponse: '  Fiche corrigée : CHU Habib Bourguiba.  ' });
+            expect(res.status).toBe(200);
+            expect(res.body.message).toMatch(/prévenu par e-mail/);
+            const maj = db.query.mock.calls.find(([sql]) => /UPDATE signalements/.test(sql));
+            expect(maj[1]).toEqual(['admin', 'Fiche corrigée : CHU Habib Bourguiba.', 3]);
+            expect(mail.envoyerMail).toHaveBeenCalledWith(expect.objectContaining({ to: 'resident@exemple.tn' }));
+            expect(mail.envoyerMail.mock.calls[0][0].html).toContain('Fiche corrigée');
+        });
+
+        it("traite le signalement même si l'e-mail ne part pas", async () => {
+            mail.envoyerMail.mockRejectedValueOnce(new Error('SMTP'));
+            repondre([
+                [/WHERE s\.id = \?/, [[{ id: 3, fiche_id: 10, resident_id: 4, motif: 'service', traite_le: null, periode: 'S1', annee: 2026, email: 'r@exemple.tn' }]]],
+                [/UPDATE signalements/, [{ affectedRows: 1 }]]
+            ]);
             const res = await request(app).put('/api/admin/signalements/3/traite').set('Authorization', jeton(ADMIN));
             expect(res.status).toBe(200);
-            const maj = db.query.mock.calls.find(([sql]) => /UPDATE signalements/.test(sql));
-            expect(maj[1]).toEqual(['admin', 3]);
+            expect(res.body.message).toBe('Signalement marqué comme traité.');
         });
 
         it('refuse le traitement au rôle « lecture »', async () => {
             const res = await request(app).put('/api/admin/signalements/3/traite').set('Authorization', jeton(LECTEUR));
             expect(res.status).toBe(403);
+        });
+    });
+
+    describe('E-mails « nouvelle fiche disponible »', () => {
+        const fiche = (id, residentId, email) => ({ id, periode: 'S2', annee: 2026, hopital: 'CHU', service: 'Urgences',
+            resident_id: residentId, nom_prenom: `Résident ${residentId}`, email });
+
+        it('compte les résidents à prévenir et ceux sans e-mail', async () => {
+            repondre([[/LEFT JOIN notifications_fiches/, [[fiche(1, 4, 'a@exemple.tn'), fiche(2, 4, 'a@exemple.tn'), fiche(3, 5, null)]]]]);
+            const res = await request(app).get('/api/admin/notifications/fiches').set('Authorization', jeton(LECTEUR));
+            expect(res.status).toBe(200);
+            expect(res.body).toMatchObject({ residents: 1, fiches: 2, sansEmail: 1, envoiPossible: true });
+        });
+
+        it('envoie un e-mail par résident et retient les fiches annoncées', async () => {
+            repondre([
+                [/LEFT JOIN notifications_fiches/, [[fiche(1, 4, 'a@exemple.tn'), fiche(2, 4, 'a@exemple.tn'), fiche(3, 6, 'b@exemple.tn')]]],
+                [/INSERT IGNORE INTO notifications_fiches/, [{}]],
+                [/INSERT INTO journal_actions/, [{}]]
+            ]);
+            const res = await request(app).post('/api/admin/notifications/fiches').set('Authorization', jeton(ADMIN));
+            expect(res.status).toBe(200);
+            expect(res.body).toMatchObject({ envoyes: 2, fiches: 3, echecs: 0 });
+            expect(mail.envoyerMail).toHaveBeenCalledTimes(2);
+            const insertions = db.query.mock.calls.filter(([sql]) => /INSERT IGNORE INTO notifications_fiches/.test(sql));
+            expect(insertions[0][1]).toEqual([[[1, 4], [2, 4]]]);
+        });
+
+        it("ne marque pas comme prévenu un résident dont l'e-mail a échoué", async () => {
+            mail.envoyerMail.mockRejectedValueOnce(new Error('SMTP'));
+            repondre([
+                [/LEFT JOIN notifications_fiches/, [[fiche(1, 4, 'a@exemple.tn'), fiche(3, 6, 'b@exemple.tn')]]],
+                [/INSERT IGNORE INTO notifications_fiches/, [{}]],
+                [/INSERT INTO journal_actions/, [{}]]
+            ]);
+            const res = await request(app).post('/api/admin/notifications/fiches').set('Authorization', jeton(ADMIN));
+            expect(res.body).toMatchObject({ envoyes: 1, echecs: 1 });
+            const insertions = db.query.mock.calls.filter(([sql]) => /INSERT IGNORE INTO notifications_fiches/.test(sql));
+            expect(insertions).toHaveLength(1);
+            expect(insertions[0][1]).toEqual([[[3, 6]]]);
+        });
+
+        it("refuse l'envoi au rôle « lecture » et sans SMTP", async () => {
+            const lecteur = await request(app).post('/api/admin/notifications/fiches').set('Authorization', jeton(LECTEUR));
+            expect(lecteur.status).toBe(403);
+            mail.envoiPossible.mockReturnValueOnce(false);
+            const sansSmtp = await request(app).post('/api/admin/notifications/fiches').set('Authorization', jeton(ADMIN));
+            expect(sansSmtp.status).toBe(503);
+        });
+    });
+
+    describe('GET /api/contact', () => {
+        it("donne les coordonnées du service des stages sans connexion", async () => {
+            const res = await request(app).get('/api/contact');
+            expect(res.status).toBe(200);
+            expect(res.body.email).toContain('@');
         });
     });
 

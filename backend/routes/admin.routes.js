@@ -8,6 +8,7 @@ const journal = require('../controllers/journal.controller');
 const referentiels = require('../controllers/referentiels.controller');
 const exportsController = require('../controllers/exports.controller');
 const comptes = require('../controllers/comptes.controller');
+const notifications = require('../controllers/notifications.controller');
 
 // La génération d'un ZIP de fiches est coûteuse : quelques exports par minute suffisent.
 const zipLimiter = rateLimit({
@@ -28,6 +29,18 @@ router.post('/referentiels/fusion', requireAdmin, referentiels.fusionner);
 router.get('/exports/residents.xlsx', requireAdmin, exportsController.exporterResidents);
 router.get('/exports/fiches/compte', requireAdmin, exportsController.compterFiches);
 router.get('/exports/fiches.zip', requireAdmin, zipLimiter, exportsController.exporterFichesZip);
+
+// Envoi groupé d'e-mails : une fois par minute suffit (le bouton est déjà désactivé pendant l'envoi).
+const notificationLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 2,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Un envoi vient déjà d\'être lancé. Patientez une minute.' }
+});
+
+router.get('/notifications/fiches', requireAdmin, notifications.apercu);
+router.post('/notifications/fiches', requireAdmin, notifications.verifierEnvoi, notificationLimiter, notifications.envoyer);
 
 router.get('/moi', requireAdmin, comptes.moi);
 router.get('/comptes', requireGestionComptes, comptes.lister);

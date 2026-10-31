@@ -29,6 +29,11 @@ export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: ResidentLoginComponent, title: 'Connexion résident' },
   {
+    path: 'aide',
+    title: 'Aide et contact',
+    loadComponent: () => import('./aide/aide').then((m) => m.Aide)
+  },
+  {
     path: 'mes-stages',
     canActivate: [residentGuard],
     title: 'Mes fiches de stage',

@@ -106,9 +106,21 @@ CREATE TABLE IF NOT EXISTS signalements (
     cree_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     traite_le DATETIME DEFAULT NULL COMMENT 'NULL tant que le signalement est ouvert',
     traite_par VARCHAR(50) DEFAULT NULL COMMENT 'login de l''administrateur',
+    reponse VARCHAR(500) DEFAULT NULL COMMENT 'réponse de l''administration, visible par le résident',
     PRIMARY KEY (id),
     KEY idx_signalements_ouverts (traite_le, cree_le),
     KEY idx_signalements_fiche (fiche_id),
     CONSTRAINT fk_signalements_fiche FOREIGN KEY (fiche_id)
+        REFERENCES formulaires_stage (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- E-mails « nouvelle fiche disponible » déjà envoyés (une ligne par fiche)
+CREATE TABLE IF NOT EXISTS notifications_fiches (
+    fiche_id INT NOT NULL,
+    resident_id INT NOT NULL,
+    envoye_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (fiche_id),
+    KEY idx_notifications_resident (resident_id),
+    CONSTRAINT fk_notifications_fiche FOREIGN KEY (fiche_id)
         REFERENCES formulaires_stage (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

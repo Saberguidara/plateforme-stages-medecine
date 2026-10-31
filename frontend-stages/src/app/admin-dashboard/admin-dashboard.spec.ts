@@ -23,8 +23,13 @@ describe('AdminDashboard', () => {
 
   afterEach(() => httpMock.verify());
 
-  const signalements = (liste: unknown[] = []) =>
+  const AUCUNE_NOTIFICATION = { semestre: 'S2', annee: 2026, residents: 0, fiches: 0, sansEmail: 0, envoiPossible: true };
+
+  // Requêtes secondaires du tableau de bord : signalements et e-mails « nouvelle fiche » en attente
+  const signalements = (liste: object[] = [], notifications: object = AUCUNE_NOTIFICATION) => {
     httpMock.expectOne((r) => r.url === `${environment.apiUrl}/admin/signalements`).flush(liste);
+    httpMock.expectOne(`${environment.apiUrl}/admin/notifications/fiches`).flush(notifications);
+  };
 
   const STATS = {
     semestre: { semestre: 'S2', annee: 2026 },
@@ -68,5 +73,20 @@ describe('AdminDashboard', () => {
     expect(page.textContent).toContain("L'hôpital");
     expect(page.textContent).toContain('Mauvais hôpital');
     expect(page.querySelector('a[href="/admin/residents/4"]')).toBeTruthy();
+  });
+
+  it('propose de prévenir par e-mail les résidents dont la fiche est disponible', async () => {
+    httpMock.expectOne(`${environment.apiUrl}/admin/statistiques`).flush(STATS);
+    signalements([], { ...AUCUNE_NOTIFICATION, residents: 12, fiches: 14, sansEmail: 3 });
+    await fixture.whenStable();
+
+    const page: HTMLElement = fixture.nativeElement;
+    expect(page.textContent).toContain('14 fiche(s) du semestre pas encore annoncée(s)');
+    expect(page.textContent).toContain("3 autre(s) n'ont pas d'e-mail");
+    // Le bouton n'est affiché qu'aux administrateurs complets ; l'envoi lui-même est vérifié ici.
+    fixture.componentInstance.envoyerNotifications();
+    httpMock.expectOne((r) => r.method === 'POST' && r.url === `${environment.apiUrl}/admin/notifications/fiches`)
+      .flush({ envoyes: 12, fiches: 14, echecs: 0, message: '12 résident(s) prévenu(s) par e-mail.' });
+    httpMock.expectOne(`${environment.apiUrl}/admin/notifications/fiches`).flush(AUCUNE_NOTIFICATION);
   });
 });

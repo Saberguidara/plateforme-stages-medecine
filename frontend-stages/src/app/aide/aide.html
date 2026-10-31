@@ -1,0 +1,58 @@
+<div class="container page-aide">
+
+  <a class="aide-retour" [routerLink]="connecte ? '/mes-stages' : '/login'">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> {{ connecte ? 'Retour à mes fiches' : 'Retour à la connexion' }}
+  </a>
+
+  <header class="aide-entete">
+    <p class="aide-surtitre">Espace résident</p>
+    <h2 class="aide-titre">Aide et contact</h2>
+    <p class="aide-intro">Les réponses aux questions les plus fréquentes, et comment joindre le service des stages.</p>
+  </header>
+
+  <div class="aide-grille">
+    <section class="card dashboard-card" aria-labelledby="titre-questions">
+      <div class="card-body p-4">
+        <h3 id="titre-questions" class="aide-section-titre">Questions fréquentes</h3>
+        <div class="aide-questions">
+          @for (q of questions; track q.question; let premier = $first) {
+          <details class="aide-question" [open]="premier">
+            <summary>{{ q.question }}</summary>
+            <p>{{ q.reponse }}</p>
+          </details>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="aide-contact" aria-labelledby="titre-contact">
+      <h3 id="titre-contact" class="aide-section-titre">Service des stages</h3>
+      <p class="aide-contact-intro">Faculté de médecine de Sfax</p>
+
+      @if (contact(); as c) {
+      <ul class="aide-coordonnees">
+        @if (c.email) {
+        <li><i class="bi bi-envelope" aria-hidden="true"></i> <a [href]="'mailto:' + c.email">{{ c.email }}</a></li>
+        }
+        @if (c.telephone) {
+        <li><i class="bi bi-telephone" aria-hidden="true"></i> <a class="chiffres" [href]="'tel:' + c.telephone">{{ c.telephone }}</a></li>
+        }
+        @if (c.adresse) {
+        <li><i class="bi bi-geo-alt" aria-hidden="true"></i> <span>{{ c.adresse }}</span></li>
+        }
+        @if (c.horaires) {
+        <li><i class="bi bi-clock" aria-hidden="true"></i> <span>{{ c.horaires }}</span></li>
+        }
+      </ul>
+      <p class="aide-contact-conseil">Indiquez votre nom et votre CIN dans votre message pour une réponse plus rapide.</p>
+      } @else if (contactIndisponible()) {
+      <p class="aide-contact-conseil">Les coordonnées n'ont pas pu être chargées. Adressez-vous directement au service des stages de la faculté.</p>
+      } @else {
+      <div aria-busy="true" aria-label="Chargement des coordonnées">
+        <span class="skeleton skeleton-ligne opacity-25"></span>
+        <span class="skeleton skeleton-ligne w-50 opacity-25"></span>
+      </div>
+      }
+    </section>
+  </div>
+</div>

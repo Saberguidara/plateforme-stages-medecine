@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { RouterOutlet, Router } from '@angular/router';
+import { RouterLink, RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './services/auth';
 import { Toasts } from './shell/toasts';
@@ -8,7 +8,7 @@ import { PdfViewer } from './shell/pdf-viewer';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, Toasts, PdfViewer],
+  imports: [RouterOutlet, RouterLink, CommonModule, Toasts, PdfViewer],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -20,6 +20,10 @@ export class App {
   isLoginPage(): boolean {
     const url = this.router.url.split('?')[0];
     return url === '/login' || url === '/admin/connexion' || url === '/';
+  }
+
+  estConnecte(): boolean {
+    return this.authService.isAdmin() || this.authService.isResident();
   }
 
   getUserName(): string {

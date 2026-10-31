@@ -54,6 +54,13 @@
             <span class="pastille pastille-sombre"><i class="bi bi-flag" aria-hidden="true"></i> Erreur signalée le {{ f.signale_le | date: 'dd/MM/yyyy' }} · en cours de vérification</span>
             }
           </div>
+          @if (!f.signale_le && f.signalement_traite_le) {
+          <div class="reponse-signalement mt-2">
+            <i class="bi bi-check2-circle" aria-hidden="true"></i>
+            <span>Votre signalement a été traité le {{ f.signalement_traite_le | date: 'dd/MM/yyyy' }}.
+              @if (f.signalement_reponse) { <span class="d-block">Réponse du service des stages : « {{ f.signalement_reponse }} »</span> }</span>
+          </div>
+          }
         </div>
         <div class="semestre-actions">
           <button type="button" class="btn pill-btn-orange btn-lg" (click)="pdf(f, 'telecharger')" [disabled]="pdfEnCours() !== null">
@@ -121,8 +128,14 @@
                   }
                   @if (f.signale_le) {
                   <span class="pastille pastille-sombre"><i class="bi bi-flag" aria-hidden="true"></i> Erreur signalée le {{ f.signale_le | date: 'dd/MM/yyyy' }}</span>
+                  } @else if (f.signalement_traite_le) {
+                  <span class="pastille pastille-succes" [title]="f.signalement_reponse || ''"><i class="bi bi-check2-circle" aria-hidden="true"></i> Signalement traité le {{ f.signalement_traite_le | date: 'dd/MM/yyyy' }}</span>
                   }
                 </div>
+                @if (!f.signale_le && f.signalement_reponse) {
+                <div class="reponse-signalement mt-2"><i class="bi bi-chat-left-text" aria-hidden="true"></i>
+                  <span>Réponse du service des stages : « {{ f.signalement_reponse }} »</span></div>
+                }
               </div>
               <div class="frise-actions">
                 <button type="button" class="btn-icone" (click)="pdf(f, 'apercu')" [disabled]="pdfEnCours() !== null"
@@ -146,6 +159,11 @@
       }
     </div>
   </section>
+
+  <p class="aide-lien">
+    <i class="bi bi-question-circle" aria-hidden="true"></i> Une fiche manque ou une question ?
+    <a routerLink="/aide">Aide et contact du service des stages</a>
+  </p>
 
   <!-- Fenêtre : signaler une erreur sur une fiche -->
   @if (ficheSignalee(); as f) {

@@ -58,10 +58,9 @@
           <small class="text-muted d-block chiffres">Signalé le {{ sg.cree_le | date: 'dd/MM/yyyy à HH:mm' }}</small>
         </span>
         @if (peutModifier) {
-        <button type="button" class="btn btn-sm pill-btn-outline-dark flex-shrink-0" (click)="traiter(sg)" [disabled]="traitementEnCours() === sg.id"
-          [attr.aria-label]="'Marquer comme traité le signalement de ' + sg.nom_prenom">
-          @if (traitementEnCours() === sg.id) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
-          <i class="bi bi-check2" aria-hidden="true"></i> Traité
+        <button type="button" class="btn btn-sm pill-btn-outline-dark flex-shrink-0" (click)="aTraiter.set(sg)"
+          [attr.aria-label]="'Traiter le signalement de ' + sg.nom_prenom">
+          <i class="bi bi-check2" aria-hidden="true"></i> Traiter
         </button>
         }
       </li>
@@ -112,6 +111,32 @@
       <div class="tuile-detail">Fiche disponible, jamais téléchargée</div>
     </a>
   </div>
+
+  <!-- Prévenir par e-mail les résidents dont la fiche du semestre est disponible -->
+  @if (notifications(); as n) {
+  @if (n.residents > 0 || n.sansEmail > 0) {
+  <div class="bandeau-notification mt-3">
+    <i class="bi bi-envelope-paper" aria-hidden="true"></i>
+    <div class="flex-grow-1 min-w-0">
+      @if (n.residents > 0) {
+      <strong>{{ n.fiches }} fiche(s) du semestre pas encore annoncée(s)</strong>
+      <div class="small text-muted">{{ n.residents }} résident(s) recevront un e-mail « votre fiche est disponible ».
+        @if (n.sansEmail > 0) { {{ n.sansEmail }} autre(s) n'ont pas d'e-mail et ne seront pas prévenus. }</div>
+      } @else {
+      <strong>Toutes les fiches annonçables ont été annoncées</strong>
+      <div class="small text-muted">{{ n.sansEmail }} résident(s) sans e-mail ne peuvent pas être prévenus.</div>
+      }
+      @if (!n.envoiPossible) { <div class="small text-danger">L'envoi d'e-mails n'est pas configuré sur le serveur.</div> }
+    </div>
+    @if (peutModifier && n.residents > 0) {
+    <button type="button" class="btn pill-btn-orange flex-shrink-0" (click)="envoyerNotifications()" [disabled]="envoiEnCours() || !n.envoiPossible">
+      @if (envoiEnCours()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Envoi… }
+      @else { <i class="bi bi-send" aria-hidden="true"></i> Prévenir par e-mail }
+    </button>
+    }
+  </div>
+  }
+  }
 
   <div class="row g-4 mt-1">
     <!-- Alertes -->
@@ -182,3 +207,7 @@
   </div>
   }
 </div>
+
+@if (aTraiter(); as sg) {
+<app-traitement-signalement [signalement]="sg" (traite)="signalementTraite(sg)" (annule)="aTraiter.set(null)"></app-traitement-signalement>
+}

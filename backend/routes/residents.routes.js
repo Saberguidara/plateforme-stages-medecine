@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const residentsController = require('../controllers/residents.controller');
 const { requireAdmin, requireAnyAuth } = require('../middlewares/auth.middleware');
+const { contact } = require('../config/contact');
 
 // Public / Shared
+router.get('/contact', (req, res) => res.json(contact()));
 router.get('/residents/:cin', requireAnyAuth, residentsController.getResidentByCin);
 
 // Admin (le rôle « lecture » n'a accès qu'aux GET : voir auth.middleware.js)

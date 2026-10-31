@@ -12,6 +12,7 @@ import { ResidentForm, ResidentEnregistre } from '../admin-shared/resident-form'
 import { StageForm } from '../admin-shared/stage-form';
 import { Confirmation } from '../admin-shared/confirmation';
 import { JournalListe } from '../admin-shared/journal-liste';
+import { SignalementATraiter, TraitementSignalement } from '../admin-shared/traitement-signalement';
 
 interface AnneeParcours {
   cle: string;
@@ -24,7 +25,7 @@ interface AnneeParcours {
 @Component({
   selector: 'app-admin-dossier',
   standalone: true,
-  imports: [RouterLink, DatePipe, ResidentForm, StageForm, Confirmation, JournalListe],
+  imports: [RouterLink, DatePipe, ResidentForm, StageForm, Confirmation, JournalListe, TraitementSignalement],
   templateUrl: './admin-dossier.html'
 })
 export class AdminDossier implements OnInit {
@@ -48,7 +49,7 @@ export class AdminDossier implements OnInit {
   readonly periodes = signal<string[]>(ORDRE_PERIODES);
   readonly versionJournal = signal(0);
   readonly pdfEnCours = signal<number | null>(null);
-  readonly traitementEnCours = signal<number | null>(null);
+  readonly aTraiter = signal<SignalementATraiter | null>(null);
 
   // Fenêtres ouvertes
   readonly editionResident = signal(false);
@@ -165,19 +166,16 @@ export class AdminDossier implements OnInit {
   }
 
   traiterSignalement(f: FicheDossier) {
-    if (!f.signalement_id) return;
-    this.traitementEnCours.set(f.id);
-    this.api.traiterSignalement(f.signalement_id).subscribe({
-      next: () => {
-        this.traitementEnCours.set(null);
-        this.toast.succes(`Signalement sur ${f.periode} ${f.annee} marqué comme traité.`);
-        this.actualiser();
-      },
-      error: (err) => {
-        this.traitementEnCours.set(null);
-        this.toast.erreur(err.error?.message || "Le signalement n'a pas pu être mis à jour.");
-      }
+    if (!f.signalement_id || !f.signalement_motif) return;
+    this.aTraiter.set({
+      id: f.signalement_id, nom_prenom: this.dossier()!.nom_prenom, periode: f.periode, annee: f.annee,
+      motif: f.signalement_motif, message: f.signalement_message
     });
+  }
+
+  signalementTraite() {
+    this.aTraiter.set(null);
+    this.actualiser();
   }
 
   confirmer() {

@@ -2,13 +2,13 @@ import { Component, inject, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-resident-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="auth-page-wrapper">
       <div class="auth-floating-card">
@@ -91,8 +91,7 @@ import { environment } from '../../environments/environment';
               </div>
 
               <p class="contact-service">
-                Un problème de connexion ? Service des stages :
-                <a href="mailto:saber_guidara@medecinesfax.org">saber_guidara@medecinesfax.org</a>
+                Un problème de connexion ? <a routerLink="/aide">Aide et contact du service des stages</a>
               </p>
             </div>
           </div>

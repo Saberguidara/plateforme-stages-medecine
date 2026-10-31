@@ -1773,3 +1773,21 @@ a.lien-alerte:hover {
     align-items: flex-start;
     flex-wrap: wrap;
 }
+
+/* Tableau de bord : fiches du semestre à annoncer par e-mail */
+.bandeau-notification {
+    display: flex;
+    gap: 12px 18px;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--fms-blanc);
+    border-left: 5px solid var(--fms-orange);
+    border-radius: 16px;
+    box-shadow: var(--fms-ombre-carte);
+    padding: 16px 20px;
+}
+
+.bandeau-notification > .bi {
+    font-size: 1.6rem;
+    color: var(--fms-orange-fonce);
+}

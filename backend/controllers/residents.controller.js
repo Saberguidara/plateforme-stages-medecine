@@ -40,7 +40,11 @@ exports.getResidentByCin = async (req, res) => {
         const [lignes] = await db.query(
             `SELECT f.id, f.periode, f.annee, f.service, f.hopital, f.url_pdf,
                     (SELECT MAX(t.telecharge_le) FROM telechargements t WHERE t.fiche_id = f.id) AS dernier_telechargement,
-                    s.cree_le AS signale_le
+                    s.cree_le AS signale_le,
+                    (SELECT s2.traite_le FROM signalements s2 WHERE s2.fiche_id = f.id AND s2.traite_le IS NOT NULL
+                     ORDER BY s2.traite_le DESC LIMIT 1) AS signalement_traite_le,
+                    (SELECT s2.reponse FROM signalements s2 WHERE s2.fiche_id = f.id AND s2.traite_le IS NOT NULL
+                     ORDER BY s2.traite_le DESC LIMIT 1) AS signalement_reponse
              FROM formulaires_stage f
              LEFT JOIN signalements s ON s.fiche_id = f.id AND s.traite_le IS NULL
              WHERE f.resident_id = ? ${ORDRE_FICHES_F}`,

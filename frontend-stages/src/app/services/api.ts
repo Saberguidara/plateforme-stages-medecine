@@ -68,11 +68,28 @@ export interface Signalement {
   cree_le: string;
   traite_le: string | null;
   traite_par: string | null;
+  reponse: string | null;
   nom_prenom: string;
   periode: string;
   annee: number;
   hopital: string | null;
   service: string | null;
+}
+
+export interface ContactService {
+  email: string | null;
+  telephone: string | null;
+  adresse: string | null;
+  horaires: string | null;
+}
+
+export interface NotificationsEnAttente {
+  semestre: string;
+  annee: number;
+  residents: number;
+  fiches: number;
+  sansEmail: number;
+  envoiPossible: boolean;
 }
 
 export interface ResumeImport {
@@ -241,8 +258,22 @@ export class ApiService {
     return this.http.get<Signalement[]>(`${this.apiUrl}/admin/signalements`, { params: { statut } });
   }
 
-  traiterSignalement(id: number): Observable<ApiMutationResponse> {
-    return this.http.put<ApiMutationResponse>(`${this.apiUrl}/admin/signalements/${id}/traite`, {});
+  traiterSignalement(id: number, reponse = ''): Observable<ApiMutationResponse> {
+    return this.http.put<ApiMutationResponse>(`${this.apiUrl}/admin/signalements/${id}/traite`, { reponse });
+  }
+
+  // ===== E-mails « nouvelle fiche disponible » et contact =====
+
+  getNotificationsFiches(): Observable<NotificationsEnAttente> {
+    return this.http.get<NotificationsEnAttente>(`${this.apiUrl}/admin/notifications/fiches`);
+  }
+
+  envoyerNotificationsFiches(): Observable<{ envoyes: number; fiches: number; echecs: number; message: string }> {
+    return this.http.post<any>(`${this.apiUrl}/admin/notifications/fiches`, {});
+  }
+
+  getContact(): Observable<ContactService> {
+    return this.http.get<ContactService>(`${this.apiUrl}/contact`);
   }
 
   // ===== Référentiels =====

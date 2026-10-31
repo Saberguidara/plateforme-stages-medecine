@@ -11,12 +11,17 @@
                 </div>
             </div>
 
-            <div class="header-user-actions">
+            <div class="header-user-actions" *ngIf="estConnecte(); else lienConnexion">
                 <span class="header-welcome-text"><strong>Bienvenue</strong> {{ getUserName() }}</span>
                 <button type="button" class="btn-header-logout" (click)="logout()">
                     <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Déconnexion
                 </button>
             </div>
+            <ng-template #lienConnexion>
+                <div class="header-user-actions">
+                    <a class="btn-header-logout" routerLink="/login"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Connexion</a>
+                </div>
+            </ng-template>
         </div>
     </header>
     <main class="main-content">

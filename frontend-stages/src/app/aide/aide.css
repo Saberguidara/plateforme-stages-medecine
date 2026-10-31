@@ -1,0 +1,172 @@
+/* Page d'aide de l'espace résident ; cartes et squelettes sont dans src/styles.css. */
+
+.page-aide {
+    max-width: 960px;
+    margin-top: 28px;
+    margin-bottom: 32px;
+}
+
+.aide-retour {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--fms-orange-fonce);
+    font-weight: 600;
+    text-decoration: none;
+    margin-bottom: 16px;
+}
+
+.aide-retour:hover {
+    text-decoration: underline;
+}
+
+.aide-entete {
+    margin-bottom: 24px;
+}
+
+.aide-surtitre {
+    margin: 0;
+    font-size: 0.8rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--fms-orange-fonce);
+}
+
+.aide-titre {
+    font-family: var(--fms-titre);
+    font-weight: 700;
+    font-size: 2.2rem;
+    margin: 4px 0 6px;
+}
+
+.aide-intro {
+    color: var(--fms-gris);
+    margin: 0;
+}
+
+.aide-grille {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 330px;
+    gap: 24px;
+    align-items: start;
+}
+
+.aide-section-titre {
+    font-family: var(--fms-titre);
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 16px;
+}
+
+/* Questions fréquentes */
+.aide-questions {
+    display: grid;
+    gap: 10px;
+}
+
+.aide-question {
+    background: #fafafa;
+    border-radius: 14px;
+    padding: 0 16px;
+}
+
+.aide-question summary {
+    cursor: pointer;
+    font-weight: 700;
+    padding: 14px 0;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.aide-question summary::-webkit-details-marker {
+    display: none;
+}
+
+.aide-question summary::after {
+    content: '+';
+    color: var(--fms-orange-fonce);
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+.aide-question[open] summary::after {
+    content: '−';
+}
+
+.aide-question[open] {
+    background: var(--fms-orange-pale);
+}
+
+.aide-question p {
+    margin: 0 0 14px;
+    color: #333;
+}
+
+/* Contact */
+.aide-contact {
+    background: var(--fms-noir);
+    color: var(--fms-beige);
+    border-radius: var(--fms-rayon-carte);
+    border-bottom: 4px solid var(--fms-orange);
+    padding: 24px;
+}
+
+.aide-contact .aide-section-titre {
+    margin-bottom: 2px;
+}
+
+.aide-contact-intro {
+    color: rgba(245, 240, 230, 0.7);
+    margin-bottom: 16px;
+}
+
+.aide-coordonnees {
+    list-style: none;
+    margin: 0 0 16px;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.aide-coordonnees li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    overflow-wrap: anywhere;
+}
+
+.aide-coordonnees .bi {
+    color: var(--fms-orange);
+}
+
+.aide-coordonnees a {
+    color: var(--fms-beige);
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+.aide-contact-conseil {
+    font-size: 0.85rem;
+    color: rgba(245, 240, 230, 0.7);
+    margin: 0;
+}
+
+@media (max-width: 767px) {
+    .page-aide {
+        margin-top: 16px;
+    }
+
+    .aide-titre {
+        font-size: 1.7rem;
+    }
+
+    .aide-grille {
+        grid-template-columns: 1fr;
+    }
+
+    .aide-contact {
+        order: -1;
+    }
+}

@@ -135,9 +135,8 @@
                   @if (f.signalement_message) { <div class="text-break">« {{ f.signalement_message }} »</div> }
                 </div>
                 @if (peutModifier) {
-                <button type="button" class="btn btn-sm pill-btn-outline-dark" (click)="traiterSignalement(f)" [disabled]="traitementEnCours() === f.id">
-                  @if (traitementEnCours() === f.id) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
-                  <i class="bi bi-check2" aria-hidden="true"></i> Marquer comme traité
+                <button type="button" class="btn btn-sm pill-btn-outline-dark" (click)="traiterSignalement(f)">
+                  <i class="bi bi-check2" aria-hidden="true"></i> Traiter
                 </button>
                 }
               </div>
@@ -185,6 +184,11 @@
       <app-resident-form [resident]="d" (enregistre)="residentEnregistre($event)" (annule)="editionResident.set(false)"></app-resident-form>
     </div>
   </div>
+  }
+
+  <!-- Fenêtre : traiter une erreur signalée par le résident -->
+  @if (aTraiter(); as sg) {
+  <app-traitement-signalement [signalement]="sg" (traite)="signalementTraite()" (annule)="aTraiter.set(null)"></app-traitement-signalement>
   }
 
   <!-- Fenêtre : ajouter ou modifier un stage -->

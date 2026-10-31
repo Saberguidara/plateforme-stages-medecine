@@ -1,5 +1,6 @@
 import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -18,6 +19,8 @@ interface FicheResident {
   dates: string;
   dernier_telechargement: string | null;
   signale_le: string | null;
+  signalement_traite_le: string | null;
+  signalement_reponse: string | null;
 }
 
 interface DossierPersonnel {
@@ -51,7 +54,7 @@ const NOMS_SEMESTRES: Record<string, string> = { S1: '1er semestre', S2: '2nd se
 @Component({
   selector: 'app-resident-search',
   standalone: true,
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, RouterLink],
   templateUrl: './resident-search.html',
   styleUrls: ['./resident-search.css']
 })

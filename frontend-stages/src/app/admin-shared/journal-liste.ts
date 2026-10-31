@@ -18,7 +18,7 @@ const LIBELLES_CHAMPS: Record<string, string> = {
 const ICONES: Record<string, string> = {
   creation: 'bi-plus-lg', modification: 'bi-pencil', suppression: 'bi-trash3',
   import: 'bi-cloud-arrow-up', annulation: 'bi-arrow-counterclockwise', fusion: 'bi-intersect',
-  signalement: 'bi-flag', traitement: 'bi-check2-circle'
+  signalement: 'bi-flag', traitement: 'bi-check2-circle', notification: 'bi-envelope'
 };
 
 function texte(valeur: unknown): string {
@@ -147,7 +147,8 @@ export class JournalListe {
       case 'fiche:modification': return `a modifié ${stage}`;
       case 'fiche:suppression': return `a supprimé ${stage}`;
       case 'fiche:signalement': return `a signalé une erreur sur ${stage} (${this.motif(v.motif)})${v.message ? ` : « ${v.message} »` : ''}`;
-      case 'fiche:traitement': return `a traité l'erreur signalée sur ${stage} (${this.motif(v.motif)})`;
+      case 'fiche:traitement': return `a traité l'erreur signalée sur ${stage} (${this.motif(v.motif)})${v.reponse ? ` et a répondu : « ${v.reponse} »` : ''}`;
+      case 'notification:notification': return `a prévenu par e-mail ${v.residents} résident(s) que leur fiche ${v.semestre} ${v.annee} est disponible (${v.fiches} fiche(s))`;
       case 'import:import': return `a importé « ${v.fichier} »${v.semestre ? ` (${v.semestre} ${v.annee})` : ''} : ${v.residentsCrees} résident(s) et ${v.fichesCreees} fiche(s) créés`;
       case 'import:annulation': return `a annulé l'import « ${v.fichier} » : ${v.fichesSupprimees} fiche(s) supprimée(s)`;
       case 'referentiel:fusion': return `a remplacé ${a.avant?.variantes?.length ?? 0} écriture(s) ${a.apres?.type === 'service' ? 'de service' : "d'hôpital"} par « ${a.apres?.valeur} » (${a.apres?.fichesModifiees} fiche(s))`;

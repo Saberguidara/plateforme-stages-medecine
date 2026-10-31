@@ -268,6 +268,32 @@
     accent-color: var(--fms-orange);
 }
 
+.reponse-signalement {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 0.9rem;
+    background: rgba(31, 122, 77, 0.08);
+    border-radius: 12px;
+    padding: 8px 12px;
+    overflow-wrap: anywhere;
+}
+
+.reponse-signalement > .bi {
+    color: var(--fms-succes);
+}
+
+.aide-lien {
+    text-align: center;
+    margin: 0;
+    color: var(--fms-gris);
+}
+
+.aide-lien a {
+    color: var(--fms-orange-fonce);
+    font-weight: 600;
+}
+
 /* Fiche du semestre repérée dans la frise */
 .frise-carte.en-cours {
     background: var(--fms-orange-pale);

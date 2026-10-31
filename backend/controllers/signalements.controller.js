@@ -3,8 +3,10 @@ const db = require('../config/db');
 const logger = require('../utils/logger');
 const { journaliser } = require('../utils/journal');
 const { normalizeString } = require('../utils/validation');
+const { envoyerMail, gabarit, echapper } = require('../services/mail');
 
 const MOTIFS = ['hopital', 'service', 'periode', 'autre'];
+const LIBELLES_MOTIFS = { hopital: "l'hôpital", service: 'le service', periode: 'la période', autre: 'autre chose' };
 const LONGUEUR_MAX = 500;
 
 // Le résident ne peut signaler qu'une fiche de son propre dossier, une fois tant que le signalement est ouvert.
@@ -53,8 +55,8 @@ exports.lister = async (req, res) => {
     const traites = req.query.statut === 'traites';
     try {
         const [lignes] = await db.query(
-            `SELECT s.id, s.fiche_id, s.resident_id, s.motif, s.message, s.cree_le, s.traite_le, s.traite_par,
-                    r.nom_prenom, f.periode, f.annee, f.hopital, f.service
+            `SELECT s.id, s.fiche_id, s.resident_id, s.motif, s.message, s.cree_le, s.traite_le, s.traite_par, s.reponse,
+                    r.nom_prenom, r.email IS NOT NULL AND r.email <> '' AS a_email, f.periode, f.annee, f.hopital, f.service
              FROM signalements s
              JOIN formulaires_stage f ON f.id = s.fiche_id
              JOIN residents r ON r.id = s.resident_id
@@ -69,25 +71,58 @@ exports.lister = async (req, res) => {
     }
 };
 
+// Réponse facultative, visible par le résident sur sa fiche et envoyée par e-mail s'il en a un.
 exports.traiter = async (req, res) => {
     const id = parseInt(String(req.params.id), 10);
     if (!id) return res.status(400).json({ message: 'Signalement invalide.' });
+    const reponse = normalizeString(req.body && req.body.reponse).slice(0, LONGUEUR_MAX) || null;
     try {
         const [lignes] = await db.query(
-            `SELECT s.id, s.fiche_id, s.resident_id, s.motif, s.message, s.traite_le, f.periode, f.annee
-             FROM signalements s JOIN formulaires_stage f ON f.id = s.fiche_id WHERE s.id = ?`,
+            `SELECT s.id, s.fiche_id, s.resident_id, s.motif, s.message, s.traite_le, f.periode, f.annee,
+                    r.nom_prenom, r.email
+             FROM signalements s
+             JOIN formulaires_stage f ON f.id = s.fiche_id
+             JOIN residents r ON r.id = s.resident_id
+             WHERE s.id = ?`,
             [id]
         );
         if (lignes.length === 0) return res.status(404).json({ message: 'Signalement introuvable.' });
         const s = lignes[0];
         if (s.traite_le) return res.json({ success: true, message: 'Ce signalement était déjà traité.' });
 
-        await db.query('UPDATE signalements SET traite_le = NOW(), traite_par = ? WHERE id = ? AND traite_le IS NULL', [req.admin.login, id]);
+        await db.query(
+            'UPDATE signalements SET traite_le = NOW(), traite_par = ?, reponse = ? WHERE id = ? AND traite_le IS NULL',
+            [req.admin.login, reponse, id]
+        );
         await journaliser(null, req, {
             action: 'traitement', entite: 'fiche', entiteId: s.fiche_id, residentId: s.resident_id,
-            apres: { periode: s.periode, annee: s.annee, motif: s.motif, message: s.message }
+            apres: { periode: s.periode, annee: s.annee, motif: s.motif, message: s.message, reponse }
         });
-        res.json({ success: true, message: 'Signalement marqué comme traité.' });
+
+        let prevenu = false;
+        if (s.email) {
+            try {
+                await envoyerMail({
+                    to: s.email,
+                    subject: `Votre signalement sur la fiche ${s.periode} ${s.annee} a été traité`,
+                    html: gabarit({
+                        titre: `Bonjour ${echapper(s.nom_prenom)},`,
+                        paragraphes: [
+                            `Le service des stages a traité votre signalement sur la fiche <strong>${echapper(s.periode)} ${s.annee}</strong> (${LIBELLES_MOTIFS[s.motif] || s.motif}).`,
+                            ...(reponse ? [`Réponse du service : « ${echapper(reponse)} »`] : []),
+                            'Vous pouvez télécharger votre fiche à jour depuis votre espace.'
+                        ]
+                    })
+                });
+                prevenu = true;
+            } catch (err) {
+                logger.error('E-mail de réponse au signalement : ' + err);
+            }
+        }
+        res.json({
+            success: true,
+            message: prevenu ? 'Signalement traité : le résident a été prévenu par e-mail.' : 'Signalement marqué comme traité.'
+        });
     } catch (error) {
         logger.error('Traitement du signalement : ' + error);
         res.status(500).json({ message: "Le signalement n'a pas pu être mis à jour." });
