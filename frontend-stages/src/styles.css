@@ -637,6 +637,32 @@ button.compteur-alerte:hover {
     background: #e9e5dc;
 }
 
+.pdf-fenetre-compacte {
+    height: auto;
+    width: min(480px, 100%);
+}
+
+.pdf-sans-apercu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 32px 24px;
+    text-align: center;
+    color: var(--fms-noir);
+}
+
+.pdf-sans-apercu > .bi {
+    font-size: 3rem;
+    color: var(--fms-orange-fonce);
+}
+
+.pdf-sans-apercu p {
+    margin: 0;
+    color: var(--fms-gris);
+    line-height: 1.5;
+}
+
 /* ===== Animations communes ===== */
 
 @keyframes fadeIn {
