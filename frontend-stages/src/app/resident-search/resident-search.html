@@ -1,125 +1,162 @@
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-10">
+<div class="container espace-resident">
 
-      <div class="text-center mb-4 border-bottom-soft pb-3">
-        <h2 class="dashboard-page-title mb-2">Espace Résident</h2>
-        <p class="lead text-muted mb-0 page-sous-titre">Mes fiches de validation de stages</p>
+  @if (dossier(); as d) {
+  <!-- Mon parcours : identité et année en cours -->
+  <section class="parcours-entete" aria-labelledby="titre-dossier">
+    <div class="parcours-identite">
+      <span class="parcours-avatar" aria-hidden="true">{{ initiales() }}</span>
+      <div class="min-w-0">
+        <p class="parcours-surtitre">Espace résident</p>
+        <h2 id="titre-dossier" class="parcours-nom">{{ d.nom_prenom }}</h2>
+        <p class="parcours-details">{{ d.specialite }}@if (d.promotion) { · Promotion <span class="chiffres">{{ d.promotion }}</span> }</p>
       </div>
+    </div>
 
-      @if (donneesResident) {
-      <div class="card dashboard-card">
-        <div class="card-header dashboard-card-header-dark d-flex justify-content-between align-items-center">
-          <div>
-            <h4 class="mb-0">Dossier de : {{ donneesResident.nom_prenom }}</h4>
-            <small>Spécialité : {{ donneesResident.specialite }} &nbsp;|&nbsp;
-              @if (donneesResident.parcours_termine) { <i class="bi bi-mortarboard" aria-hidden="true"></i> Parcours terminé }
-              @else { {{ niveauLabel(donneesResident.niveau) }} }</small>
-          </div>
-        </div>
-        <div class="card-body">
+    <div class="parcours-statut">
+      <span class="parcours-statut-libelle">Année en cours</span>
+      <span class="parcours-statut-valeur" [class.termine]="d.parcours_termine">
+        @if (d.parcours_termine) { <i class="bi bi-mortarboard" aria-hidden="true"></i> }
+        {{ anneeEnCours() }}
+      </span>
+    </div>
 
-          @if (donneesResident.fiches.length === 0) {
-          <div class="etat-vide">
-            <i class="bi bi-journal-x etat-vide-icone" aria-hidden="true"></i>
-            <div class="etat-vide-titre">Aucune fiche disponible pour le moment</div>
-            <p class="etat-vide-texte">Vos fiches apparaîtront ici dès que le service des stages aura enregistré vos affectations.</p>
-          </div>
-          } @else {
-          <div class="table-responsive d-none d-md-block">
-            <table class="table table-hover table-striped align-middle">
-              <thead class="table-light">
-                <tr>
-                  <th scope="col">Année (Niveau)</th>
-                  <th scope="col">Période</th>
-                  <th scope="col">Année Univ.</th>
-                  <th scope="col">Service</th>
-                  <th scope="col">Hôpital</th>
-                  <th scope="col" class="text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (fiche of donneesResident.fiches; track fiche.id) {
-                <tr>
-                  <td>
-                    <span
-                      class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
-                      {{ getAnneeResidanat(fiche, donneesResident) }}
-                    </span>
-                  </td>
-                  <td><strong>{{ fiche.periode }}</strong></td>
-                  <td class="chiffres">{{ fiche.annee }}</td>
-                  <td>{{ fiche.service || 'Non assigné' }}</td>
-                  <td>{{ fiche.hopital || 'Non assigné' }}</td>
-                  <td class="text-center d-flex gap-2 justify-content-center">
-                    <button class="btn btn-sm pill-btn-outline-dark" (click)="apercuPDF(fiche, donneesResident)"
-                      [disabled]="isGenerating">
-                      <i class="bi bi-eye" aria-hidden="true"></i> Aperçu
-                    </button>
-                    <button class="btn btn-sm pill-btn-orange" (click)="telechargerPDF(fiche, donneesResident)"
-                      [disabled]="isGenerating">
-                      <i class="bi bi-download" aria-hidden="true"></i> Télécharger
-                    </button>
-                  </td>
-                </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+    <ol class="parcours-etapes" aria-label="Progression du résidanat">
+      @for (e of etapes(); track e.niveau) {
+      <li class="parcours-etape" [attr.data-etat]="e.etat" [attr.aria-current]="e.etat === 'courante' ? 'step' : null">
+        <span class="parcours-etape-pastille">
+          @if (e.etat === 'faite') { <i class="bi bi-check-lg" aria-hidden="true"></i> } @else { {{ e.niveau }} }
+        </span>
+        <span class="parcours-etape-libelle">{{ e.libelle }}</span>
+      </li>
+      }
+    </ol>
+  </section>
 
-          <!-- Téléphone : une carte par fiche -->
-          <div class="d-md-none fiche-cards">
-            @for (fiche of donneesResident.fiches; track fiche.id) {
-            <div class="fiche-card">
-              <div class="d-flex justify-content-between align-items-baseline gap-2">
-                <strong class="fiche-periode chiffres">{{ fiche.periode }} · {{ fiche.annee }}</strong>
-                <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ getAnneeResidanat(fiche, donneesResident) }}</span>
-              </div>
-              <div class="fiche-lieu">{{ fiche.hopital || 'Hôpital non assigné' }}</div>
-              <div class="text-muted small">{{ fiche.service || 'Service non assigné' }}</div>
-              <div class="d-flex gap-2 mt-2">
-                <button class="btn pill-btn-outline-dark" (click)="apercuPDF(fiche, donneesResident)"
-                  [disabled]="isGenerating" aria-label="Aperçu de la fiche">
-                  <i class="bi bi-eye" aria-hidden="true"></i>
-                </button>
-                <button class="btn pill-btn-orange flex-grow-1" (click)="telechargerPDF(fiche, donneesResident)"
-                  [disabled]="isGenerating">
-                  <i class="bi bi-download" aria-hidden="true"></i> {{ isGenerating ? 'Génération…' : 'Télécharger la fiche' }}
-                </button>
-              </div>
-            </div>
+  <!-- La fiche du semestre en cours, mise en avant -->
+  <section class="card dashboard-card semestre-carte" aria-labelledby="titre-semestre">
+    <div class="card-body p-4">
+      <h3 id="titre-semestre" class="section-titre">Ma fiche du semestre <small class="chiffres">{{ nomSemestre() }}</small></h3>
+
+      @for (f of fichesDuSemestre(); track f.id) {
+      <div class="semestre-fiche">
+        <div class="min-w-0">
+          <div class="mb-1"><span class="frise-periode">{{ f.periode }}</span>
+            <span class="text-muted small">{{ f.dates }}</span></div>
+          <div class="semestre-lieu">{{ f.hopital || 'Hôpital non renseigné' }}</div>
+          <div class="text-muted text-break">{{ f.service || 'Service non renseigné' }}</div>
+          <div class="mt-2">
+            @if (f.dernier_telechargement) {
+            <span class="pastille pastille-succes"><i class="bi bi-check2-circle" aria-hidden="true"></i> Déjà téléchargée le {{ f.dernier_telechargement | date: 'dd/MM/yyyy' }}</span>
+            } @else {
+            <span class="pastille pastille-alerte"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Pas encore téléchargée</span>
             }
           </div>
-          }
-
         </div>
-      </div>
-      } @else if (messageErreur) {
-      <div class="card dashboard-card">
-        <div class="etat-vide">
-          <i class="bi bi-cloud-slash etat-vide-icone" aria-hidden="true"></i>
-          <div class="etat-vide-titre">Votre dossier n'a pas pu être chargé</div>
-          <p class="etat-vide-texte">{{ messageErreur }}</p>
-          <button type="button" class="btn pill-btn-orange" (click)="chercher()">
-            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Réessayer
+        <div class="semestre-actions">
+          <button type="button" class="btn pill-btn-orange btn-lg" (click)="pdf(f, 'telecharger')" [disabled]="pdfEnCours() !== null">
+            @if (pdfEnCours() === f.id) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Génération… }
+            @else { <i class="bi bi-download" aria-hidden="true"></i> Télécharger ma fiche }
+          </button>
+          <button type="button" class="btn pill-btn-outline-dark" (click)="pdf(f, 'apercu')" [disabled]="pdfEnCours() !== null">
+            <i class="bi bi-eye" aria-hidden="true"></i> Aperçu
           </button>
         </div>
       </div>
-      } @else {
-      <!-- Chargement : silhouette du dossier -->
-      <div class="card dashboard-card" aria-busy="true" aria-label="Chargement de votre dossier">
-        <div class="dashboard-card-header-dark">
-          <span class="skeleton skeleton-titre opacity-25"></span>
-          <span class="skeleton skeleton-ligne w-50 opacity-25"></span>
-        </div>
-        <div class="card-body d-grid gap-3">
-          <span class="skeleton skeleton-carte"></span>
-          <span class="skeleton skeleton-carte"></span>
-          <span class="skeleton skeleton-carte d-none d-md-block"></span>
+      } @empty {
+      <div class="semestre-vide">
+        <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+        <div>
+          <div class="fw-bold">
+            @if (d.parcours_termine) { Votre parcours de résidanat est terminé. }
+            @else { Votre fiche du {{ nomSemestre() }} n'est pas encore disponible. }
+          </div>
+          <p class="text-muted mb-0">
+            @if (d.parcours_termine) { Vos fiches restent disponibles ci-dessous. }
+            @else { Elle apparaîtra ici dès que le service des stages aura enregistré votre affectation. }
+          </p>
         </div>
       </div>
       }
+    </div>
+  </section>
 
+  <!-- Tout le parcours, année par année -->
+  <section class="card dashboard-card" aria-labelledby="titre-parcours">
+    <div class="card-body p-4">
+      <h3 id="titre-parcours" class="section-titre">Mon parcours <small class="chiffres">{{ d.fiches.length }} fiche{{ d.fiches.length > 1 ? 's' : '' }}</small></h3>
+
+      @if (d.fiches.length === 0) {
+      <div class="etat-vide py-3">
+        <i class="bi bi-journal-x etat-vide-icone" aria-hidden="true"></i>
+        <div class="etat-vide-titre">Aucune fiche disponible pour le moment</div>
+        <p class="etat-vide-texte">Vos fiches apparaîtront ici dès que le service des stages aura enregistré vos affectations.</p>
+      </div>
+      } @else {
+      @for (annee of parcours(); track annee.cle) {
+      <div class="frise-annee">
+        <h4 class="frise-annee-titre">{{ annee.titre }} @if (annee.detail) { <small>{{ annee.detail }}</small> }</h4>
+        <ol class="frise">
+          @for (f of annee.fiches; track f.id) {
+          <li class="frise-item" [class.rattrapage]="f.periode.startsWith('R')">
+            <div class="frise-carte" [class.en-cours]="estDuSemestre(f)">
+              <div>
+                <div class="mb-1"><span class="frise-periode">{{ f.periode }}</span>
+                  <span class="text-muted small">{{ libellesPeriodes[f.periode] }} <span class="chiffres">{{ f.annee }}</span></span></div>
+                <div class="frise-lieu">{{ f.hopital || 'Hôpital non renseigné' }}</div>
+                <div class="text-muted small text-break">{{ f.service || 'Service non renseigné' }}</div>
+                <div class="d-flex gap-2 flex-wrap mt-2">
+                  @if (estDuSemestre(f)) { <span class="pastille pastille-sombre">Semestre en cours</span> }
+                  @if (f.dernier_telechargement) {
+                  <span class="pastille pastille-succes"><i class="bi bi-check2" aria-hidden="true"></i> Téléchargée le {{ f.dernier_telechargement | date: 'dd/MM/yyyy' }}</span>
+                  } @else {
+                  <span class="pastille pastille-neutre">Jamais téléchargée</span>
+                  }
+                </div>
+              </div>
+              <div class="frise-actions">
+                <button type="button" class="btn-icone" (click)="pdf(f, 'apercu')" [disabled]="pdfEnCours() !== null"
+                  title="Aperçu" [attr.aria-label]="'Aperçu de la fiche ' + f.periode + ' ' + f.annee">
+                  @if (pdfEnCours() === f.id) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> }
+                  @else { <i class="bi bi-eye" aria-hidden="true"></i> }
+                </button>
+                <button type="button" class="btn-icone" (click)="pdf(f, 'telecharger')" [disabled]="pdfEnCours() !== null"
+                  title="Télécharger" [attr.aria-label]="'Télécharger la fiche ' + f.periode + ' ' + f.annee"><i class="bi bi-download" aria-hidden="true"></i></button>
+              </div>
+            </div>
+          </li>
+          }
+        </ol>
+      </div>
+      }
+      }
+    </div>
+  </section>
+
+  } @else if (messageErreur()) {
+  <div class="card dashboard-card">
+    <div class="etat-vide">
+      <i class="bi bi-cloud-slash etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Votre dossier n'a pas pu être chargé</div>
+      <p class="etat-vide-texte">{{ messageErreur() }}</p>
+      <button type="button" class="btn pill-btn-orange" (click)="charger()">
+        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Réessayer
+      </button>
     </div>
   </div>
+  } @else {
+  <!-- Chargement : silhouette du dossier -->
+  <div aria-busy="true" aria-label="Chargement de votre dossier">
+    <div class="parcours-entete">
+      <span class="skeleton skeleton-titre opacity-25"></span>
+      <span class="skeleton skeleton-ligne w-50 opacity-25"></span>
+    </div>
+    <div class="card dashboard-card">
+      <div class="card-body d-grid gap-3">
+        <span class="skeleton skeleton-carte"></span>
+        <span class="skeleton skeleton-carte"></span>
+      </div>
+    </div>
+  </div>
+  }
+
 </div>

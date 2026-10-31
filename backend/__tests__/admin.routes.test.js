@@ -133,6 +133,32 @@ describe("Routes de l'administration", () => {
         });
     });
 
+    describe('GET /api/residents/:cin (espace résident)', () => {
+        const jetonResident = `Bearer ${jwt.sign({ cin: '12345678', role: 'resident' }, 'test_secret')}`;
+
+        it("renvoie les dates de chaque période, le dernier téléchargement et le semestre en cours", async () => {
+            repondre([
+                [/FROM residents WHERE cin/, [[{ id: 4, cin: '12345678', specialite: 'Médecine de famille', niveau: 2, promotion: 2025 }]]],
+                [/FROM formulaires_stage f/, [[
+                    { id: 10, periode: 'T1', annee: 2025, service: 'Urgences', hopital: 'CHU', dernier_telechargement: '2025-02-01 10:00:00' },
+                    { id: 11, periode: 'S2', annee: 2025, service: 'Pédiatrie', hopital: 'CHU', dernier_telechargement: null }
+                ]]]
+            ]);
+            const res = await request(app).get('/api/residents/12345678').set('Authorization', jetonResident);
+            expect(res.status).toBe(200);
+            expect(res.body.niveau).toBe(2);
+            expect(res.body.fiches[0].dates).toMatch(/^Du .+\/2025 au .+\/2025$/);
+            expect(res.body.fiches[0].dernier_telechargement).toBe('2025-02-01 10:00:00');
+            expect(['S1', 'S2']).toContain(res.body.semestreCourant.semestre);
+            expect(res.body.semestreCourant.periodes.length).toBe(4);
+        });
+
+        it("refuse le dossier d'un autre résident", async () => {
+            const res = await request(app).get('/api/residents/87654321').set('Authorization', jetonResident);
+            expect(res.status).toBe(403);
+        });
+    });
+
     describe('GET /api/admin/residents/verifier-cin', () => {
         it('signale un CIN déjà attribué à un autre résident', async () => {
             db.query.mockResolvedValueOnce([[{ id: 4, nom_prenom: 'NOM EXEMPLE' }]]);

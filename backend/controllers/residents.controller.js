@@ -1,14 +1,15 @@
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { validateResidentPayload, validateCin, normalizeString } = require('../utils/validation');
-const { SPECIALITES, PERIODES_DU_SEMESTRE, semestreCourant, etatResidanat } = require('../config/specialites');
+const {
+    SPECIALITES, SPECIALITE_PAR_DEFAUT, PERIODES_DU_SEMESTRE, semestreCourant, etatResidanat, specialiteDe, libellePeriode
+} = require('../config/specialites');
 const { NIVEAU_COURANT, construireFiltres } = require('../services/filtres-residents');
 const { journaliser, extraire, CHAMPS_RESIDENT } = require('../utils/journal');
 
 // Remplace le niveau brut par l'année de résidanat en cours, ou « parcours terminé ».
 const avecEtat = (r) => ({ ...r, ...etatResidanat(r.specialite, r.niveau) });
 
-const ORDRE_FICHES = "ORDER BY annee ASC, FIELD(periode,'T1','T2','S1','T3','T4','S2','R1','R2',periode)";
 const ORDRE_FICHES_F = "ORDER BY f.annee ASC, FIELD(f.periode,'T1','T2','S1','T3','T4','S2','R1','R2',f.periode)";
 
 exports.getResidentByCin = async (req, res) => {
@@ -35,13 +36,19 @@ exports.getResidentByCin = async (req, res) => {
         }
 
         const resident = avecEtat(residents[0]);
-        const [fiches] = await db.query(
-            `SELECT id, periode, annee, service, hopital, url_pdf FROM formulaires_stage
-             WHERE resident_id = ? ${ORDRE_FICHES}`,
+        // Seuls les téléchargements du résident lui-même sont enregistrés (voir pdf.controller).
+        const [lignes] = await db.query(
+            `SELECT f.id, f.periode, f.annee, f.service, f.hopital, f.url_pdf,
+                    (SELECT MAX(t.telecharge_le) FROM telechargements t WHERE t.fiche_id = f.id) AS dernier_telechargement
+             FROM formulaires_stage f WHERE f.resident_id = ? ${ORDRE_FICHES_F}`,
             [resident.id]
         );
 
-        res.json({ ...resident, fiches });
+        const specialite = specialiteDe(resident.specialite) || SPECIALITES[SPECIALITE_PAR_DEFAUT];
+        const fiches = lignes.map((f) => ({ ...f, dates: libellePeriode(specialite, f.periode, f.annee) }));
+        const { semestre, annee } = semestreCourant();
+
+        res.json({ ...resident, fiches, semestreCourant: { semestre, annee, periodes: PERIODES_DU_SEMESTRE[semestre] } });
     } catch (error) {
         logger.error('Erreur lors de la recherche : ' + error);
         res.status(500).json({ error: 'Erreur serveur lors de la recherche' });

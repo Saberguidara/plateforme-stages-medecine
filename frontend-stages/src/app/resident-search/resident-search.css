@@ -1,49 +1,290 @@
-/* Styles propres à l'espace résident ; cartes et boutons sont dans src/styles.css. */
+/* Styles propres à l'espace résident ; cartes, frise et boutons sont dans src/styles.css. */
 
-.dashboard-page-title {
+.espace-resident {
+    max-width: 960px;
+    margin-top: 32px;
+    margin-bottom: 32px;
+    display: grid;
+    gap: 24px;
+}
+
+.min-w-0 {
+    min-width: 0;
+}
+
+/* En-tête « mon parcours » */
+.parcours-entete {
+    background: var(--fms-noir);
+    color: var(--fms-beige);
+    border-radius: var(--fms-rayon-carte);
+    border-bottom: 4px solid var(--fms-orange);
+    padding: 28px 32px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px 32px;
+    align-items: center;
+}
+
+.parcours-identite {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+}
+
+.parcours-avatar {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--fms-orange);
+    color: var(--fms-noir);
+    display: grid;
+    place-items: center;
     font-family: var(--fms-titre);
     font-weight: 700;
-    color: var(--fms-noir);
-    font-size: 2.5rem;
-    letter-spacing: 1px;
+    font-size: 1.5rem;
 }
 
-.page-sous-titre {
-    font-size: 1.2rem;
+.parcours-surtitre {
+    margin: 0;
+    font-size: 0.8rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--fms-orange);
 }
 
-.border-bottom-soft {
-    border-bottom: 2px solid rgba(0, 0, 0, 0.05) !important;
-}
-
-.fiche-cards {
-    display: grid;
-    gap: 12px;
-}
-
-.fiche-card {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 14px;
-    padding: 14px 16px;
-    display: grid;
-    gap: 4px;
-}
-
-.fiche-periode {
-    font-size: 1.05rem;
-}
-
-.fiche-lieu {
-    font-weight: 600;
+.parcours-nom {
+    font-family: var(--fms-titre);
+    font-weight: 700;
+    font-size: 1.7rem;
+    margin: 2px 0 4px;
     overflow-wrap: anywhere;
 }
 
+.parcours-details {
+    margin: 0;
+    color: rgba(245, 240, 230, 0.75);
+}
+
+.parcours-statut {
+    display: grid;
+    justify-items: end;
+    gap: 4px;
+}
+
+.parcours-statut-libelle {
+    font-size: 0.8rem;
+    color: rgba(245, 240, 230, 0.7);
+}
+
+.parcours-statut-valeur {
+    font-family: var(--fms-titre);
+    font-weight: 700;
+    font-size: 1.4rem;
+    background: var(--fms-orange);
+    color: var(--fms-noir);
+    border-radius: 50px;
+    padding: 6px 20px;
+    white-space: nowrap;
+}
+
+.parcours-statut-valeur.termine {
+    background: var(--fms-beige);
+}
+
+/* Progression 1A → 3A */
+.parcours-etapes {
+    grid-column: 1 / -1;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+}
+
+.parcours-etape {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.parcours-etape + .parcours-etape::before {
+    content: '';
+    position: absolute;
+    top: 17px;
+    right: 50%;
+    width: 100%;
+    height: 3px;
+    background: rgba(245, 240, 230, 0.2);
+    z-index: 0;
+}
+
+.parcours-etape + .parcours-etape[data-etat='faite']::before,
+.parcours-etape + .parcours-etape[data-etat='courante']::before {
+    background: var(--fms-orange);
+}
+
+.parcours-etape-pastille {
+    position: relative;
+    z-index: 1;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    background: var(--fms-noir);
+    border: 3px solid rgba(245, 240, 230, 0.3);
+    color: rgba(245, 240, 230, 0.6);
+}
+
+.parcours-etape[data-etat='faite'] .parcours-etape-pastille {
+    background: var(--fms-orange);
+    border-color: var(--fms-orange);
+    color: var(--fms-noir);
+}
+
+.parcours-etape[data-etat='courante'] .parcours-etape-pastille {
+    border-color: var(--fms-orange);
+    color: var(--fms-beige);
+    box-shadow: 0 0 0 5px rgba(244, 123, 69, 0.3);
+}
+
+.parcours-etape-libelle {
+    font-size: 0.85rem;
+    color: rgba(245, 240, 230, 0.75);
+}
+
+.parcours-etape[data-etat='courante'] .parcours-etape-libelle {
+    color: var(--fms-orange);
+    font-weight: 700;
+}
+
+/* Titres des sections */
+.section-titre {
+    font-family: var(--fms-titre);
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.section-titre small {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 400;
+    font-size: 0.9rem;
+    color: var(--fms-gris);
+}
+
+/* Fiche du semestre */
+.semestre-carte {
+    border-left: 6px solid var(--fms-orange);
+}
+
+.semestre-fiche {
+    display: flex;
+    gap: 16px 24px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    background: var(--fms-orange-pale);
+    border-radius: 16px;
+    padding: 18px 20px;
+}
+
+.semestre-fiche + .semestre-fiche {
+    margin-top: 12px;
+}
+
+.semestre-fiche > div:first-child {
+    flex: 1 1 280px;
+}
+
+.semestre-lieu {
+    font-family: var(--fms-titre);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--fms-noir);
+    overflow-wrap: anywhere;
+}
+
+.semestre-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 230px;
+}
+
+.semestre-vide {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: #fafafa;
+    border-radius: 16px;
+    padding: 18px 20px;
+}
+
+.semestre-vide > i {
+    font-size: 1.8rem;
+    color: var(--fms-orange-fonce);
+}
+
+/* Fiche du semestre repérée dans la frise */
+.frise-carte.en-cours {
+    background: var(--fms-orange-pale);
+    box-shadow: inset 3px 0 0 var(--fms-orange);
+}
+
 @media (max-width: 767px) {
-    .dashboard-page-title {
-        font-size: 1.8rem;
+    .espace-resident {
+        margin-top: 16px;
+        gap: 16px;
     }
 
-    .dashboard-card-header-dark {
-        padding: 14px 16px;
+    .parcours-entete {
+        grid-template-columns: 1fr;
+        padding: 20px;
+        gap: 18px;
+    }
+
+    .parcours-avatar {
+        flex-basis: 52px;
+        width: 52px;
+        height: 52px;
+        font-size: 1.2rem;
+    }
+
+    .parcours-nom {
+        font-size: 1.35rem;
+    }
+
+    .parcours-statut {
+        justify-items: start;
+    }
+
+    .parcours-statut-valeur {
+        font-size: 1.15rem;
+    }
+
+    .semestre-actions {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .semestre-actions .btn-lg {
+        font-size: 0.95rem;
+        letter-spacing: 0;
+        padding-inline: 12px;
+    }
+
+    .semestre-fiche,
+    .card-body.p-4 {
+        padding: 16px !important;
     }
 }
