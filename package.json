@@ -1,0 +1,15 @@
+{
+  "name": "plateforme-stages-medecine",
+  "private": true,
+  "description": "Fiches de validation de stage FMSfax : Express sert l'API et l'application Angular compilée.",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "build": "npm ci --prefix backend --omit=dev && npm ci --prefix frontend-stages && npm run build --prefix frontend-stages",
+    "start": "npm start --prefix backend",
+    "test": "npm test --prefix backend",
+    "db:init": "npm run db:init --prefix backend",
+    "db:migrate": "npm run db:migrate --prefix backend"
+  }
+}
