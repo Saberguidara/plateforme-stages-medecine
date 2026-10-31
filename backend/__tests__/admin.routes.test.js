@@ -25,6 +25,7 @@ function construireApp() {
     app.use('/api', require('../routes/fiches.routes'));
     app.use('/api/admin', require('../routes/import.routes'));
     app.use('/api/admin', require('../routes/admin.routes'));
+    app.use('/api', require('../routes/signalements.routes'));
     return app;
 }
 
@@ -155,6 +156,82 @@ describe("Routes de l'administration", () => {
 
         it("refuse le dossier d'un autre résident", async () => {
             const res = await request(app).get('/api/residents/87654321').set('Authorization', jetonResident);
+            expect(res.status).toBe(403);
+        });
+    });
+
+    describe('Signalement d\'erreur sur une fiche', () => {
+        const jetonResident = `Bearer ${jwt.sign({ id: 4, cin: '12345678', role: 'resident' }, 'test_secret')}`;
+        const FICHE = { id: 10, resident_id: 4, periode: 'S1', annee: 2026, hopital: 'CHU', service: 'Urgences' };
+
+        it('enregistre le signalement du résident et le journalise', async () => {
+            repondre([
+                [/FROM formulaires_stage f JOIN residents r/, [[FICHE]]],
+                [/SELECT id FROM signalements/, [[]]],
+                [/INSERT INTO signalements/, [{ insertId: 3 }]],
+                [/INSERT INTO journal_actions/, [{}]]
+            ]);
+            const res = await request(app).post('/api/signalements').set('Authorization', jetonResident)
+                .send({ ficheId: 10, motif: 'hopital', message: "  Ce n'est pas le bon hôpital  " });
+            expect(res.status).toBe(201);
+            const insertion = db.query.mock.calls.find(([sql]) => /INSERT INTO signalements/.test(sql));
+            expect(insertion[1]).toEqual([10, 4, 'hopital', "Ce n'est pas le bon hôpital"]);
+            const journal = db.query.mock.calls.find(([sql]) => /INSERT INTO journal_actions/.test(sql));
+            expect(journal[1].slice(2, 6)).toEqual(['signalement', 'fiche', 10, 4]);
+        });
+
+        it("ne vérifie que les fiches du résident connecté", async () => {
+            repondre([[/FROM formulaires_stage f JOIN residents r/, [[]]]]);
+            const res = await request(app).post('/api/signalements').set('Authorization', jetonResident).send({ ficheId: 99, motif: 'service' });
+            expect(res.status).toBe(404);
+            const verification = db.query.mock.calls.find(([sql]) => /JOIN residents r/.test(sql));
+            expect(verification[1]).toEqual([99, '12345678']);
+        });
+
+        it('refuse un second signalement tant que le premier est ouvert', async () => {
+            repondre([
+                [/FROM formulaires_stage f JOIN residents r/, [[FICHE]]],
+                [/SELECT id FROM signalements/, [[{ id: 1 }]]]
+            ]);
+            const res = await request(app).post('/api/signalements').set('Authorization', jetonResident).send({ ficheId: 10, motif: 'periode' });
+            expect(res.status).toBe(409);
+            expect(db.query.mock.calls.some(([sql]) => /INSERT INTO signalements/.test(sql))).toBe(false);
+        });
+
+        it('exige une description pour le motif « autre » et un motif connu', async () => {
+            const sansMessage = await request(app).post('/api/signalements').set('Authorization', jetonResident).send({ ficheId: 10, motif: 'autre' });
+            const motifInconnu = await request(app).post('/api/signalements').set('Authorization', jetonResident).send({ ficheId: 10, motif: 'x' });
+            expect(sansMessage.status).toBe(400);
+            expect(motifInconnu.status).toBe(400);
+        });
+
+        it("est réservé aux résidents", async () => {
+            const res = await request(app).post('/api/signalements').set('Authorization', jeton(ADMIN)).send({ ficheId: 10, motif: 'hopital' });
+            expect(res.status).toBe(403);
+        });
+
+        it("liste les signalements ouverts pour l'administration", async () => {
+            repondre([[/FROM signalements s/, [[{ id: 3, motif: 'hopital', nom_prenom: 'X' }]]]]);
+            const res = await request(app).get('/api/admin/signalements').set('Authorization', jeton(LECTEUR));
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveLength(1);
+            expect(db.query.mock.calls[0][0]).toMatch(/traite_le IS NULL/);
+        });
+
+        it('marque un signalement comme traité et le journalise', async () => {
+            repondre([
+                [/FROM signalements s JOIN formulaires_stage/, [[{ id: 3, fiche_id: 10, resident_id: 4, motif: 'hopital', traite_le: null, periode: 'S1', annee: 2026 }]]],
+                [/UPDATE signalements/, [{ affectedRows: 1 }]],
+                [/INSERT INTO journal_actions/, [{}]]
+            ]);
+            const res = await request(app).put('/api/admin/signalements/3/traite').set('Authorization', jeton(ADMIN));
+            expect(res.status).toBe(200);
+            const maj = db.query.mock.calls.find(([sql]) => /UPDATE signalements/.test(sql));
+            expect(maj[1]).toEqual(['admin', 3]);
+        });
+
+        it('refuse le traitement au rôle « lecture »', async () => {
+            const res = await request(app).put('/api/admin/signalements/3/traite').set('Authorization', jeton(LECTEUR));
             expect(res.status).toBe(403);
         });
     });

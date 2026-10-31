@@ -1749,3 +1749,27 @@ a.lien-alerte:hover {
     .tableau-residents tbody tr:nth-child(even) { background: #fcfaf6; }
     .tableau-residents thead th { position: static; }
 }
+
+/* Erreur signalée par un résident sur une fiche */
+.signalement-fiche {
+    display: flex;
+    gap: 10px 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--fms-orange-pale);
+    border: 1px solid rgba(244, 123, 69, 0.45);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    order: 3;
+}
+
+.signalement-fiche > .bi,
+.signalement-ligne > .bi {
+    color: var(--fms-orange-fonce);
+}
+
+.signalement-ligne {
+    align-items: flex-start;
+    flex-wrap: wrap;
+}

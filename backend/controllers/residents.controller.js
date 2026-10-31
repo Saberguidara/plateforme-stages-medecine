@@ -39,8 +39,11 @@ exports.getResidentByCin = async (req, res) => {
         // Seuls les téléchargements du résident lui-même sont enregistrés (voir pdf.controller).
         const [lignes] = await db.query(
             `SELECT f.id, f.periode, f.annee, f.service, f.hopital, f.url_pdf,
-                    (SELECT MAX(t.telecharge_le) FROM telechargements t WHERE t.fiche_id = f.id) AS dernier_telechargement
-             FROM formulaires_stage f WHERE f.resident_id = ? ${ORDRE_FICHES_F}`,
+                    (SELECT MAX(t.telecharge_le) FROM telechargements t WHERE t.fiche_id = f.id) AS dernier_telechargement,
+                    s.cree_le AS signale_le
+             FROM formulaires_stage f
+             LEFT JOIN signalements s ON s.fiche_id = f.id AND s.traite_le IS NULL
+             WHERE f.resident_id = ? ${ORDRE_FICHES_F}`,
             [resident.id]
         );
 
@@ -75,8 +78,11 @@ exports.getResidentById = async (req, res) => {
             `SELECT f.id, f.periode, f.annee, f.service, f.hopital, f.import_id, f.modifie_le,
                     CAST(IF(? > 0, f.annee - ? + 1, ?) AS SIGNED) AS annee_residanat,
                     (SELECT COUNT(*) FROM telechargements t WHERE t.fiche_id = f.id) AS nb_telechargements,
-                    (SELECT MAX(t.telecharge_le) FROM telechargements t WHERE t.fiche_id = f.id) AS dernier_telechargement
-             FROM formulaires_stage f WHERE f.resident_id = ? ${ORDRE_FICHES_F}`,
+                    (SELECT MAX(t.telecharge_le) FROM telechargements t WHERE t.fiche_id = f.id) AS dernier_telechargement,
+                    s.id AS signalement_id, s.motif AS signalement_motif, s.message AS signalement_message, s.cree_le AS signale_le
+             FROM formulaires_stage f
+             LEFT JOIN signalements s ON s.fiche_id = f.id AND s.traite_le IS NULL
+             WHERE f.resident_id = ? ${ORDRE_FICHES_F}`,
             [resident.promotion || 0, resident.promotion || 0, resident.niveau_saisi, id]
         );
 

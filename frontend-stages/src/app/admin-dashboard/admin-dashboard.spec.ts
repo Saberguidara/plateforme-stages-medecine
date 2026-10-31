@@ -23,17 +23,23 @@ describe('AdminDashboard', () => {
 
   afterEach(() => httpMock.verify());
 
+  const signalements = (liste: unknown[] = []) =>
+    httpMock.expectOne((r) => r.url === `${environment.apiUrl}/admin/signalements`).flush(liste);
+
+  const STATS = {
+    semestre: { semestre: 'S2', annee: 2026 },
+    promotions: [
+      { niveau: 1, promotion: 2026, total: 12 },
+      { niveau: 2, promotion: 2025, total: 9 },
+      { niveau: 3, promotion: 2024, total: 7 }
+    ],
+    actifs: 28, fichesSemestre: 40, residentsAvecFiche: 25, sansFicheSemestre: 3, sansEmail: 4,
+    sansStage: 1, ficheRecuperee: 10, aRelancer: 15, absentsRegistre: null, derniersImports: []
+  };
+
   it('affiche les chiffres du semestre avec des liens vers la liste filtrée', async () => {
-    httpMock.expectOne(`${environment.apiUrl}/admin/statistiques`).flush({
-      semestre: { semestre: 'S2', annee: 2026 },
-      promotions: [
-        { niveau: 1, promotion: 2026, total: 12 },
-        { niveau: 2, promotion: 2025, total: 9 },
-        { niveau: 3, promotion: 2024, total: 7 }
-      ],
-      actifs: 28, fichesSemestre: 40, residentsAvecFiche: 25, sansFicheSemestre: 3, sansEmail: 4,
-      sansStage: 1, ficheRecuperee: 10, aRelancer: 15, absentsRegistre: null, derniersImports: []
-    });
+    httpMock.expectOne(`${environment.apiUrl}/admin/statistiques`).flush(STATS);
+    signalements();
     await fixture.whenStable();
 
     const page: HTMLElement = fixture.nativeElement;
@@ -46,7 +52,21 @@ describe('AdminDashboard', () => {
 
   it("affiche un état d'erreur si le serveur ne répond pas", async () => {
     httpMock.expectOne(`${environment.apiUrl}/admin/statistiques`).flush('Erreur', { status: 500, statusText: 'Server Error' });
+    signalements();
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Statistiques indisponibles');
+  });
+
+  it('liste les erreurs signalées par les résidents', async () => {
+    httpMock.expectOne(`${environment.apiUrl}/admin/statistiques`).flush(STATS);
+    signalements([{ id: 3, fiche_id: 10, resident_id: 4, motif: 'hopital', message: 'Mauvais hôpital', cree_le: '2026-10-30T10:00:00Z',
+      traite_le: null, traite_par: null, nom_prenom: 'Résident Test', periode: 'S2', annee: 2026, hopital: 'CHU', service: 'Urgences' }]);
+    await fixture.whenStable();
+
+    const page: HTMLElement = fixture.nativeElement;
+    expect(page.textContent).toContain('Erreurs signalées par les résidents');
+    expect(page.textContent).toContain("L'hôpital");
+    expect(page.textContent).toContain('Mauvais hôpital');
+    expect(page.querySelector('a[href="/admin/residents/4"]')).toBeTruthy();
   });
 });

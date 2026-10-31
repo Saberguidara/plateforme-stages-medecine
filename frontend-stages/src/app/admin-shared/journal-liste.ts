@@ -1,7 +1,7 @@
 import { Component, effect, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { ActionJournal, ApiService } from '../services/api';
+import { ActionJournal, ApiService, LIBELLES_MOTIFS, MotifSignalement } from '../services/api';
 
 interface Changement {
   champ: string;
@@ -17,7 +17,8 @@ const LIBELLES_CHAMPS: Record<string, string> = {
 
 const ICONES: Record<string, string> = {
   creation: 'bi-plus-lg', modification: 'bi-pencil', suppression: 'bi-trash3',
-  import: 'bi-cloud-arrow-up', annulation: 'bi-arrow-counterclockwise', fusion: 'bi-intersect'
+  import: 'bi-cloud-arrow-up', annulation: 'bi-arrow-counterclockwise', fusion: 'bi-intersect',
+  signalement: 'bi-flag', traitement: 'bi-check2-circle'
 };
 
 function texte(valeur: unknown): string {
@@ -51,7 +52,7 @@ function texte(valeur: unknown): string {
           <li class="journal-item">
             <span class="journal-icone"><i [class]="'bi ' + icone(a)" aria-hidden="true"></i></span>
             <div class="journal-texte">
-              <div><strong>{{ a.admin_login || 'Système' }}</strong> {{ description(a) }}
+              <div><strong>{{ a.admin_login || (a.action === 'signalement' ? 'Le résident' : 'Système') }}</strong> {{ description(a) }}
                 @if (afficherResident() && a.resident_id && a.resident_nom) {
                   · <a [routerLink]="['/admin/residents', a.resident_id]">{{ a.resident_nom }}</a>
                 }
@@ -145,6 +146,8 @@ export class JournalListe {
       case 'fiche:creation': return `a ajouté ${stage}`;
       case 'fiche:modification': return `a modifié ${stage}`;
       case 'fiche:suppression': return `a supprimé ${stage}`;
+      case 'fiche:signalement': return `a signalé une erreur sur ${stage} (${this.motif(v.motif)})${v.message ? ` : « ${v.message} »` : ''}`;
+      case 'fiche:traitement': return `a traité l'erreur signalée sur ${stage} (${this.motif(v.motif)})`;
       case 'import:import': return `a importé « ${v.fichier} »${v.semestre ? ` (${v.semestre} ${v.annee})` : ''} : ${v.residentsCrees} résident(s) et ${v.fichesCreees} fiche(s) créés`;
       case 'import:annulation': return `a annulé l'import « ${v.fichier} » : ${v.fichesSupprimees} fiche(s) supprimée(s)`;
       case 'referentiel:fusion': return `a remplacé ${a.avant?.variantes?.length ?? 0} écriture(s) ${a.apres?.type === 'service' ? 'de service' : "d'hôpital"} par « ${a.apres?.valeur} » (${a.apres?.fichesModifiees} fiche(s))`;
@@ -152,6 +155,10 @@ export class JournalListe {
       case 'administrateur:modification': return `a modifié le compte « ${v.login} »`;
       default: return `${a.action} ${a.entite}`;
     }
+  }
+
+  private motif(code: MotifSignalement): string {
+    return (LIBELLES_MOTIFS[code] ?? code).toLowerCase();
   }
 
   changements(a: ActionJournal): Changement[] {

@@ -50,6 +50,9 @@
             } @else {
             <span class="pastille pastille-alerte"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Pas encore téléchargée</span>
             }
+            @if (f.signale_le) {
+            <span class="pastille pastille-sombre"><i class="bi bi-flag" aria-hidden="true"></i> Erreur signalée le {{ f.signale_le | date: 'dd/MM/yyyy' }} · en cours de vérification</span>
+            }
           </div>
         </div>
         <div class="semestre-actions">
@@ -60,6 +63,11 @@
           <button type="button" class="btn pill-btn-outline-dark" (click)="pdf(f, 'apercu')" [disabled]="pdfEnCours() !== null">
             <i class="bi bi-eye" aria-hidden="true"></i> Aperçu
           </button>
+          @if (!f.signale_le) {
+          <button type="button" class="btn btn-link lien-signaler" (click)="ouvrirSignalement(f)">
+            <i class="bi bi-flag" aria-hidden="true"></i> Une information est fausse ?
+          </button>
+          }
         </div>
       </div>
       } @empty {
@@ -111,6 +119,9 @@
                   } @else {
                   <span class="pastille pastille-neutre">Jamais téléchargée</span>
                   }
+                  @if (f.signale_le) {
+                  <span class="pastille pastille-sombre"><i class="bi bi-flag" aria-hidden="true"></i> Erreur signalée le {{ f.signale_le | date: 'dd/MM/yyyy' }}</span>
+                  }
                 </div>
               </div>
               <div class="frise-actions">
@@ -121,6 +132,10 @@
                 </button>
                 <button type="button" class="btn-icone" (click)="pdf(f, 'telecharger')" [disabled]="pdfEnCours() !== null"
                   title="Télécharger" [attr.aria-label]="'Télécharger la fiche ' + f.periode + ' ' + f.annee"><i class="bi bi-download" aria-hidden="true"></i></button>
+                @if (!f.signale_le) {
+                <button type="button" class="btn-icone" (click)="ouvrirSignalement(f)"
+                  title="Signaler une erreur" [attr.aria-label]="'Signaler une erreur sur la fiche ' + f.periode + ' ' + f.annee"><i class="bi bi-flag" aria-hidden="true"></i></button>
+                }
               </div>
             </div>
           </li>
@@ -131,6 +146,46 @@
       }
     </div>
   </section>
+
+  <!-- Fenêtre : signaler une erreur sur une fiche -->
+  @if (ficheSignalee(); as f) {
+  <div class="custom-modal-overlay" (click)="fermerSignalement()">
+    <div class="custom-modal-card fenetre-formulaire" role="dialog" aria-modal="true" aria-labelledby="titreSignalement"
+      (click)="$event.stopPropagation()">
+      <h3 class="custom-modal-title" id="titreSignalement"><i class="bi bi-flag" aria-hidden="true"></i> Signaler une erreur</h3>
+      <p class="text-muted small mb-3">Fiche {{ f.periode }} {{ f.annee }} · {{ f.hopital || 'Hôpital non renseigné' }} · {{ f.service || 'Service non renseigné' }}</p>
+      <form (ngSubmit)="envoyerSignalement()" novalidate>
+        <fieldset>
+          <legend class="form-label text-muted small fw-bold">Qu'est-ce qui est erroné ?</legend>
+          <div class="choix-motifs">
+            @for (m of motifs; track m[0]) {
+            <label class="choix-motif" [class.actif]="signalement.motif === m[0]">
+              <input type="radio" name="motif" [value]="m[0]" [(ngModel)]="signalement.motif"> {{ m[1] }}
+            </label>
+            }
+          </div>
+        </fieldset>
+        <label class="form-label text-muted small fw-bold mt-3" for="sigMessage">
+          Précisions @if (signalement.motif !== 'autre') { <span class="fw-normal">(facultatif)</span> }
+        </label>
+        <textarea class="form-control elegant-input" id="sigMessage" name="message" rows="3" maxlength="500"
+          placeholder="Par exemple : mon stage était au service de pédiatrie, pas en chirurgie." [(ngModel)]="signalement.message"></textarea>
+        <div class="text-muted small text-end chiffres">{{ signalement.message.length }} / 500</div>
+        @if (erreurSignalement()) {
+        <div class="alerte-saisie bloquante mt-2" role="alert"><i class="bi bi-x-circle" aria-hidden="true"></i> <span>{{ erreurSignalement() }}</span></div>
+        }
+        <p class="text-muted small mt-3 mb-0">Le service des stages vérifiera votre fiche et la corrigera si besoin.</p>
+        <div class="mt-4 d-flex justify-content-end gap-2 flex-wrap">
+          <button type="button" class="btn pill-btn-outline-dark px-4" (click)="fermerSignalement()" [disabled]="envoiSignalement()">Annuler</button>
+          <button type="submit" class="btn pill-btn-orange px-4" [disabled]="envoiSignalement()">
+            @if (envoiSignalement()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
+            Envoyer le signalement
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  }
 
   } @else if (messageErreur()) {
   <div class="card dashboard-card">

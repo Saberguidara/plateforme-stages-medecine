@@ -126,6 +126,22 @@
                   @if (f.modifie_le) { <span class="pastille pastille-neutre">Modifiée le {{ f.modifie_le | date: 'dd/MM/yyyy' }}</span> }
                 </div>
               </div>
+              @if (f.signalement_id) {
+              <div class="signalement-fiche w-100" role="note">
+                <i class="bi bi-flag-fill" aria-hidden="true"></i>
+                <div class="flex-grow-1 min-w-0">
+                  <strong>Erreur signalée par le résident le {{ f.signale_le | date: 'dd/MM/yyyy' }}</strong>
+                  · {{ libellesMotifs[f.signalement_motif!] }}
+                  @if (f.signalement_message) { <div class="text-break">« {{ f.signalement_message }} »</div> }
+                </div>
+                @if (peutModifier) {
+                <button type="button" class="btn btn-sm pill-btn-outline-dark" (click)="traiterSignalement(f)" [disabled]="traitementEnCours() === f.id">
+                  @if (traitementEnCours() === f.id) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
+                  <i class="bi bi-check2" aria-hidden="true"></i> Marquer comme traité
+                </button>
+                }
+              </div>
+              }
               <div class="frise-actions">
                 <button type="button" class="btn-icone" (click)="pdf(f, 'apercu')" [disabled]="pdfEnCours() === f.id"
                   title="Aperçu" [attr.aria-label]="'Aperçu de la fiche ' + f.periode + ' ' + f.annee">

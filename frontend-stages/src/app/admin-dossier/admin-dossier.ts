@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
-import { ApiService, DossierResident, FicheDossier, enregistrerFichier } from '../services/api';
+import { ApiService, DossierResident, FicheDossier, LIBELLES_MOTIFS, enregistrerFichier } from '../services/api';
 import { AuthService } from '../services/auth';
 import { ToastService } from '../services/toast';
 import { PdfViewerService } from '../services/pdf-viewer';
@@ -40,6 +40,7 @@ export class AdminDossier implements OnInit {
   readonly libellesPeriodes = LIBELLES_PERIODES;
   readonly descriptionPromotion = descriptionPromotion;
   readonly libelleNiveau = libelleNiveau;
+  readonly libellesMotifs = LIBELLES_MOTIFS;
 
   readonly dossier = signal<DossierResident | null>(null);
   readonly introuvable = signal(false);
@@ -47,6 +48,7 @@ export class AdminDossier implements OnInit {
   readonly periodes = signal<string[]>(ORDRE_PERIODES);
   readonly versionJournal = signal(0);
   readonly pdfEnCours = signal<number | null>(null);
+  readonly traitementEnCours = signal<number | null>(null);
 
   // Fenêtres ouvertes
   readonly editionResident = signal(false);
@@ -159,6 +161,22 @@ export class AdminDossier implements OnInit {
         },
         error: (err) => this.echecConfirmation(err, "Le stage n'a pas pu être supprimé.")
       })
+    });
+  }
+
+  traiterSignalement(f: FicheDossier) {
+    if (!f.signalement_id) return;
+    this.traitementEnCours.set(f.id);
+    this.api.traiterSignalement(f.signalement_id).subscribe({
+      next: () => {
+        this.traitementEnCours.set(null);
+        this.toast.succes(`Signalement sur ${f.periode} ${f.annee} marqué comme traité.`);
+        this.actualiser();
+      },
+      error: (err) => {
+        this.traitementEnCours.set(null);
+        this.toast.erreur(err.error?.message || "Le signalement n'a pas pu être mis à jour.");
+      }
     });
   }
 

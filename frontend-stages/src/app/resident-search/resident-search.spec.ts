@@ -33,7 +33,7 @@ describe('ResidentSearchComponent', () => {
       providers: [
         provideRouter([]),
         provideHttpClient(),
-        { provide: ApiService, useValue: { getResidentByCin: () => of(reponse) } }
+        { provide: ApiService, useValue: { getResidentByCin: () => of(reponse), signalerErreur: () => of({ success: true, message: 'ok' }) } }
       ]
     }).compileComponents();
     fixture = TestBed.createComponent(ResidentSearchComponent);
@@ -64,5 +64,20 @@ describe('ResidentSearchComponent', () => {
     const c = await creer();
     expect(c.anneeEnCours()).toBe('Parcours terminé');
     expect(c.etapes().every((e) => e.etat === 'faite')).toBe(true);
+  });
+
+  it("signale une erreur sur une fiche après avoir vérifié la saisie", async () => {
+    reponse = dossier();
+    const c = await creer();
+    const fiche = c.dossier()!.fiches[1];
+    c.ouvrirSignalement(fiche);
+    c.signalement = { motif: 'autre', message: ' ' };
+    c.envoyerSignalement();
+    expect(c.erreurSignalement()).toContain('Décrivez');
+
+    c.signalement = { motif: 'hopital', message: '' };
+    c.envoyerSignalement();
+    expect(c.ficheSignalee()).toBeNull();
+    expect(c.dossier()!.fiches[1].signale_le).toBeTruthy();
   });
 });

@@ -42,8 +42,36 @@
   </div>
   }
 
+  <!-- Erreurs signalées par les résidents, à traiter -->
+  @if (signalements().length > 0) {
+  <h3 class="section-titre-page mt-0"><i class="bi bi-flag" aria-hidden="true"></i> Erreurs signalées par les résidents
+    <span class="chiffre-alerte">{{ signalements().length }}</span></h3>
+  <div class="card dashboard-card mb-4">
+    <ul class="liste-alertes">
+      @for (sg of signalements(); track sg.id) {
+      <li class="lien-alerte signalement-ligne">
+        <i class="bi bi-flag-fill" aria-hidden="true"></i>
+        <span class="min-w-0 flex-grow-1">
+          <a class="fw-semibold" [routerLink]="['/admin/residents', sg.resident_id]">{{ sg.nom_prenom }}</a>
+          <small class="text-muted chiffres"> · {{ sg.periode }} {{ sg.annee }} · {{ sg.hopital || 'Hôpital non renseigné' }}</small><br>
+          <span>{{ libellesMotifs[sg.motif] }} @if (sg.message) { : « {{ sg.message }} » }</span>
+          <small class="text-muted d-block chiffres">Signalé le {{ sg.cree_le | date: 'dd/MM/yyyy à HH:mm' }}</small>
+        </span>
+        @if (peutModifier) {
+        <button type="button" class="btn btn-sm pill-btn-outline-dark flex-shrink-0" (click)="traiter(sg)" [disabled]="traitementEnCours() === sg.id"
+          [attr.aria-label]="'Marquer comme traité le signalement de ' + sg.nom_prenom">
+          @if (traitementEnCours() === sg.id) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
+          <i class="bi bi-check2" aria-hidden="true"></i> Traité
+        </button>
+        }
+      </li>
+      }
+    </ul>
+  </div>
+  }
+
   <!-- Résidents en cours de résidanat, par promotion -->
-  <h3 class="section-titre-page mt-0"><i class="bi bi-people" aria-hidden="true"></i> Résidents en cours
+  <h3 class="section-titre-page" [class.mt-0]="signalements().length === 0"><i class="bi bi-people" aria-hidden="true"></i> Résidents en cours
     <small class="text-muted fw-normal fs-6 chiffres">{{ s.actifs }} au total</small></h3>
   <div class="tuiles-grille">
     @for (p of s.promotions; track p.niveau) {

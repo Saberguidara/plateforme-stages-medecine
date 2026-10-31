@@ -35,6 +35,7 @@ const residentsRoutes = require('./routes/residents.routes');
 const fichesRoutes = require('./routes/fiches.routes');
 const pdfRoutes = require('./routes/pdf.routes');
 const adminRoutes = require('./routes/admin.routes');
+const signalementsRoutes = require('./routes/signalements.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api', residentsRoutes);
@@ -42,6 +43,7 @@ app.use('/api', fichesRoutes);
 app.use('/api/admin', importRoutes);
 app.use('/api', pdfRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api', signalementsRoutes);
 
 app.use((err, req, res, next) => {
     if (err.message && err.message.startsWith('CORS:')) {

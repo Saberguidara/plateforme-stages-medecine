@@ -1,8 +1,9 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ApiService, enregistrerFichier } from '../services/api';
+import { ApiService, LIBELLES_MOTIFS, MotifSignalement, enregistrerFichier } from '../services/api';
 import { environment } from '../../environments/environment';
 import { ToastService } from '../services/toast';
 import { PdfViewerService } from '../services/pdf-viewer';
@@ -16,6 +17,7 @@ interface FicheResident {
   hopital: string | null;
   dates: string;
   dernier_telechargement: string | null;
+  signale_le: string | null;
 }
 
 interface DossierPersonnel {
@@ -49,7 +51,7 @@ const NOMS_SEMESTRES: Record<string, string> = { S1: '1er semestre', S2: '2nd se
 @Component({
   selector: 'app-resident-search',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, FormsModule],
   templateUrl: './resident-search.html',
   styleUrls: ['./resident-search.css']
 })
@@ -64,6 +66,13 @@ export class ResidentSearchComponent implements OnInit {
   readonly dossier = signal<DossierPersonnel | null>(null);
   readonly messageErreur = signal('');
   readonly pdfEnCours = signal<number | null>(null);
+
+  // Fenêtre « Signaler une erreur »
+  readonly motifs = Object.entries(LIBELLES_MOTIFS) as [MotifSignalement, string][];
+  readonly ficheSignalee = signal<FicheResident | null>(null);
+  readonly envoiSignalement = signal(false);
+  readonly erreurSignalement = signal('');
+  signalement: { motif: MotifSignalement | ''; message: string } = { motif: '', message: '' };
 
   private cin = '';
 
@@ -179,6 +188,53 @@ export class ResidentSearchComponent implements OnInit {
     this.dossier.update((d) => d && {
       ...d,
       fiches: d.fiches.map((f) => (f.id === id ? { ...f, dernier_telechargement: maintenant } : f))
+    });
+  }
+
+  // ===== Signalement d'une erreur sur une fiche =====
+
+  ouvrirSignalement(fiche: FicheResident) {
+    this.signalement = { motif: '', message: '' };
+    this.erreurSignalement.set('');
+    this.ficheSignalee.set(fiche);
+  }
+
+  @HostListener('document:keydown.escape')
+  fermerSignalement() {
+    if (!this.envoiSignalement()) this.ficheSignalee.set(null);
+  }
+
+  envoyerSignalement() {
+    const fiche = this.ficheSignalee();
+    const { motif, message } = this.signalement;
+    if (!fiche) return;
+    if (!motif) return this.erreurSignalement.set('Indiquez ce qui est erroné.');
+    if (motif === 'autre' && !message.trim()) return this.erreurSignalement.set("Décrivez l'erreur en quelques mots.");
+
+    this.envoiSignalement.set(true);
+    this.erreurSignalement.set('');
+    this.api.signalerErreur({ ficheId: fiche.id, motif, message: message.trim() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.envoiSignalement.set(false);
+          this.ficheSignalee.set(null);
+          this.marquerSignalee(fiche.id);
+          this.toast.succes('Signalement envoyé : le service des stages va vérifier votre fiche.');
+        },
+        error: (err) => {
+          this.envoiSignalement.set(false);
+          if (err.status === 409) this.marquerSignalee(fiche.id);
+          this.erreurSignalement.set(err.error?.message || "Le signalement n'a pas pu être envoyé. Réessayez.");
+        }
+      });
+  }
+
+  private marquerSignalee(id: number) {
+    const maintenant = new Date().toISOString();
+    this.dossier.update((d) => d && {
+      ...d,
+      fiches: d.fiches.map((f) => (f.id === id ? { ...f, signale_le: f.signale_le || maintenant } : f))
     });
   }
 }

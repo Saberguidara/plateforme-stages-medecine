@@ -29,6 +29,10 @@ export interface FicheDossier {
   annee_residanat: number | null;
   nb_telechargements: number;
   dernier_telechargement: string | null;
+  signalement_id: number | null;
+  signalement_motif: MotifSignalement | null;
+  signalement_message: string | null;
+  signale_le: string | null;
 }
 
 export interface DossierResident {
@@ -44,6 +48,31 @@ export interface DossierResident {
   parcours_termine: boolean;
   fiches: FicheDossier[];
   semestreCourant: { semestre: string; annee: number; fiches: number; recuperee: boolean };
+}
+
+export type MotifSignalement = 'hopital' | 'service' | 'periode' | 'autre';
+
+export const LIBELLES_MOTIFS: Record<MotifSignalement, string> = {
+  hopital: "L'hôpital",
+  service: 'Le service',
+  periode: 'La période',
+  autre: 'Autre'
+};
+
+export interface Signalement {
+  id: number;
+  fiche_id: number;
+  resident_id: number;
+  motif: MotifSignalement;
+  message: string | null;
+  cree_le: string;
+  traite_le: string | null;
+  traite_par: string | null;
+  nom_prenom: string;
+  periode: string;
+  annee: number;
+  hopital: string | null;
+  service: string | null;
 }
 
 export interface ResumeImport {
@@ -200,6 +229,20 @@ export class ApiService {
   // Le serveur relit le résident en base ; seules les informations du stage viennent du formulaire.
   apercuFiche(donnees: FichePayload): Observable<Blob> {
     return this.http.post(`${this.apiUrl}/admin/apercu-pdf`, donnees, { responseType: 'blob' });
+  }
+
+  // ===== Signalements d'erreur sur une fiche =====
+
+  signalerErreur(donnees: { ficheId: number; motif: MotifSignalement; message: string }): Observable<ApiMutationResponse> {
+    return this.http.post<ApiMutationResponse>(`${this.apiUrl}/signalements`, donnees);
+  }
+
+  getSignalements(statut: 'ouverts' | 'traites' = 'ouverts'): Observable<Signalement[]> {
+    return this.http.get<Signalement[]>(`${this.apiUrl}/admin/signalements`, { params: { statut } });
+  }
+
+  traiterSignalement(id: number): Observable<ApiMutationResponse> {
+    return this.http.put<ApiMutationResponse>(`${this.apiUrl}/admin/signalements/${id}/traite`, {});
   }
 
   // ===== Référentiels =====
