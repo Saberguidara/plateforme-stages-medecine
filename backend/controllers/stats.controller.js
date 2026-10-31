@@ -18,7 +18,7 @@ exports.getStatistiques = async (req, res) => {
         const { semestre, annee } = semestreCourant();
 
         const [parNiveau] = await db.query(
-            `SELECT ${NIVEAU_COURANT} AS niveau, COUNT(*) AS total FROM residents r WHERE ${ACTIF} GROUP BY niveau`,
+            `SELECT ${NIVEAU_COURANT} AS niveau, COUNT(*) AS total FROM residents r WHERE ${ACTIF} GROUP BY ${NIVEAU_COURANT}`,
             paramsActif()
         );
         const promotions = Array.from({ length: DUREE_MAX }, (_, i) => {

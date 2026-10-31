@@ -69,7 +69,7 @@ describe("Routes de l'administration", () => {
     describe('GET /api/admin/statistiques', () => {
         it('renvoie les effectifs par année de résidanat, le semestre en cours et les alertes', async () => {
             repondre([
-                [/GROUP BY niveau/, [[{ niveau: 1, total: 10 }, { niveau: 3, total: 4 }]]],
+                [/AS niveau, COUNT\(\*\) AS total/,[[{ niveau: 1, total: 10 }, { niveau: 3, total: 4 }]]],
                 [/COUNT\(DISTINCT f\.resident_id\)/, [[{ n: 25, residents: 12 }]]],
                 [/FROM historique_imports\s+WHERE undone = 0/, [[{
                     id: 7, filename: 'registre.xlsx', semestre: 'S2', annee: 2026,
