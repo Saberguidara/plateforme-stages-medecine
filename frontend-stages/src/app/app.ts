@@ -4,11 +4,12 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from './services/auth';
 import { Toasts } from './shell/toasts';
 import { PdfViewer } from './shell/pdf-viewer';
+import { Reveil } from './shell/reveil';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, CommonModule, Toasts, PdfViewer],
+  imports: [RouterOutlet, RouterLink, CommonModule, Toasts, PdfViewer, Reveil],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

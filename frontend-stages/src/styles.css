@@ -546,6 +546,41 @@ button.compteur-alerte:hover {
 
 .toast-fermer:hover { color: var(--fms-beige); }
 
+/* ===== Réveil du serveur (hébergement gratuit en veille) ===== */
+
+.reveil-bandeau {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: min(520px, calc(100vw - 32px));
+    background: var(--fms-noir);
+    color: var(--fms-beige);
+    border-left: 4px solid var(--fms-orange);
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    font-size: 0.92rem;
+    line-height: 1.4;
+    animation: fadeIn 0.25s ease-out;
+}
+
+.reveil-roue {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(245, 240, 230, 0.3);
+    border-top-color: var(--fms-orange);
+    border-radius: 50%;
+    animation: reveil-tour 0.9s linear infinite;
+}
+
+@keyframes reveil-tour { to { transform: rotate(360deg); } }
+
 /* ===== Aperçu PDF ===== */
 
 .pdf-overlay {
@@ -617,6 +652,8 @@ button.compteur-alerte:hover {
 @media (prefers-reduced-motion: reduce) {
     .skeleton { animation: none; }
     .toast-item,
+    .reveil-bandeau,
+    .reveil-roue,
     .custom-modal-overlay,
     .custom-modal-card,
     .pdf-overlay { animation: none; }
