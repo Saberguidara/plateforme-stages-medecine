@@ -1,126 +1,122 @@
-# 🏥 Plateforme de Gestion des Stages Médicaux
+# Plateforme des stages · Faculté de Médecine de Sfax
 
-Une application web full-stack pour la gestion et le suivi des stages de résidence médicale, développée avec **Angular**, **Node.js/Express** et **MySQL**.
+Application web qui produit les **fiches de validation de stage** des résidents de médecine de famille, fidèles au modèle Word officiel, à partir des registres de choix de stages.
 
----
-
-## 📋 Description
-
-Cette plateforme permet de centraliser et simplifier la gestion des stages pour les résidents en médecine et les administrateurs. Elle offre une interface moderne, mobile-first, avec deux rôles distincts et une génération automatique de documents PDF.
+Une seule application : le serveur **Express** sert l'API (`/api`) et l'application **Angular** compilée, à la même adresse.
 
 ---
 
-## ✨ Fonctionnalités
+## Fonctionnalités
 
-### 👨‍⚕️ Résidents
-- Consulter les stages disponibles
-- Soumettre et suivre leurs demandes de stage
-- Télécharger leurs attestations en PDF
+### Résidents
+- Connexion par CIN et code à usage unique envoyé à l'adresse e-mail enregistrée par le service des stages
+- « Mon parcours » : frise des stages par année de résidanat
+- Fiche de validation du semestre en PDF (aperçu et téléchargement)
+- Signalement d'une erreur sur une fiche, et suivi de la réponse
+- Page d'aide et coordonnées du service des stages
 
-### 🛠️ Administrateurs
-- Gérer les stages et les affectations
-- Suivre l'état des demandes
-- Générer des rapports PDF
-- Gérer les comptes résidents
+### Administration
+- Tableau de bord, liste des résidents et dossier détaillé
+- Import automatique des registres Excel de choix de stages, avec annulation
+- Référentiels : fusion des variantes d'hôpitaux et de services
+- Historique des actions, exports, comptes administrateurs nominatifs
+- Traitement des signalements des résidents
 
 ---
 
-## 🚀 Stack Technique
+## Stack technique
 
 | Couche | Technologie |
 |---|---|
-| Frontend | Angular 17+ |
-| Backend | Node.js + Express |
-| Base de données | MySQL |
-| Auth | JWT (JSON Web Token) |
-| PDF | Génération côté serveur |
-| Architecture | REST API + SPA Mobile-first |
+| Frontend | Angular 21, Bootstrap 5 |
+| Backend | Node.js, Express 5 |
+| Base de données | MySQL 8 (ou compatible : Aiven, TiDB Cloud) |
+| Authentification | JWT ; code à usage unique par e-mail (Brevo SMTP) pour les résidents |
+| PDF | `pdf-lib`, sur un fond tiré du modèle Word |
+| Excel | `exceljs` |
 
 ---
 
-## 📁 Structure du Projet
+## Structure
 
 ```
-plateforme-stages/
-├── frontend/          # Application Angular
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── components/
-│   │   │   ├── services/
-│   │   │   └── guards/
-│   └── ...
-├── backend/           # API Node.js/Express
-│   ├── routes/
-│   ├── controllers/
-│   ├── models/
-│   └── middleware/
-└── README.md
+plateforme-stages-medecine/
+├── package.json          # build et démarrage de l'application complète
+├── backend/              # API Express + service du frontend compilé
+│   ├── controllers/  routes/  middlewares/  services/
+│   ├── db/schema.sql     # schéma complet d'une base vide
+│   ├── db/migrations/    # évolutions d'une base existante
+│   ├── templates/        # modèle de fiche (PDF de fond, champs, polices)
+│   └── __tests__/        # tests Jest
+├── frontend-stages/      # application Angular
+└── docs/                 # audit, schéma de la base
 ```
 
 ---
 
-## ⚙️ Installation
+## Développement local
 
-### Prérequis
-- Node.js v18+
-- MySQL 8+
-- Angular CLI
-
-### Backend
+Prérequis : Node.js 20.19 ou plus récent, MySQL 8.
 
 ```bash
 cd backend
 npm install
-cp .env.example .env
-# Remplir les variables dans .env
-npm start
+cp .env.example .env      # puis remplir les variables
+npm run db:init           # crée les tables dans une base vide
+npm run admin:create      # avec ADMIN_LOGIN et ADMIN_PASSWORD dans .env
+npm start                 # API sur http://localhost:3000
 ```
 
-### Frontend
+Dans un second terminal :
 
 ```bash
-cd frontend
+cd frontend-stages
 npm install
-ng serve
+npm start                 # http://localhost:4200, avec rechargement automatique
 ```
 
-### Base de données
+Pour tester l'application complète comme en production (une seule adresse) :
 
 ```bash
-# Importer le schéma SQL
-mysql -u root -p < database/schema.sql
+npm run build             # à la racine : installe et compile tout
+npm start                 # http://localhost:3000
+```
+
+### Tests
+
+```bash
+npm test --prefix backend
+npm test --prefix frontend-stages -- --watch=false
 ```
 
 ---
 
-## 🔐 Variables d'environnement
+## Déploiement
 
-Créer un fichier `.env` dans le dossier `backend/` :
+L'hébergeur (par exemple un Web Service Render) n'a besoin que de deux commandes, à la racine du dépôt :
 
-```env
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=
-DB_PASSWORD=
-DB_NAME=plateforme_stages
-JWT_SECRET=
-PORT=3000
-```
+- **Build** : `npm run build`
+- **Démarrage** : `npm start`
 
----
+Variables d'environnement à définir (voir [`backend/.env.example`](backend/.env.example)) :
 
-## 📸 Captures d'écran
+- `JWT_SECRET`, `OTP_SECRET` : longues chaînes aléatoires différentes
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`, `DB_SSL=true`, `DB_POOL_SIZE` (5 à 10 sur une base gratuite)
+- `TRUST_PROXY=1` : indispensable derrière l'hébergeur, sinon tous les visiteurs partagent les mêmes limites de requêtes
+- `NODE_ENV=production`, `APP_URL` (adresse publique, utilisée dans les e-mails)
+- `BREVO_USER`, `BREVO_PASS`, `EMAIL_FROM`, `EMAIL_FROM_NAME`
+- `CONTACT_EMAIL`, `CONTACT_TELEPHONE`, `CONTACT_ADRESSE`, `CONTACT_HORAIRES` (page d'aide)
 
-> *(À ajouter — dashboard admin, liste des stages, fiche résident)*
+La base distante s'initialise une fois avec `npm run db:init` (depuis un poste dont le `.env` pointe vers elle).
 
----
-
-## 👤 Auteur
-
-**Saber** — Technicien à la Faculté de Médecine de Sfax | Étudiant DSI ISET Sfax
+Sur une offre gratuite, le serveur s'endort après une période sans visite ; l'application affiche « Démarrage du serveur… » pendant le réveil.
 
 ---
 
-## 📄 Licence
+## Auteur
+
+**Saber GUIDARA** — Technicien à la Faculté de Médecine de Sfax, étudiant DSI à l'ISET Sfax
+
+## Licence
 
 Ce projet est sous licence MIT.

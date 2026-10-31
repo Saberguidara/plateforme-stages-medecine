@@ -19,3 +19,9 @@ logs/security/
 # Journaux applicatifs (peuvent contenir des données personnelles)
 backend/logs/
 backend/temp_uploads/
+
+# Fiches réelles de résidents (données personnelles) : jamais dans Git
+docs/*.pdf
+
+# Configuration locale de Claude Code
+.claude/
