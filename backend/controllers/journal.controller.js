@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const logger = require('../utils/logger');
+const { validatePagination, parseEntierRequete } = require('../utils/validation');
 
 const lireJson = (valeur) => {
     if (valeur === null || valeur === undefined) return null;
@@ -9,13 +10,17 @@ const lireJson = (valeur) => {
 
 // Journal des actions, filtrable par dossier résident ou par type d'entité.
 exports.getJournal = async (req, res) => {
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 30));
+    // Entiers stricts : une valeur comme « 1 OR 1=1 » est refusée (400) au lieu d'être lue comme 1.
+    const pagination = validatePagination(req.query, { limitDefaut: 30, limitMax: 100 });
+    if (!pagination.valid) return res.status(400).json({ error: pagination.message });
+    const residentId = parseEntierRequete(req.query.resident_id);
+    if (!residentId.valid) return res.status(400).json({ error: 'resident_id doit être un nombre entier.' });
+
+    const { page, limit } = pagination;
     const conditions = ['1=1'];
     const params = [];
 
-    const residentId = parseInt(req.query.resident_id, 10);
-    if (residentId) { conditions.push('j.resident_id = ?'); params.push(residentId); }
+    if (residentId.value) { conditions.push('j.resident_id = ?'); params.push(residentId.value); }
     if (req.query.entite) { conditions.push('j.entite = ?'); params.push(String(req.query.entite)); }
 
     try {

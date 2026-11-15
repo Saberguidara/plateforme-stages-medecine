@@ -116,8 +116,38 @@ function validateEmail(value) {
     return { valid: true, value: email };
 }
 
+const PAGE_MAX = 10000;
+
+// Entier positif lu dans l'URL (page, limit, identifiant) : uniquement des chiffres.
+// « 1 OR 1=1 » est refusé au lieu d'être lu comme 1 par parseInt (faux positif « Injection SQL » de ZAP).
+// Absent ou vide : valeur par défaut (undefined si aucune).
+function parseEntierRequete(value, { defaut, min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
+    if (value === undefined || value === '') return { valid: true, value: defaut };
+    const texte = String(value);
+    if (!/^\d{1,15}$/.test(texte)) return { valid: false };
+    const nombre = Number(texte);
+    if (nombre < min || nombre > max) return { valid: false };
+    return { valid: true, value: nombre };
+}
+
+// Pagination d'une liste : page de 1 à PAGE_MAX, limit de 1 à limitMax.
+function validatePagination(query = {}, { limitDefaut, limitMax }) {
+    const page = parseEntierRequete(query.page, { defaut: 1, max: PAGE_MAX });
+    const limit = parseEntierRequete(query.limit, { defaut: limitDefaut, max: limitMax });
+    if (!page.valid || !limit.valid) {
+        return {
+            valid: false,
+            message: `Pagination invalide : page (1 à ${PAGE_MAX}) et limit (1 à ${limitMax}) doivent être des nombres entiers.`
+        };
+    }
+    return { valid: true, page: page.value, limit: limit.value };
+}
+
 module.exports = {
     VALID_PERIODES,
+    PAGE_MAX,
+    parseEntierRequete,
+    validatePagination,
     normalizeString,
     parseBoundedYear,
     validateResidentPayload,

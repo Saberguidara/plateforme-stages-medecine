@@ -341,6 +341,45 @@ describe("Routes de l'administration", () => {
             expect(res.body.data[0].apres).toEqual({ service: 'B' });
             expect(db.query.mock.calls[0][1]).toEqual([5, 30, 0]);
         });
+
+        // Valeurs envoyées par OWASP ZAP : refusées au lieu d'être lues comme 1 par parseInt.
+        it.each([
+            'page=1%20OR%201%3D1%20--%20',
+            "page=1'%20AND%20'1'%3D'1'%20--%20",
+            'page=0',
+            'page=10001',
+            'page=4467877383591',
+            'page=1&page=2',
+            'limit=101',
+            'limit=20abc',
+            'resident_id=2%20OR%201%3D1'
+        ])('refuse %s (400) sans interroger la base', async (requete) => {
+            const res = await request(app).get(`/api/admin/journal?${requete}`).set('Authorization', jeton(ADMIN));
+
+            expect(res.status).toBe(400);
+            expect(db.query).not.toHaveBeenCalled();
+        });
+
+        it('accepte une page et une limite valides', async () => {
+            repondre([
+                [/FROM journal_actions j LEFT JOIN/, [[]]],
+                [/COUNT\(\*\) AS n FROM journal_actions/, [[{ n: 0 }]]]
+            ]);
+
+            const res = await request(app).get('/api/admin/journal?page=3&limit=20').set('Authorization', jeton(ADMIN));
+
+            expect(res.status).toBe(200);
+            expect(db.query.mock.calls[0][1]).toEqual([20, 40]);
+        });
+    });
+
+    describe('GET /api/admin/residents (pagination stricte)', () => {
+        it.each(['page=1%20OR%201%3D1', 'page=10001', 'limit=201', 'limit=-5'])('refuse %s (400)', async (requete) => {
+            const res = await request(app).get(`/api/admin/residents?${requete}`).set('Authorization', jeton(ADMIN));
+
+            expect(res.status).toBe(400);
+            expect(db.query).not.toHaveBeenCalledWith(expect.stringContaining('FROM residents r'), expect.anything());
+        });
     });
 
     describe('POST /api/admin/import/undo', () => {

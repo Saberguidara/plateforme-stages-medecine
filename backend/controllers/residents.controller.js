@@ -1,6 +1,6 @@
 const db = require('../config/db');
 const logger = require('../utils/logger');
-const { validateResidentPayload, validateCin, normalizeString } = require('../utils/validation');
+const { validateResidentPayload, validateCin, normalizeString, validatePagination } = require('../utils/validation');
 const {
     SPECIALITES, SPECIALITE_PAR_DEFAUT, PERIODES_DU_SEMESTRE, semestreCourant, etatResidanat, specialiteDe, libellePeriode
 } = require('../config/specialites');
@@ -112,10 +112,9 @@ exports.getResidentById = async (req, res) => {
 
 const COLONNES_TRI = ['cin', 'nom_prenom', 'specialite', 'faculte_origine', 'promotion', 'niveau', 'nb_fiches'];
 
-// Liste paginée ; les mêmes filtres servent à l'export Excel.
-async function listerResidents(query, { pagination = true } = {}) {
-    const page = Math.max(1, parseInt(query.page, 10) || 1);
-    const limit = Math.min(200, Math.max(1, parseInt(query.limit, 10) || 20));
+// Liste paginée ; les mêmes filtres servent à l'export Excel (sans pagination).
+// page et limit arrivent déjà validés (validatePagination).
+async function listerResidents(query, { pagination = true, page = 1, limit = 20 } = {}) {
     const orderBy = COLONNES_TRI.includes(query.sortCol) ? query.sortCol : 'nom_prenom';
     const orderDir = query.sortDesc === 'true' ? 'DESC' : 'ASC';
     const { where, params } = await construireFiltres(query);
@@ -143,8 +142,11 @@ async function listerResidents(query, { pagination = true } = {}) {
 exports.listerResidents = listerResidents;
 
 exports.getAllResidents = async (req, res) => {
+    const pagination = validatePagination(req.query, { limitDefaut: 20, limitMax: 200 });
+    if (!pagination.valid) return res.status(400).json({ error: pagination.message });
+
     try {
-        const { rows, total, page, limit } = await listerResidents(req.query);
+        const { rows, total, page, limit } = await listerResidents(req.query, { page: pagination.page, limit: pagination.limit });
         // Résidents qui ne peuvent pas se connecter, sur toute la base (indépendant des filtres)
         const [sansEmailResult] = await db.query("SELECT COUNT(*) AS n FROM residents WHERE email IS NULL OR email = ''");
         res.json({ data: rows, total, page, limit, sansEmail: sansEmailResult[0].n });

@@ -5,6 +5,7 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.startsWith('REMPLACER')) {
     process.exit(1);
 }
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -17,11 +18,24 @@ const app = express();
 // Derrière l'hébergeur (Render…), l'IP du visiteur arrive par X-Forwarded-For.
 // Sans ce réglage, tous les visiteurs partagent la même IP et les mêmes limites de requêtes.
 if (process.env.TRUST_PROXY) app.set('trust proxy', parseInt(process.env.TRUST_PROXY, 10) || process.env.TRUST_PROXY);
+
+// Nonce CSP : valeur aléatoire propre à chaque réponse. Angular la reçoit par l'attribut ngCspNonce
+// (voir l'envoi d'index.html) et l'ajoute à ses balises <style> ; un style injecté, sans ce nonce, est refusé.
+app.use((req, res, next) => {
+    res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+    next();
+});
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             // L'aperçu des fiches affiche un PDF généré dans le navigateur (URL blob:) dans un iframe.
-            'frame-src': ["'self'", 'blob:']
+            'frame-src': ["'self'", 'blob:'],
+            // Polices et styles servis par l'application seulement (Bootstrap et ses icônes sont dans le build) :
+            // le « https: » par défaut de Helmet autorisait n'importe quel site (alerte ZAP « CSP: Wildcard Directive »).
+            'font-src': ["'self'", 'data:'],
+            // Pas de 'unsafe-inline' : seules les balises <style> portant le nonce de la réponse sont appliquées.
+            'style-src': ["'self'", (req, res) => `'nonce-${res.locals.cspNonce}'`]
         }
     }
 }));
@@ -70,9 +84,12 @@ if (fs.existsSync(indexHtml)) {
             if (/-[A-Z0-9]{8}\.(js|css)$/.test(filePath)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         }
     }));
+    // index.html est lu une fois ; le nonce de la réponse est inséré sur <app-root> à chaque envoi.
+    const pageAccueil = fs.readFileSync(indexHtml, 'utf8');
+    if (!pageAccueil.includes('<app-root>')) logger.error('index.html sans <app-root> : nonce CSP non transmis à Angular.');
     app.get(/^(?!\/api\/).*/, (req, res) => {
         res.setHeader('Cache-Control', 'no-cache');
-        res.sendFile(indexHtml);
+        res.type('html').send(pageAccueil.replace('<app-root>', `<app-root ngCspNonce="${res.locals.cspNonce}">`));
     });
 } else {
     logger.info(`Frontend non compilé (${frontendDir} absent) : seule l'API est servie.`);
