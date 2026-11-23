@@ -4,10 +4,9 @@ import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, of } from 'rxjs';
 import { catchError, debounceTime, switchMap } from 'rxjs/operators';
-import { ApiService, enregistrerFichier } from '../services/api';
+import { ApiService, CompteFichesExport, LieuExport, enregistrerFichier } from '../services/api';
 import { ToastService } from '../services/toast';
 import { semestreCourant } from '../services/residanat';
-import { SuggestionsReferentiel } from '../admin-shared/suggestions-referentiel';
 
 // Exports : liste des résidents en Excel et fiches PDF d'un semestre dans un ZIP.
 @Component({
@@ -22,10 +21,11 @@ export class AdminExports implements OnInit {
   private destroyRef = inject(DestroyRef);
 
   readonly promos = signal<number[]>([]);
-  readonly hopitaux = new SuggestionsReferentiel('hopital');
+  // Hôpitaux ayant des fiches ce semestre (selon la promotion), avec leurs services
+  readonly lieux = signal<LieuExport[]>([]);
   readonly exportExcel = signal(false);
   readonly exportZip = signal(false);
-  readonly compte = signal<{ total: number; maximum: number } | null>(null);
+  readonly compte = signal<CompteFichesExport | null>(null);
   private readonly compte$ = new Subject<void>();
 
   excel = { promo: '', population: 'actifs', email: false };
@@ -37,7 +37,7 @@ export class AdminExports implements OnInit {
     { valeur: 'absents-registre', libelle: 'Absents du dernier registre' }
   ];
 
-  zip = { semestre: semestreCourant().semestre, annee: semestreCourant().annee, promo: '', hopital: '' };
+  zip = { semestre: semestreCourant().semestre, annee: semestreCourant().annee, promo: '', hopital: '', service: '' };
 
   ngOnInit() {
     this.api.getPromotions().subscribe({ next: (p) => this.promos.set(p), error: () => { } });
@@ -45,8 +45,32 @@ export class AdminExports implements OnInit {
       debounceTime(300),
       switchMap(() => this.api.compterFichesExport(this.zip).pipe(catchError(() => of(null)))),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe((res) => this.compte.set(res));
+    ).subscribe((res) => {
+      this.compte.set(res);
+      if (res) this.majLieux(res.hopitaux ?? []);
+    });
     this.recompter();
+  }
+
+  servicesHopital() {
+    return this.lieux().find((h) => h.hopital === this.zip.hopital)?.services ?? [];
+  }
+
+  choisirHopital() {
+    this.zip.service = '';
+    this.recompter();
+  }
+
+  // Un hôpital ou un service qui n'a plus de fiche (autre semestre, autre promotion) est retiré du filtre.
+  private majLieux(lieux: LieuExport[]) {
+    this.lieux.set(lieux);
+    const hopital = lieux.find((h) => h.hopital === this.zip.hopital);
+    const serviceAbsent = this.zip.service && !hopital?.services.some((s) => s.service === this.zip.service);
+    if ((this.zip.hopital && !hopital) || serviceAbsent) {
+      if (!hopital) this.zip.hopital = '';
+      this.zip.service = '';
+      this.recompter();
+    }
   }
 
   recompter() {

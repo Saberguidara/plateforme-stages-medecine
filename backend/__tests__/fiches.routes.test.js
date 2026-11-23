@@ -92,7 +92,7 @@ describe('Fiches Controller', () => {
         expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Fiche introuvable.' });
     });
 
-    it('signale une période déjà occupée par un conflit 409', async () => {
+    it('signale une fiche en double (même période, service et hôpital) par un conflit 409', async () => {
         req.body = { resident_id: 3, periode: 'T1', annee: 2026, service: 'A', hopital: 'B' };
         db.query
             .mockResolvedValueOnce([[{ id: 3 }]])
@@ -101,6 +101,6 @@ describe('Fiches Controller', () => {
         await createFiche(req, res);
 
         expect(res.status).toHaveBeenCalledWith(409);
-        expect(res.json).toHaveBeenCalledWith({ success: false, message: 'La période T1 2026 est déjà occupée pour ce résident.' });
+        expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Ce résident a déjà une fiche T1 2026 pour ce service et cet hôpital.' });
     });
 });

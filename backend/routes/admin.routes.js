@@ -25,6 +25,7 @@ router.get('/journal', requireAdmin, journal.getJournal);
 router.get('/referentiels/suggestions', requireAdmin, referentiels.getSuggestions);
 router.get('/referentiels/:type', requireAdmin, referentiels.getReferentiel);
 router.post('/referentiels/fusion', requireAdmin, referentiels.fusionner);
+router.post('/referentiels/ignorer', requireAdmin, referentiels.ignorerVariantes);
 
 router.get('/exports/residents.xlsx', requireAdmin, exportsController.exporterResidents);
 router.get('/exports/fiches/compte', requireAdmin, exportsController.compterFiches);

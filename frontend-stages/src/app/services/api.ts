@@ -172,6 +172,21 @@ export interface GroupeVariantes {
   variantes: ValeurReferentiel[];
 }
 
+// Hôpitaux du semestre et leurs services, pour les filtres de l'export ZIP
+export interface LieuExport {
+  hopital: string;
+  fiches: number;
+  services: { service: string; fiches: number }[];
+}
+
+export interface CompteFichesExport {
+  semestre: string;
+  annee: number;
+  total: number;
+  maximum: number;
+  hopitaux: LieuExport[];
+}
+
 // Filtres de la liste des résidents, repris tels quels par l'export Excel
 export type FiltresResidents = Record<string, string | number | boolean | undefined | null>;
 
@@ -298,6 +313,11 @@ export class ApiService {
     return this.http.post<any>(`${this.apiUrl}/admin/referentiels/fusion`, { type, sources, cible });
   }
 
+  // « Ne pas fusionner » : ces écritures ne seront plus proposées ensemble
+  ignorerVariantes(type: 'hopital' | 'service', valeurs: string[]): Observable<{ message: string }> {
+    return this.http.post<any>(`${this.apiUrl}/admin/referentiels/ignorer`, { type, valeurs });
+  }
+
   // ===== Tableau de bord, imports et journal =====
 
   getStatistiques(): Observable<Statistiques> {
@@ -322,7 +342,7 @@ export class ApiService {
     return this.http.get(`${this.apiUrl}/admin/exports/residents.xlsx`, { params: versParams(filtres), responseType: 'blob' });
   }
 
-  compterFichesExport(filtres: FiltresResidents): Observable<{ semestre: string; annee: number; total: number; maximum: number }> {
+  compterFichesExport(filtres: FiltresResidents): Observable<CompteFichesExport> {
     return this.http.get<any>(`${this.apiUrl}/admin/exports/fiches/compte`, { params: versParams(filtres) });
   }
 

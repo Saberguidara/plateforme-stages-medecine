@@ -42,35 +42,112 @@
   </div>
   }
 
-  <!-- Erreurs signalées par les résidents, à traiter -->
-  @if (signalements().length > 0) {
-  <h3 class="section-titre-page mt-0"><i class="bi bi-flag" aria-hidden="true"></i> Erreurs signalées par les résidents
-    <span class="chiffre-alerte">{{ signalements().length }}</span></h3>
-  <div class="card dashboard-card mb-4">
-    <ul class="liste-alertes">
-      @for (sg of signalements(); track sg.id) {
-      <li class="lien-alerte signalement-ligne">
-        <i class="bi bi-flag-fill" aria-hidden="true"></i>
-        <span class="min-w-0 flex-grow-1">
-          <a class="fw-semibold" [routerLink]="['/admin/residents', sg.resident_id]">{{ sg.nom_prenom }}</a>
-          <small class="text-muted chiffres"> · {{ sg.periode }} {{ sg.annee }} · {{ sg.hopital || 'Hôpital non renseigné' }}</small><br>
-          <span>{{ libellesMotifs[sg.motif] }} @if (sg.message) { : « {{ sg.message }} » }</span>
-          <small class="text-muted d-block chiffres">Signalé le {{ sg.cree_le | date: 'dd/MM/yyyy à HH:mm' }}</small>
-        </span>
-        @if (peutModifier) {
-        <button type="button" class="btn btn-sm pill-btn-outline-dark flex-shrink-0" (click)="aTraiter.set(sg)"
-          [attr.aria-label]="'Traiter le signalement de ' + sg.nom_prenom">
-          <i class="bi bi-check2" aria-hidden="true"></i> Traiter
-        </button>
+  <!-- Signalements, alertes et derniers imports sur une même ligne -->
+  <div class="row g-4 mb-2 ligne-suivi">
+    <!-- Erreurs signalées par les résidents, à traiter (bloc toujours présent) -->
+    <div class="col-xl-4 col-lg-6 d-flex flex-column">
+      <h3 class="section-titre-page mt-0"><i class="bi bi-flag" aria-hidden="true"></i> Signalements
+        @if (signalements().length > 0) { <span class="chiffre-alerte">{{ signalements().length }}</span> }</h3>
+      <div class="card dashboard-card flex-grow-1">
+        @if (signalements().length === 0) {
+        <div class="etat-vide py-4">
+          <i class="bi bi-flag etat-vide-icone" aria-hidden="true"></i>
+          <div class="etat-vide-titre">Aucun signalement</div>
+          <p class="etat-vide-texte mb-0">Les erreurs signalées par les résidents sur leurs fiches apparaîtront ici.</p>
+        </div>
+        } @else {
+        <ul class="liste-alertes">
+          @for (sg of signalements(); track sg.id) {
+          <li class="lien-alerte signalement-ligne">
+            <i class="bi bi-flag-fill" aria-hidden="true"></i>
+            <span class="min-w-0 flex-grow-1">
+              <a class="fw-semibold" [routerLink]="['/admin/residents', sg.resident_id]">{{ sg.nom_prenom }}</a>
+              <small class="text-muted chiffres"> · {{ sg.periode }} {{ sg.annee }} · {{ sg.hopital || 'Hôpital non renseigné' }}</small><br>
+              <span>{{ libellesMotifs[sg.motif] }} @if (sg.message) { : « {{ sg.message }} » }</span>
+              <small class="text-muted d-block chiffres">Signalé le {{ sg.cree_le | date: 'dd/MM/yyyy à HH:mm' }}</small>
+            </span>
+            @if (peutModifier) {
+            <button type="button" class="btn btn-sm pill-btn-outline-dark flex-shrink-0" (click)="aTraiter.set(sg)"
+              [attr.aria-label]="'Traiter le signalement de ' + sg.nom_prenom">
+              <i class="bi bi-check2" aria-hidden="true"></i> Traiter
+            </button>
+            }
+          </li>
+          }
+        </ul>
         }
-      </li>
-      }
-    </ul>
+      </div>
+    </div>
+
+    <!-- Alertes -->
+    <div class="col-xl-4 col-lg-6 d-flex flex-column">
+      <h3 class="section-titre-page mt-0"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Alertes</h3>
+      <div class="card dashboard-card flex-grow-1">
+        @if (s.sansStage === 0 && (!s.absentsRegistre || s.absentsRegistre.total === 0)) {
+        <div class="etat-vide py-4">
+          <i class="bi bi-check2-circle etat-vide-icone" aria-hidden="true"></i>
+          <div class="etat-vide-titre">Rien à signaler</div>
+          <p class="etat-vide-texte mb-0">Tous les résidents en cours ont au moins un stage et figurent dans le dernier registre.</p>
+        </div>
+        } @else {
+        <ul class="liste-alertes">
+          @if (s.sansStage > 0) {
+          <li>
+            <a class="lien-alerte" routerLink="/admin/residents" [queryParams]="{ alerte: 'sans-stage' }">
+              <i class="bi bi-journal-x" aria-hidden="true"></i>
+              <span><strong>Résidents sans aucun stage</strong><br><small class="text-muted">Mutation, mobilité, report… à vérifier</small></span>
+              <span class="chiffre-alerte">{{ s.sansStage }}</span>
+            </a>
+          </li>
+          }
+          @if (s.absentsRegistre && s.absentsRegistre.total > 0) {
+          <li>
+            <a class="lien-alerte" routerLink="/admin/residents" [queryParams]="{ alerte: 'absents-registre' }">
+              <i class="bi bi-person-dash" aria-hidden="true"></i>
+              <span class="text-break"><strong>Absents du dernier registre</strong><br>
+                <small class="text-muted">{{ s.absentsRegistre.import.filename }}
+                  @if (s.absentsRegistre.import.semestre) { ({{ s.absentsRegistre.import.semestre }} {{ s.absentsRegistre.import.annee }}) }</small></span>
+              <span class="chiffre-alerte">{{ s.absentsRegistre.total }}</span>
+            </a>
+          </li>
+          }
+        </ul>
+        }
+      </div>
+    </div>
+
+    <!-- Derniers imports -->
+    <div class="col-xl-4 col-lg-6 d-flex flex-column">
+      <h3 class="section-titre-page mt-0"><i class="bi bi-clock-history" aria-hidden="true"></i> Derniers imports
+        <a class="ms-auto small fw-normal" routerLink="/admin/historique">Tout l'historique</a></h3>
+      <div class="card dashboard-card flex-grow-1">
+        @if (s.derniersImports.length === 0) {
+        <div class="etat-vide py-4">
+          <i class="bi bi-cloud-arrow-up etat-vide-icone" aria-hidden="true"></i>
+          <div class="etat-vide-titre">Aucun import</div>
+          <p class="etat-vide-texte mb-0">Les registres importés apparaîtront ici.</p>
+        </div>
+        } @else {
+        <ul class="liste-alertes">
+          @for (i of s.derniersImports; track i.id) {
+          <li class="lien-alerte">
+            <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
+            <span class="min-w-0 flex-grow-1">
+              <span class="d-block texte-tronque fw-semibold" [title]="i.filename">{{ i.filename }}</span>
+              <small class="text-muted chiffres">{{ i.imported_at | date: 'dd/MM/yyyy HH:mm' }}
+                @if (i.semestre) { · {{ i.semestre }} {{ i.annee }} } · {{ i.fiches_created }} fiche(s)</small>
+            </span>
+            @if (i.undone) { <span class="pastille pastille-neutre">Annulé</span> }
+          </li>
+          }
+        </ul>
+        }
+      </div>
+    </div>
   </div>
-  }
 
   <!-- Résidents en cours de résidanat, par promotion -->
-  <h3 class="section-titre-page" [class.mt-0]="signalements().length === 0"><i class="bi bi-people" aria-hidden="true"></i> Résidents en cours
+  <h3 class="section-titre-page"><i class="bi bi-people" aria-hidden="true"></i> Résidents en cours
     <small class="text-muted fw-normal fs-6 chiffres">{{ s.actifs }} au total</small></h3>
   <div class="tuiles-grille">
     @for (p of s.promotions; track p.niveau) {
@@ -138,73 +215,6 @@
   }
   }
 
-  <div class="row g-4 mt-1">
-    <!-- Alertes -->
-    <div class="col-lg-6">
-      <h3 class="section-titre-page"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Alertes</h3>
-      <div class="card dashboard-card">
-        @if (s.sansStage === 0 && (!s.absentsRegistre || s.absentsRegistre.total === 0)) {
-        <div class="etat-vide py-4">
-          <i class="bi bi-check2-circle etat-vide-icone" aria-hidden="true"></i>
-          <div class="etat-vide-titre">Rien à signaler</div>
-          <p class="etat-vide-texte mb-0">Tous les résidents en cours ont au moins un stage et figurent dans le dernier registre.</p>
-        </div>
-        } @else {
-        <ul class="liste-alertes">
-          @if (s.sansStage > 0) {
-          <li>
-            <a class="lien-alerte" routerLink="/admin/residents" [queryParams]="{ alerte: 'sans-stage' }">
-              <i class="bi bi-journal-x" aria-hidden="true"></i>
-              <span><strong>Résidents sans aucun stage</strong><br><small class="text-muted">Mutation, mobilité, report… à vérifier</small></span>
-              <span class="chiffre-alerte">{{ s.sansStage }}</span>
-            </a>
-          </li>
-          }
-          @if (s.absentsRegistre && s.absentsRegistre.total > 0) {
-          <li>
-            <a class="lien-alerte" routerLink="/admin/residents" [queryParams]="{ alerte: 'absents-registre' }">
-              <i class="bi bi-person-dash" aria-hidden="true"></i>
-              <span class="text-break"><strong>Absents du dernier registre</strong><br>
-                <small class="text-muted">{{ s.absentsRegistre.import.filename }}
-                  @if (s.absentsRegistre.import.semestre) { ({{ s.absentsRegistre.import.semestre }} {{ s.absentsRegistre.import.annee }}) }</small></span>
-              <span class="chiffre-alerte">{{ s.absentsRegistre.total }}</span>
-            </a>
-          </li>
-          }
-        </ul>
-        }
-      </div>
-    </div>
-
-    <!-- Derniers imports -->
-    <div class="col-lg-6">
-      <h3 class="section-titre-page"><i class="bi bi-clock-history" aria-hidden="true"></i> Derniers imports
-        <a class="ms-auto small fw-normal" routerLink="/admin/historique">Tout l'historique</a></h3>
-      <div class="card dashboard-card">
-        @if (s.derniersImports.length === 0) {
-        <div class="etat-vide py-4">
-          <i class="bi bi-cloud-arrow-up etat-vide-icone" aria-hidden="true"></i>
-          <div class="etat-vide-titre">Aucun import</div>
-          <p class="etat-vide-texte mb-0">Les registres importés apparaîtront ici.</p>
-        </div>
-        } @else {
-        <ul class="liste-alertes">
-          @for (i of s.derniersImports; track i.id) {
-          <li class="lien-alerte">
-            <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
-            <span class="min-w-0 flex-grow-1">
-              <span class="d-block texte-tronque fw-semibold" [title]="i.filename">{{ i.filename }}</span>
-              <small class="text-muted chiffres">{{ i.imported_at | date: 'dd/MM/yyyy HH:mm' }}
-                @if (i.semestre) { · {{ i.semestre }} {{ i.annee }} } · {{ i.fiches_created }} fiche(s)</small>
-            </span>
-            @if (i.undone) { <span class="pastille pastille-neutre">Annulé</span> }
-          </li>
-          }
-        </ul>
-        }
-      </div>
-    </div>
-  </div>
   }
 </div>
 

@@ -25,3 +25,7 @@ docs/*.pdf
 
 # Configuration locale de Claude Code
 .claude/
+
+# Rapports Playwright
+test-results/
+playwright-report/

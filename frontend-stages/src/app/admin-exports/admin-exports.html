@@ -1,4 +1,4 @@
-<div class="largeur-page">
+<div class="largeur-page formulaire-compact">
   <div class="admin-page-header">
     <h2 class="admin-page-title"><i class="bi bi-download" aria-hidden="true"></i> Exports</h2>
   </div>
@@ -53,39 +53,46 @@
         <div class="card-body p-4">
           <p class="text-muted small">Toutes les fiches de validation du semestre en PDF, rangées par année de résidanat (1A, 2A, 3A).</p>
           <div class="row g-3">
-            <div class="col-6">
+            <div class="col-sm-5">
               <label class="form-label text-muted small fw-bold" for="zipSemestre">Semestre</label>
               <select class="form-select elegant-input" id="zipSemestre" [(ngModel)]="zip.semestre" (ngModelChange)="recompter()">
                 <option value="S1">S1 (janv. à juin)</option>
                 <option value="S2">S2 (juil. à déc.)</option>
               </select>
             </div>
-            <div class="col-6">
+            <div class="col-5 col-sm-3">
               <label class="form-label text-muted small fw-bold" for="zipAnnee">Année</label>
               <input type="number" class="form-control elegant-input chiffres" id="zipAnnee" min="2000" max="2100"
                 [(ngModel)]="zip.annee" (ngModelChange)="recompter()">
             </div>
-            <div class="col-sm-6">
+            <div class="col-7 col-sm-4">
               <label class="form-label text-muted small fw-bold" for="zipPromo">Promotion</label>
               <select class="form-select elegant-input" id="zipPromo" [(ngModel)]="zip.promo" (ngModelChange)="recompter()">
                 <option value="">Toutes</option>
                 @for (p of promos(); track p) { <option [value]="'' + p">{{ p }}</option> }
               </select>
             </div>
-            <div class="col-sm-6">
+            <div class="col-sm-7">
               <label class="form-label text-muted small fw-bold" for="zipHopital">Hôpital</label>
-              <input type="text" class="form-control elegant-input" id="zipHopital" list="zipHopitaux" placeholder="Tous" autocomplete="off"
-                [(ngModel)]="zip.hopital" (ngModelChange)="hopitaux.chercher($event); recompter()" (focus)="hopitaux.chercher(zip.hopital)">
-              <datalist id="zipHopitaux">
-                @for (h of hopitaux.valeurs(); track h) { <option [value]="h"></option> }
-              </datalist>
+              <select class="form-select elegant-input" id="zipHopital" [(ngModel)]="zip.hopital" (ngModelChange)="choisirHopital()">
+                <option value="">Tous</option>
+                @for (h of lieux(); track h.hopital) { <option [value]="h.hopital">{{ h.hopital }} ({{ h.fiches }})</option> }
+              </select>
+            </div>
+            <div class="col-sm-5">
+              <label class="form-label text-muted small fw-bold" for="zipService">Service</label>
+              <select class="form-select elegant-input" id="zipService" [(ngModel)]="zip.service" (ngModelChange)="recompter()"
+                [disabled]="!zip.hopital">
+                <option value="">{{ zip.hopital ? 'Tous les services' : "Choisir d'abord un hôpital" }}</option>
+                @for (s of servicesHopital(); track s.service) { <option [value]="s.service">{{ s.service }} ({{ s.fiches }})</option> }
+              </select>
             </div>
           </div>
           <div class="mt-4 d-flex justify-content-between align-items-center gap-3 flex-wrap">
             <span class="small chiffres" aria-live="polite">
               @if (compte(); as c) {
                 @if (c.total === 0) { <span class="text-muted">Aucune fiche pour ces critères.</span> }
-                @else if (c.total > c.maximum) { <span class="text-danger">{{ c.total }} fiches : affinez par promotion ou hôpital ({{ c.maximum }} au plus).</span> }
+                @else if (c.total > c.maximum) { <span class="text-danger">{{ c.total }} fiches : affinez par promotion, hôpital ou service ({{ c.maximum }} au plus).</span> }
                 @else { <strong>{{ c.total }}</strong> fiche(s) à générer }
               } @else { <span class="text-muted"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Comptage…</span> }
             </span>

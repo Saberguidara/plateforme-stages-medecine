@@ -21,8 +21,9 @@
                 <div class="card-body p-4">
 
                     <p class="text-muted small mb-3">
-                        Déposez le registre de choix tel quel (registre de la faculté, choix national ou liste CIN + e-mail).
-                        Le semestre, l'année et le type de stage sont détectés automatiquement.
+                        Déposez le registre tel quel : registre complet du résidanat (une feuille par promotion, une colonne par trimestre),
+                        registre de choix, choix national ou liste CIN + e-mail. Les périodes et le type de stage sont détectés automatiquement.
+                        Seuls les nouveaux stages sont ajoutés ; une fiche qui diffère du fichier est corrigée, sauf si elle a été retouchée sur la plateforme.
                     </p>
 
                     <div class="row g-3 align-items-end">
@@ -64,7 +65,11 @@
                                 <tr>
                                     <td>{{ f.feuille }}</td>
                                     <td>{{ f.format }}</td>
+                                    @if (f.promotion) {
+                                    <td>Promotion {{ f.promotion }} · {{ f.source }}</td>
+                                    } @else {
                                     <td [title]="f.source || ''">{{ f.semestre ? f.semestre + ' ' + f.annee : '—' }}</td>
+                                    }
                                     <td class="text-end">{{ f.lignes ?? '—' }}</td>
                                     <td class="text-end">{{ f.retenues ?? '—' }}</td>
                                 </tr>
@@ -77,8 +82,30 @@
                     @if (bilan) {
                     <ul class="small text-muted mb-0">
                         @if (bilan.residentsExistants) { <li>{{ bilan.residentsExistants }} résidents déjà inscrits complétés</li> }
-                        @if (bilan.fichesExistantes) { <li>{{ bilan.fichesExistantes }} fiches existaient déjà et n'ont pas été modifiées</li> }
-                        @if (bilan.sansStage) { <li>{{ bilan.sansStage }} résidents sans stage ce semestre (mutation, mobilité, report…)</li> }
+                        @if (bilan.fichesExistantes) { <li>{{ bilan.fichesExistantes }} fiches existaient déjà à l'identique</li> }
+                        @if (bilan.fichesCorrigees) { <li>{{ bilan.fichesCorrigees }} fiches corrigées depuis le fichier (service ou hôpital différent)</li> }
+                        @if (bilan.fichesConservees) {
+                        <li>{{ bilan.fichesConservees }} fiches retouchées sur la plateforme et gardées telles quelles, alors que le fichier diffère :
+                            <ul>
+                                @for (c of conflits; track $index) {
+                                <li>{{ c.nomPrenom }} ({{ c.cin }}) · {{ c.periode }} {{ c.annee }} : plateforme « {{ c.base.service }}, {{ c.base.hopital }} »,
+                                    fichier « {{ c.fichier.service }}, {{ c.fichier.hopital }} »</li>
+                                }
+                            </ul>
+                        </li>
+                        }
+                        @if (bilan.fichesHorsFichier) { <li>{{ bilan.fichesHorsFichier }} fiches en base absentes du fichier, gardées (rattrapage, stage ajouté à la main…)</li> }
+                        @if (bilan.sansStage) { <li>{{ bilan.sansStage }} résidents sans stage (mutation, mobilité, report…)</li> }
+                        @if (situationsListe().length) {
+                        <li>Cellules sans stage, sans fiche créée : {{ situationsListe() }}</li>
+                        }
+                        @if (bilan.anomalies?.length) {
+                        <li class="text-danger">Cellules à vérifier dans le fichier :
+                            <ul>
+                                @for (a of bilan.anomalies; track $index) { <li>{{ a }}</li> }
+                            </ul>
+                        </li>
+                        }
                         @if (bilan.autresFacultes) { <li>{{ bilan.autresFacultes }} résidents d'autres facultés ignorés (choix national)</li> }
                         @if (bilan.doublons) { <li>{{ bilan.doublons }} lignes en double entre les feuilles ignorées</li> }
                         @if (bilan.sansCin) { <li>{{ bilan.sansCin }} lignes sans CIN ignorées</li> }

@@ -8,7 +8,17 @@ const DATES_PERIODES = {
     T3: ['01/07', '30/09'],
     T4: ['01/10', '31/12'],
     S1: ['01/01', '30/06'],
-    S2: ['01/07', '31/12']
+    S2: ['01/07', '31/12'],
+    // Stages de 45 jours (ORL et dermatologie à Tunis, à partir de la promotion 2026) :
+    // le trimestre est coupé en deux moitiés, une fiche par moitié.
+    T1A: ['01/01', '15/02'],
+    T1B: ['16/02', '31/03'],
+    T2A: ['01/04', '15/05'],
+    T2B: ['16/05', '30/06'],
+    T3A: ['01/07', '15/08'],
+    T3B: ['16/08', '30/09'],
+    T4A: ['01/10', '15/11'],
+    T4B: ['16/11', '31/12']
 };
 
 const SPECIALITES = {
@@ -19,7 +29,8 @@ const SPECIALITES = {
         modele: 'medecine-famille',
         // Semestres (S1, S2) : stages aux urgences et en 1re / 2e ligne.
         // Trimestres (T1 à T4) : les autres stages, deux par semestre.
-        periodes: ['S1', 'S2', 'T1', 'T2', 'T3', 'T4', 'R1', 'R2'],
+        // Demi-trimestres (T1A à T4B) : stages de 45 jours.
+        periodes: ['S1', 'S2', 'T1', 'T2', 'T3', 'T4', 'T1A', 'T1B', 'T2A', 'T2B', 'T3A', 'T3B', 'T4A', 'T4B', 'R1', 'R2'],
         // Durée du résidanat : 1re à 3e année
         duree: 3,
         // Rattrapages : R1 couvre le 1er semestre, R2 le 2nd
@@ -30,12 +41,15 @@ const SPECIALITES = {
 const SPECIALITE_PAR_DEFAUT = 'medecine-famille';
 
 // Ordre d'affichage des périodes dans une année de résidanat (rattrapages en dernier)
-const ORDRE_PERIODES = ['T1', 'T2', 'S1', 'T3', 'T4', 'S2', 'R1', 'R2'];
+const ORDRE_PERIODES = ['T1A', 'T1B', 'T1', 'T2A', 'T2B', 'T2', 'S1', 'T3A', 'T3B', 'T3', 'T4A', 'T4B', 'T4', 'S2', 'R1', 'R2'];
+
+// Même ordre, pour les clauses SQL « ORDER BY FIELD(f.periode, …) »
+const ORDRE_PERIODES_SQL = ORDRE_PERIODES.map((p) => `'${p}'`).join(',');
 
 // Périodes rattachées à chaque semestre civil
 const PERIODES_DU_SEMESTRE = {
-    S1: ['S1', 'T1', 'T2', 'R1'],
-    S2: ['S2', 'T3', 'T4', 'R2']
+    S1: ['S1', 'T1', 'T2', 'T1A', 'T1B', 'T2A', 'T2B', 'R1'],
+    S2: ['S2', 'T3', 'T4', 'T3A', 'T3B', 'T4A', 'T4B', 'R2']
 };
 
 function semestreCourant(date = new Date()) {
@@ -81,6 +95,6 @@ function libellePeriode(specialite, periode, annee) {
 }
 
 module.exports = {
-    SPECIALITES, SPECIALITE_PAR_DEFAUT, ORDRE_PERIODES, PERIODES_DU_SEMESTRE, LIBELLES_SPECIALITES, DUREE_MAX,
+    SPECIALITES, SPECIALITE_PAR_DEFAUT, ORDRE_PERIODES, ORDRE_PERIODES_SQL, PERIODES_DU_SEMESTRE, LIBELLES_SPECIALITES, DUREE_MAX,
     specialiteDe, libellePeriode, semestreCourant, dureeDe, etatResidanat
 };

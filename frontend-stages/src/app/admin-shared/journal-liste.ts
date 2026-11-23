@@ -17,7 +17,7 @@ const LIBELLES_CHAMPS: Record<string, string> = {
 
 const ICONES: Record<string, string> = {
   creation: 'bi-plus-lg', modification: 'bi-pencil', suppression: 'bi-trash3',
-  import: 'bi-cloud-arrow-up', annulation: 'bi-arrow-counterclockwise', fusion: 'bi-intersect',
+  import: 'bi-cloud-arrow-up', annulation: 'bi-arrow-counterclockwise', fusion: 'bi-intersect', separation: 'bi-slash-circle',
   signalement: 'bi-flag', traitement: 'bi-check2-circle', notification: 'bi-envelope'
 };
 
@@ -152,6 +152,7 @@ export class JournalListe {
       case 'import:import': return `a importé « ${v.fichier} »${v.semestre ? ` (${v.semestre} ${v.annee})` : ''} : ${v.residentsCrees} résident(s) et ${v.fichesCreees} fiche(s) créés`;
       case 'import:annulation': return `a annulé l'import « ${v.fichier} » : ${v.fichesSupprimees} fiche(s) supprimée(s)`;
       case 'referentiel:fusion': return `a remplacé ${a.avant?.variantes?.length ?? 0} écriture(s) ${a.apres?.type === 'service' ? 'de service' : "d'hôpital"} par « ${a.apres?.valeur} » (${a.apres?.fichesModifiees} fiche(s))`;
+      case 'referentiel:separation': return `a choisi de ne pas fusionner ${a.apres?.valeurs?.length ?? 0} écritures ${a.apres?.type === 'service' ? 'de service' : "d'hôpital"} : ${(a.apres?.valeurs ?? []).map((v: string) => `« ${v} »`).join(', ')}`;
       case 'administrateur:creation': return `a créé le compte « ${v.login} » (${v.role === 'lecture' ? 'lecture seule' : 'administrateur'})`;
       case 'administrateur:modification': return `a modifié le compte « ${v.login} »`;
       default: return `${a.action} ${a.entite}`;

@@ -25,6 +25,8 @@ export class AdminImport {
     isImporting: boolean = false;
     rapport: any[] = [];
     bilan: any = null;
+    // Fiches retouchées à la main que le fichier aurait corrigées : gardées telles quelles
+    conflits: any[] = [];
 
     isImportSuccess: boolean = false;
     importUndoData: any = null;
@@ -65,6 +67,7 @@ export class AdminImport {
         this.isImporting = true;
         this.rapport = [];
         this.bilan = null;
+        this.conflits = [];
         this.cdr.markForCheck();
 
         const formData = new FormData();
@@ -79,6 +82,7 @@ export class AdminImport {
                     this.toast.succes(res.message || "Importation réussie.");
                     this.rapport = res.rapport || [];
                     this.bilan = res.bilan || null;
+                    this.conflits = res.conflits || [];
                     this.importUndoData = { importId: res.importId };
                     this.isImportSuccess = true;
                     this.fichierSelectionne = null;
@@ -92,6 +96,15 @@ export class AdminImport {
                     this.cdr.markForCheck();
                 }
             });
+    }
+
+    // « Mutation à Tunis (24), Stage reporté (10)… » : cellules du registre qui ne donnent pas de fiche
+    situationsListe(): string {
+        const situations: Record<string, number> = this.bilan?.situations || {};
+        return Object.entries(situations)
+            .sort((a, b) => b[1] - a[1])
+            .map(([libelle, n]) => `${libelle} (${n})`)
+            .join(', ');
     }
 
     validerImport() {
@@ -110,6 +123,7 @@ export class AdminImport {
                     this.toast.succes(res.message || "Importation annulée et données supprimées.");
                     this.rapport = [];
                     this.bilan = null;
+                    this.conflits = [];
                     this.isImportSuccess = false;
                     this.importUndoData = null;
                     this.cdr.markForCheck();

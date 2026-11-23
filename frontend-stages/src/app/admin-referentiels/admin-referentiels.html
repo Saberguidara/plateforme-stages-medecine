@@ -65,8 +65,14 @@
             <datalist [id]="'variantes' + i">
               @for (v of g.variantes; track v.valeur) { <option [value]="v.valeur"></option> }
             </datalist>
-            <button type="button" class="btn btn-sm pill-btn-orange" [disabled]="!ciblesGroupes[i].trim()" (click)="proposerFusionGroupe(i)">
+          </div>
+          <div class="d-flex gap-2 flex-wrap mt-3">
+            <button type="button" class="btn btn-sm pill-btn-orange" [disabled]="!ciblesGroupes[i].trim() || ignorance() !== null" (click)="proposerFusionGroupe(i)">
               <i class="bi bi-intersect" aria-hidden="true"></i> Fusionner</button>
+            <button type="button" class="btn btn-sm pill-btn-outline-dark" [disabled]="ignorance() !== null" (click)="ignorerGroupe(i)"
+              title="Ces écritures désignent des lieux différents : ne plus les proposer">
+              @if (ignorance() === i) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
+              @else { <i class="bi bi-slash-circle" aria-hidden="true"></i> } Ne pas fusionner</button>
           </div>
           }
         </div>
@@ -79,53 +85,67 @@
   <!-- Toutes les valeurs -->
   <h3 class="section-titre-page"><i class="bi bi-list-ul" aria-hidden="true"></i> Toutes les écritures
     <small class="text-muted fw-normal fs-6 chiffres">{{ valeurs()!.length }}</small></h3>
-  <div class="data-toolbar">
-    <div class="champ-recherche">
-      <i class="bi bi-search" aria-hidden="true"></i>
-      <input type="search" class="form-control" [attr.aria-label]="'Filtrer les ' + (type() === 'hopital' ? 'hôpitaux' : 'services')"
-        placeholder="Filtrer…" [ngModel]="filtre()" (ngModelChange)="filtre.set($event)">
+  <section class="liste-residents">
+    <div class="lr-filtres">
+      <div class="lr-recherche">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input type="search" [attr.aria-label]="'Filtrer les ' + (type() === 'hopital' ? 'hôpitaux' : 'services')"
+          placeholder="Filtrer…" [ngModel]="filtre()" (ngModelChange)="filtre.set($event)">
+      </div>
+      @if (filtre()) {
+      <span class="lr-sous chiffres">{{ valeursFiltrees().length }} sur {{ valeurs()!.length }}</span>
+      }
     </div>
+
+    <!-- Fusion des lignes cochées -->
     @if (peutModifier && selection().size >= 1) {
-    <div class="d-flex gap-2 align-items-center flex-wrap">
-      <span class="small text-muted chiffres">{{ selection().size }} sélectionnée(s) →</span>
-      <input type="text" class="form-control form-control-sm filtre-specialite" aria-label="Écriture à conserver" placeholder="Écriture à conserver"
-        [(ngModel)]="cibleManuelle">
-      <button type="button" class="btn btn-sm pill-btn-orange" [disabled]="!cibleManuelle.trim() || (selection().size === 1 && selection().has(cibleManuelle.trim()))"
-        (click)="proposerFusionSelection()"><i class="bi bi-intersect" aria-hidden="true"></i> Fusionner</button>
+    <div class="lr-selection" role="region" aria-label="Fusion de la sélection">
+      <span class="chiffres"><strong>{{ selection().size }}</strong> sélectionnée(s), à remplacer par</span>
+      <input type="text" class="lr-selection-champ" aria-label="Écriture à conserver" placeholder="Écriture à conserver" [(ngModel)]="cibleManuelle">
+      <div class="d-flex gap-2 flex-wrap ms-auto">
+        <button type="button" class="lr-btn lr-btn-orange lr-btn-petit"
+          [disabled]="!cibleManuelle.trim() || (selection().size === 1 && selection().has(cibleManuelle.trim()))"
+          (click)="proposerFusionSelection()"><i class="bi bi-intersect" aria-hidden="true"></i> Fusionner</button>
+        <button type="button" class="lr-btn-fermer" (click)="viderSelection()" aria-label="Annuler la sélection">
+          <i class="bi bi-x-lg" aria-hidden="true"></i></button>
+      </div>
     </div>
     }
-  </div>
-  <div class="card dashboard-card">
-    <div class="table-responsive table-defilante">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
+
+    <div class="lr-defilement">
+      <table class="lr-tableau">
+        <thead>
           <tr>
-            @if (peutModifier) { <th scope="col"><span class="visually-hidden">Sélection</span></th> }
-            <th scope="col">{{ type() === 'hopital' ? 'Hôpital' : 'Service' }}</th>
-            <th scope="col" class="text-end">Fiches</th>
-            @if (type() === 'hopital') { <th scope="col" class="text-end"><span class="visually-hidden">Résidents</span></th> }
+            @if (peutModifier) { <th scope="col" class="col-case"><span class="visually-hidden">Sélection</span></th> }
+            <th scope="col" class="col-valeur" [class.lr-sans-case]="!peutModifier">{{ type() === 'hopital' ? 'Hôpital' : 'Service' }}</th>
+            <th scope="col" class="col-fiches">Fiches</th>
+            <th scope="col" class="col-lien"><span class="visually-hidden">Résidents</span></th>
           </tr>
         </thead>
         <tbody>
           @for (v of valeursFiltrees(); track v.valeur) {
-          <tr>
+          <tr [class.selectionnee]="selection().has(v.valeur)" (click)="peutModifier && basculer(v.valeur)">
             @if (peutModifier) {
-            <td class="text-center"><input type="checkbox" class="form-check-input" [checked]="selection().has(v.valeur)"
+            <td class="col-case" (click)="$event.stopPropagation()"><input type="checkbox" class="form-check-input" [checked]="selection().has(v.valeur)"
               (change)="basculer(v.valeur)" [attr.aria-label]="'Sélectionner ' + v.valeur"></td>
             }
-            <td class="text-break">{{ v.valeur }}</td>
-            <td class="text-end chiffres">{{ v.nb_fiches }}</td>
-            @if (type() === 'hopital') {
-            <td class="text-end"><a class="small text-nowrap" routerLink="/admin/residents" [queryParams]="{ hopital: v.valeur }">Résidents</a></td>
-            }
+            <td class="col-valeur" [class.lr-sans-case]="!peutModifier"><span class="lr-nom" [title]="v.valeur">{{ v.valeur }}</span></td>
+            <td class="col-fiches chiffres">{{ v.nb_fiches }}</td>
+            <td class="col-lien" (click)="$event.stopPropagation()">
+              @if (type() === 'hopital') {
+              <a class="lr-lien-ligne" routerLink="/admin/residents" [queryParams]="{ hopital: v.valeur }">
+                <i class="bi bi-people" aria-hidden="true"></i> Résidents</a>
+              }
+            </td>
           </tr>
           } @empty {
-          <tr><td colspan="4" class="text-center text-muted py-4">Aucune écriture ne correspond à « {{ filtre() }} ».</td></tr>
+          <tr class="ligne-vide"><td colspan="4"><div class="etat-vide py-4">
+            <div class="etat-vide-titre">Aucune écriture ne correspond à « {{ filtre() }} ».</div></div></td></tr>
           }
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
   }
 </div>
 

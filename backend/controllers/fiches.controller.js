@@ -3,7 +3,8 @@ const logger = require('../utils/logger');
 const { validateFichePayload } = require('../utils/validation');
 const { journaliser, extraire, CHAMPS_FICHE } = require('../utils/journal');
 
-const periodeOccupee = (periode, annee) => `La période ${periode} ${annee} est déjà occupée pour ce résident.`;
+// Deux fiches peuvent partager une période (stages en parallèle), mais pas le même service dans le même hôpital.
+const periodeOccupee = (periode, annee) => `Ce résident a déjà une fiche ${periode} ${annee} pour ce service et cet hôpital.`;
 
 exports.createFiche = async (req, res) => {
     const validation = validateFichePayload(req.body, { requireResidentId: true });

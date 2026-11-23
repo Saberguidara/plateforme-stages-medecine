@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS residents (
 CREATE TABLE IF NOT EXISTS formulaires_stage (
     id INT NOT NULL AUTO_INCREMENT,
     resident_id INT NOT NULL,
-    periode VARCHAR(10) NOT NULL COMMENT 'S1, S2, T1 à T4, R1, R2',
+    periode VARCHAR(10) NOT NULL COMMENT 'S1, S2, T1 à T4, T1A à T4B (45 jours), R1, R2',
     annee YEAR NOT NULL,
     service VARCHAR(150) DEFAULT NULL,
     hopital VARCHAR(150) DEFAULT NULL,
@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS formulaires_stage (
     modifie_le DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
         COMMENT 'dernière modification ; NULL si la fiche est telle qu''importée',
     PRIMARY KEY (id),
-    UNIQUE KEY uq_stage_par_resident (resident_id, periode, annee),
+    -- Plusieurs stages possibles sur une même période (stages en parallèle), jamais deux fois le même
+    UNIQUE KEY uq_stage_par_resident_service (resident_id, annee, periode, service, hopital),
     KEY idx_formulaires_import (import_id),
     CONSTRAINT fk_formulaires_resident FOREIGN KEY (resident_id)
         REFERENCES residents (id) ON DELETE CASCADE
@@ -124,3 +125,13 @@ CREATE TABLE IF NOT EXISTS notifications_fiches (
     CONSTRAINT fk_notifications_fiche FOREIGN KEY (fiche_id)
         REFERENCES formulaires_stage (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Variantes d'écriture à ne pas fusionner (migration 005)
+CREATE TABLE IF NOT EXISTS variantes_ignorees (
+    type ENUM('hopital', 'service') NOT NULL,
+    valeur_a VARCHAR(150) NOT NULL,
+    valeur_b VARCHAR(150) NOT NULL,
+    ignore_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ignore_par VARCHAR(100) DEFAULT NULL,
+    PRIMARY KEY (type, valeur_a, valeur_b)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;

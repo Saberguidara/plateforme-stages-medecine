@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Maquettes tableau résidents</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+:root{--beige:#f5f0e6;--noir:#1a1a1a;--orange:#f47b45;--orange-f:#b5521f;--orange-p:#fef6f0;--blanc:#fff;--gris:#666;--gris-c:#e9e4da;--ligne:#efeae0;--succes:#1f7a4d;--erreur:#b42318;--titre:Georgia,serif}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#d9d3c7;color:var(--noir);font-size:13px}
+.maquette{width:1440px;height:900px;display:flex;flex-direction:column;background:var(--beige);overflow:hidden;margin:0 0 40px}
+.etiquette{font:600 13px Arial;padding:8px 14px;background:var(--noir);color:var(--beige)}
+/* en-tête du site */
+.site-entete{height:56px;background:var(--blanc);border-bottom:1px solid rgba(0,0,0,.06);display:flex;align-items:center;padding:0 24px;gap:12px;flex:0 0 auto}
+.logo{width:30px;height:30px;border-radius:50%;background:var(--orange);color:#fff;display:grid;place-items:center;font:700 13px var(--titre)}
+.site-nom{font:16px var(--titre)}
+.site-entete .droite{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--gris)}
+.corps{flex:1;display:flex;min-height:0}
+.nav{flex:0 0 220px;background:var(--blanc);border-right:1px solid rgba(0,0,0,.06);padding:20px 12px;display:flex;flex-direction:column;gap:3px}
+.nav a{display:flex;gap:11px;align-items:center;padding:9px 13px;border-radius:50px;color:var(--noir);text-decoration:none;font-size:13.5px}
+.nav a i{color:var(--orange)}
+.nav a.actif{background:var(--noir);color:var(--beige)}
+.nav .groupe{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--gris);padding:14px 13px 4px}
+.contenu{flex:1;min-width:0;display:flex;flex-direction:column;padding:18px 26px 0}
+h1{font:400 24px var(--titre);margin:0;display:flex;align-items:center;gap:10px}
+.compteur{font:600 12px Arial;background:var(--orange-p);color:var(--orange-f);border-radius:50px;padding:3px 9px}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:50px;padding:7px 15px;font:600 12.5px Arial;border:1px solid var(--noir);background:transparent;color:var(--noir);white-space:nowrap}
+.btn.orange{background:var(--orange);border-color:var(--orange);color:#fff}
+.btn.noir{background:var(--noir);color:var(--beige)}
+.btn.leger{border-color:var(--gris-c);background:var(--blanc);font-weight:500}
+.btn.icone{padding:7px 9px}
+.chiffres{font-variant-numeric:tabular-nums}
+.recherche{display:flex;align-items:center;gap:8px;background:var(--blanc);border:1px solid var(--gris-c);border-radius:50px;padding:7px 14px;color:var(--gris);min-width:260px}
+.recherche kbd{margin-left:auto;font:11px Arial;background:var(--beige);border-radius:5px;padding:1px 6px;color:var(--gris)}
+table{width:100%;border-collapse:collapse}
+th{font:600 11px Arial;text-transform:uppercase;letter-spacing:.5px;color:var(--gris);text-align:left;padding:9px 12px;white-space:nowrap}
+td{padding:8px 12px;border-top:1px solid var(--ligne);vertical-align:middle;white-space:nowrap}
+.case{width:15px;height:15px;border:1.5px solid #cfc8bb;border-radius:4px;display:inline-block;vertical-align:middle;background:#fff}
+.case.coche{background:var(--orange);border-color:var(--orange);position:relative}
+.case.coche:after{content:"✓";color:#fff;font-size:10px;position:absolute;left:2px;top:-1px}
+.avatar{width:28px;height:28px;border-radius:50%;display:inline-grid;place-items:center;font:700 10.5px Arial;flex:0 0 auto}
+.a1{background:#fde4d6;color:#b5521f}.a2{background:#e3eefc;color:#1d4f91}.a3{background:#e2f3ea;color:#1f7a4d}.a4{background:#efe6fb;color:#5b3a99}.a5{background:#ece9e2;color:#555}
+.identite{display:flex;align-items:center;gap:10px}
+.nom{font-weight:600;color:var(--noir)}
+.sous{color:var(--gris);font-size:11.5px}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:50px;padding:2px 9px;font:600 11px Arial}
+.p-ok{background:#e2f3ea;color:var(--succes)}.p-al{background:#fdecea;color:var(--erreur)}.p-ne{background:#efebe3;color:#6b655b}.p-or{background:var(--orange-p);color:var(--orange-f)}
+.point{width:7px;height:7px;border-radius:50%;display:inline-block}
+.sel{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--gris-c);background:var(--blanc);border-radius:50px;padding:6px 13px;font-size:12.5px}
+.sel i.bi-chevron-down{font-size:10px;color:var(--gris)}
+.muted{color:var(--gris)}
+.pagination{display:flex;gap:4px;align-items:center}
+.pg{min-width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;color:var(--noir)}
+.pg.on{background:var(--noir);color:var(--beige)}
+.kebab{color:var(--gris);font-size:15px}
+.annee{font:600 10.5px Arial;background:var(--beige);border-radius:50px;padding:1px 7px;margin-left:6px;color:var(--gris)}
+</style>
+</head>
+<body>
+<div id="racine"></div>
+<script>
+const R=[
+ ["Ben Salah Amira","09876543","amira.bensalah@gmail.com",2022,"R3","Sfax","Cardiologie",6,"ok","Habib Bourguiba","Cardiologie"],
+ ["Trabelsi Mohamed Ali","07654321","",2023,"R2","Sousse","Pédiatrie",4,"al","Hédi Chaker","Pédiatrie"],
+ ["Gargouri Yasmine","11223344","y.gargouri@etu.fms.tn",2021,"R4","Sfax","Anesthésie",8,"ok","Habib Bourguiba","Réanimation"],
+ ["Kammoun Firas","08877665","firas.kammoun@gmail.com",2024,"R1","Monastir","Chirurgie générale",2,"ne","Hédi Chaker","Chirurgie A"],
+ ["Ellouze Nour","10293847","nour.ellouze@yahoo.fr",2022,"R3","Tunis","Psychiatrie",6,"al","Hédi Chaker","Psychiatrie B"],
+ ["Masmoudi Karim","06574839","karim.masmoudi@gmail.com",2019,"Terminé","Sfax","Radiologie",10,"ne","—","—"],
+ ["Jemli Sarra","12345098","sarra.jemli@etu.fms.tn",2023,"R2","Sfax","Gynécologie",4,"ok","Hédi Chaker","Gynéco-obstétrique"],
+ ["Bouaziz Ahmed","09988776","",2024,"R1","Sousse","Médecine interne",2,"al","Habib Bourguiba","Médecine interne"],
+ ["Chaabouni Ines","07766554","ines.chaabouni@gmail.com",2021,"R4","Sfax","Dermatologie",8,"ok","Hédi Chaker","Dermatologie"],
+ ["Feki Oussama","11002233","oussama.feki@etu.fms.tn",2022,"R3","Monastir","Orthopédie",5,"ok","Habib Bourguiba","Orthopédie"],
+ ["Hammami Rim","08123456","rim.hammami@gmail.com",2023,"R2","Tunis","Ophtalmologie",3,"al","Habib Bourguiba","Ophtalmologie"],
+ ["Zouari Mehdi","10456789","mehdi.zouari@yahoo.fr",2024,"R1","Sfax","Néphrologie",1,"ne","Hédi Chaker","Néphrologie"],
+ ["Abdelmoula Hela","09345612","hela.abdelmoula@gmail.com",2022,"R3","Sfax","ORL",6,"ok","Habib Bourguiba","ORL"],
+ ["Mseddi Walid","07345128","walid.mseddi@etu.fms.tn",2021,"R4","Sousse","Urologie",7,"ok","Habib Bourguiba","Urologie"],
+];
+const ST={ok:["p-ok","Récupérée","#1f7a4d"],al:["p-al","Non récupérée","#b42318"],ne:["p-ne","Aucune fiche","#8b8478"]};
+const ini=n=>n.split(" ").filter(m=>m.length>2).slice(0,2).map(m=>m[0]).join("");
+const av=(r,i)=>`<span class="avatar a${(i%5)+1}">${ini(r[0])}</span>`;
+const pill=s=>`<span class="pill ${ST[s][0]}"><span class="point" style="background:${ST[s][2]}"></span>${ST[s][1]}</span>`;
+const nav=(sombre)=>`<aside class="nav" ${sombre?'style="background:var(--noir);border:0"':''}>
+ ${[["speedometer2","Tableau de bord"],["people","Résidents",1],["cloud-arrow-up","Imports"],["clock-history","Historique"]].map(([i,l,a])=>`<a class="${a?'actif':''}" ${sombre?(a?'style="background:var(--beige);color:var(--noir)"':'style="color:#e8e2d6"'):''}><i class="bi bi-${i}"></i>${l}</a>`).join("")}
+ <div class="groupe" ${sombre?'style="color:#9c958a"':''}>Outils</div>
+ ${[["hospital","Hôpitaux et services"],["download","Exports"],["person-gear","Comptes"]].map(([i,l])=>`<a ${sombre?'style="color:#e8e2d6"':''}><i class="bi bi-${i}"></i>${l}</a>`).join("")}
+</aside>`;
+const entete=`<header class="site-entete"><span class="logo">F</span><span class="site-nom">Faculté de Médecine de Sfax — Stages</span><div class="droite"><i class="bi bi-bell"></i><span class="avatar a1">AD</span><span>Administration</span></div></header>`;
+const cadre=(titre,contenu,opts={})=>`<div class="etiquette">${titre}</div><section class="maquette">${entete}<div class="corps">${nav(opts.sombre)}<main class="contenu" style="${opts.style||''}">${contenu}</main>${opts.apres||''}</div></section>`;
+
+/* ===== A — Pleine page à onglets ===== */
+const A=()=>cadre("A — Pleine page à onglets (inspiré CRM « Contacts »)",`
+<div style="background:var(--blanc);margin:-18px -26px 0;flex:1;display:flex;flex-direction:column;min-height:0">
+ <div style="display:flex;align-items:center;gap:16px;padding:16px 26px 10px">
+  <h1>Résidents <span class="compteur chiffres">412</span></h1>
+  <div class="recherche" style="margin-left:24px;width:340px"><i class="bi bi-search"></i>Rechercher un nom, CIN, e-mail…<kbd>Ctrl K</kbd></div>
+  <div style="margin-left:auto;display:flex;gap:8px"><span class="btn leger"><i class="bi bi-file-earmark-spreadsheet"></i>Exporter</span><span class="btn orange"><i class="bi bi-person-plus"></i>Nouveau résident</span></div>
+ </div>
+ <div style="display:flex;gap:26px;padding:0 26px;border-bottom:1px solid var(--ligne)">
+  ${[["people","Tous",412,1],["play-circle","En cours",356],["file-earmark-x","Sans fiche S1",38],["bell","À relancer",21],["envelope-slash","Sans e-mail",9]].map(([i,l,n,a])=>`<span style="padding:10px 0;display:flex;gap:7px;align-items:center;font-size:13px;${a?'border-bottom:2px solid var(--noir);font-weight:600':'color:var(--gris)'}"><i class="bi bi-${i}"></i>${l}<span class="chiffres" style="font-size:11px;background:${a?'var(--noir)':'var(--beige)'};color:${a?'var(--beige)':'var(--gris)'};border-radius:50px;padding:1px 7px">${n}</span></span>`).join("")}
+  <span style="padding:10px 0;color:var(--gris)"><i class="bi bi-plus"></i> Enregistrer la vue</span>
+ </div>
+ <div style="display:flex;gap:8px;padding:12px 26px;align-items:center">
+  <span class="sel">Promotion <i class="bi bi-chevron-down"></i></span><span class="sel">Faculté <i class="bi bi-chevron-down"></i></span><span class="sel" style="border-color:var(--orange);background:var(--orange-p)">Hôpital : Hédi Chaker <i class="bi bi-x"></i></span><span class="sel">Statut S1 <i class="bi bi-chevron-down"></i></span>
+  <span class="muted" style="margin-left:6px"><i class="bi bi-funnel"></i> Plus de filtres</span>
+  <span style="margin-left:auto" class="btn leger icone"><i class="bi bi-layout-three-columns"></i></span>
+ </div>
+ <table><thead><tr style="background:#faf8f4;border-top:1px solid var(--ligne)"><th style="padding-left:26px;width:40px"><span class="case"></span></th><th>Résident <i class="bi bi-arrow-up"></i></th><th>CIN</th><th>E-mail</th><th>Promotion</th><th>Faculté</th><th>Hôpital actuel</th><th style="text-align:center">Fiches</th><th>S1 2026</th><th></th></tr></thead>
+ <tbody>${R.slice(0,13).map((r,i)=>`<tr><td style="padding-left:26px"><span class="case"></span></td><td><div class="identite">${av(r,i)}<span class="nom">${r[0]}</span></div></td><td class="chiffres muted">${r[1]}</td><td>${r[2]||'<span class="pill p-or"><i class="bi bi-envelope-slash"></i>Sans e-mail</span>'}</td><td class="chiffres">${r[3]}<span class="annee">${r[4]}</span></td><td>${r[5]}</td><td>${r[9]}</td><td class="chiffres" style="text-align:center">${r[7]}</td><td>${pill(r[8])}</td><td class="kebab"><i class="bi bi-three-dots-vertical"></i></td></tr>`).join("")}</tbody></table>
+</div>`,{style:"padding-top:18px"});
+
+/* ===== B — Filtres en grille + pagination centrée ===== */
+const B=()=>cadre("B — Filtres en panneau + pagination numérotée (inspiré « Client Data »)",`
+ <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><h1>Résidents</h1><span class="muted" style="margin-left:4px">412 au total · 356 en cours</span>
+  <div style="margin-left:auto;display:flex;gap:8px"><div class="recherche" style="min-width:280px"><i class="bi bi-search"></i>Rechercher</div><span class="btn"><i class="bi bi-sliders"></i>Filtres</span><span class="btn orange"><i class="bi bi-plus-lg"></i>Nouveau</span></div></div>
+ <div style="background:var(--blanc);border-radius:16px 16px 0 0;flex:1;display:flex;flex-direction:column;margin:0 -26px;padding:0 26px">
+ <div style="display:grid;grid-template-columns:repeat(4,1fr) auto;gap:14px;padding:16px 0;align-items:end;border-bottom:1px solid var(--ligne)">
+  ${[["Promotion","Toutes les promotions"],["Faculté d'origine","Toutes les facultés"],["Hôpital","Tous les hôpitaux"],["Statut S1 2026","Tous les statuts"]].map(([l,p])=>`<label style="display:flex;flex-direction:column;gap:5px;font-size:11.5px;font-weight:600">${l}<span class="sel" style="border-radius:10px;justify-content:space-between;font-weight:400;color:var(--gris)">${p}<i class="bi bi-chevron-down"></i></span></label>`).join("")}
+  <span style="color:var(--erreur);font-weight:600;font-size:12px;padding-bottom:8px"><i class="bi bi-arrow-counterclockwise"></i> Réinitialiser</span>
+ </div>
+ <table><thead><tr><th style="width:44px">N°</th><th>Nom et prénom</th><th>CIN</th><th>E-mail</th><th>Promo</th><th>Année</th><th>Faculté</th><th>Spécialité</th><th style="text-align:center">Fiches</th><th>S1 2026</th><th style="text-align:right">Action</th></tr></thead>
+ <tbody>${R.slice(0,12).map((r,i)=>`<tr><td class="muted chiffres">${i+1}</td><td class="nom">${r[0]}</td><td class="chiffres">${r[1]}</td><td class="muted">${r[2]||'—'}</td><td class="chiffres">${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td>${r[6]}</td><td class="chiffres" style="text-align:center">${r[7]}</td><td>${pill(r[8])}</td><td style="text-align:right" class="kebab"><i class="bi bi-three-dots-vertical"></i></td></tr>`).join("")}</tbody></table>
+ <div style="margin-top:auto;display:flex;align-items:center;padding:12px 0 16px;border-top:1px solid var(--ligne)">
+  <span class="sel">12 lignes <i class="bi bi-chevron-down"></i></span>
+  <div class="pagination" style="margin:0 auto;border:1px solid var(--gris-c);border-radius:50px;padding:3px">${["1","2","3","4","5","…","35"].map((p,i)=>`<span class="pg ${i==0?'on':''}">${p}</span>`).join("")}</div>
+  <span class="btn leger"><i class="bi bi-chevron-left"></i>Précédent</span>&nbsp;<span class="btn leger">Suivant<i class="bi bi-chevron-right"></i></span>
+ </div></div>`);
+
+/* ===== C — Dense, type tableur ===== */
+const C=()=>cadre("C — Dense « tableur » avec vues enregistrées et colonnes (inspiré « Inventory »)",`
+ <div style="display:flex;align-items:center;gap:12px"><h1>Résidents</h1>
+  <div style="margin-left:auto;display:flex;gap:18px;color:var(--orange-f);font-weight:600;font-size:12.5px"><span><i class="bi bi-bookmark"></i> Vues enregistrées <i class="bi bi-chevron-down"></i></span><span><i class="bi bi-layout-three-columns"></i> Colonnes <i class="bi bi-chevron-down"></i></span><span><i class="bi bi-file-earmark-spreadsheet"></i> Excel</span></div></div>
+ <div style="display:flex;gap:24px;margin-top:12px;border-bottom:1px solid #ddd5c6">
+  ${["Vue d'ensemble","Tous","R1","R2","R3","R4","Terminés","À relancer"].map((l,i)=>`<span style="padding:8px 0;font-size:13px;${i==1?'color:var(--orange-f);font-weight:700;border-bottom:2px solid var(--orange)':'color:var(--gris)'}">${l}</span>`).join("")}</div>
+ <div style="display:flex;align-items:center;gap:10px;padding:12px 0">
+  <b style="font-size:12.5px">Semestre</b><span class="sel" style="border-radius:8px">S1 2026 <i class="bi bi-chevron-down"></i></span><b style="font-size:12.5px">Hôpital</b><span class="sel" style="border-radius:8px">Tous <i class="bi bi-chevron-down"></i></span>
+  <div class="recherche" style="border-radius:8px;min-width:230px"><i class="bi bi-search"></i>CIN ou nom…</div>
+  <span style="margin-left:auto;color:var(--orange-f);font-weight:600;font-size:12px"><i class="bi bi-save"></i> Enregistrer cette vue</span><span class="btn leger" style="border-radius:8px"><i class="bi bi-funnel"></i> Filtres avancés</span></div>
+ <div style="background:var(--blanc);border-radius:10px;border:1px solid #e6dfd2;overflow:hidden;flex:1">
+ <table style="font-size:12.5px"><thead><tr style="background:#faf8f4"><th style="width:36px"><span class="case"></span></th>${["Nom ↓","CIN ↓","Promo ↓","Spécialité ↓","Hôpital S1","Service S1","Fiches ↓","Dernière fiche ↓","Téléch.","Statut S1"].map(h=>`<th style="text-transform:none;font-size:11.5px;color:var(--noir);letter-spacing:0">${h}</th>`).join("")}</tr></thead>
+ <tbody>${R.map((r,i)=>`<tr style="${i%2?'background:#fcfbf8':''}"><td style="padding:6px 12px"><span class="case ${i==2||i==4?'coche':''}"></span></td><td style="padding:6px 12px" class="nom">${r[0]}${r[2]?'':' <i class="bi bi-envelope-slash" style="color:var(--orange)" title="Sans e-mail"></i>'}</td><td class="chiffres" style="padding:6px 12px">${r[1]}</td><td class="chiffres" style="padding:6px 12px">${r[3]}</td><td style="padding:6px 12px">${r[6]}</td><td style="padding:6px 12px">${r[9]}</td><td style="padding:6px 12px">${r[10]}</td><td class="chiffres" style="padding:6px 12px"><span style="display:inline-flex;align-items:center;gap:6px">${r[7]}<span style="width:44px;height:4px;background:var(--beige);border-radius:4px;display:inline-block"><span style="display:block;height:4px;width:${r[7]*10}%;background:var(--orange);border-radius:4px"></span></span></span></td><td class="chiffres muted" style="padding:6px 12px">${["14 oct. 2026","02 sept. 2026","11 nov. 2026","—"][i%4]}</td><td class="chiffres" style="padding:6px 12px">${r[8]=="ok"?2:0}${r[8]=="al"&&i%2?' <i class="bi bi-exclamation-triangle-fill" style="color:#e0a000"></i>':''}</td><td style="padding:6px 12px">${pill(r[8])}</td></tr>`).join("")}</tbody></table></div>
+ <div style="position:absolute"></div>`,{style:"padding-bottom:14px"});
+
+/* ===== D — Menu sombre, menu d'actions ===== */
+const D=()=>cadre("D — Cartes aérées, menu d'actions par ligne (inspiré « Assignments »)",`
+ <div style="display:flex;align-items:center;gap:10px"><h1>Résidents</h1><span class="compteur chiffres">412</span>
+  <div style="margin-left:auto;display:flex;gap:8px"><span class="btn leger"><i class="bi bi-file-earmark-spreadsheet"></i>Exporter</span><span class="btn noir"><i class="bi bi-person-plus"></i>Nouveau résident</span></div></div>
+ <div style="display:flex;gap:8px;margin:14px 0 12px"><div class="recherche" style="min-width:340px;border-radius:10px"><i class="bi bi-search"></i>Rechercher par nom, CIN</div>
+  <span class="btn leger" style="border-radius:10px"><i class="bi bi-sliders2"></i>Filtrer</span><span class="btn leger" style="border-radius:10px"><i class="bi bi-sort-alpha-down"></i>Trier A-Z <i class="bi bi-chevron-down"></i></span></div>
+ <div style="background:var(--blanc);border-radius:16px;flex:1;padding:4px 18px;position:relative;margin-bottom:16px">
+ <table><thead><tr><th>CIN</th><th>Résident</th><th>Spécialité</th><th>Hôpital · service S1</th><th>Promotion</th><th>Statut S1</th><th>Dernière connexion</th><th></th></tr></thead>
+ <tbody>${R.slice(0,11).map((r,i)=>`<tr><td class="chiffres muted" style="padding:12px">${r[1]}</td><td style="padding:12px"><div class="identite">${av(r,i)}<div><div class="nom">${r[0]}</div><div class="sous">${r[2]||'Sans e-mail'}</div></div></div></td><td>${r[6]}</td><td><div>${r[9]}</div><div class="sous">${r[10]}</div></td><td class="chiffres">${r[3]} · ${r[4]}</td><td>${pill(r[8])}</td><td class="muted chiffres">${["12 nov. 2026","Jamais","03 nov. 2026","21 oct. 2026"][i%4]}</td><td style="text-align:right;color:var(--gris);font-size:16px"><i class="bi bi-three-dots"></i></td></tr>`).join("")}</tbody></table>
+ <div style="position:absolute;right:30px;top:118px;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.12);padding:6px;width:190px;font-size:12.5px">
+  <div style="padding:8px 10px;border-radius:8px;background:var(--orange-p)"><i class="bi bi-folder2-open" style="color:var(--orange)"></i>&nbsp; Ouvrir le dossier</div>
+  <div style="padding:8px 10px"><i class="bi bi-pencil"></i>&nbsp; Modifier</div><div style="padding:8px 10px"><i class="bi bi-envelope"></i>&nbsp; Envoyer une relance</div><div style="padding:8px 10px"><i class="bi bi-download"></i>&nbsp; Télécharger les fiches</div>
+  <div style="padding:8px 10px;color:var(--erreur);border-top:1px solid var(--ligne)"><i class="bi bi-trash3"></i>&nbsp; Supprimer</div></div>
+ <div style="display:flex;align-items:center;padding:12px 0"><span class="btn leger">Précédent</span><span class="chiffres" style="margin:0 auto">Page 1 sur 38</span><span class="btn leger">Suivant</span></div>
+ </div>`,{sombre:true});
+
+/* ===== E — Groupé par année + panneau d'aperçu ===== */
+const groupes=[["R4",[2,8,13]],["R3",[0,4,9,12]],["R2",[1,6,10]],["R1",[3,7,11]]];
+const E=()=>cadre("E — Groupé par année de résidanat + panneau d'aperçu latéral (proposition UX)",`
+ <div style="display:flex;align-items:center;gap:10px"><h1>Résidents</h1><span class="compteur chiffres">412</span>
+  <div class="recherche" style="margin-left:18px;min-width:300px"><i class="bi bi-search"></i>Nom, CIN ou e-mail…</div>
+  <div style="margin-left:auto;display:flex;gap:8px"><span class="btn leger icone"><i class="bi bi-file-earmark-spreadsheet"></i></span><span class="btn orange"><i class="bi bi-person-plus"></i>Nouveau</span></div></div>
+ <div style="display:flex;gap:6px;margin:12px 0;align-items:center">
+  ${[["Tous",412,1],["En cours",356],["Sans fiche S1",38],["À relancer",21],["Sans e-mail",9]].map(([l,n,a])=>`<span class="btn ${a?'noir':'leger'}" style="padding:5px 12px">${l} <span class="chiffres" style="opacity:.7">${n}</span></span>`).join("")}
+  <span style="margin-left:auto" class="muted">Grouper par&nbsp;</span><span class="sel">Année de résidanat <i class="bi bi-chevron-down"></i></span></div>
+ <div style="background:var(--blanc);border-radius:14px 14px 0 0;flex:1;overflow:hidden;margin-right:-26px;border-right:0">
+ <table><thead><tr style="border-bottom:1px solid var(--ligne)"><th style="width:36px"><span class="case"></span></th><th>Résident</th><th>Spécialité</th><th>Hôpital S1</th><th style="text-align:center">Fiches</th><th>Statut S1</th></tr></thead>
+ <tbody>${groupes.map(([g,ix])=>`<tr><td colspan="6" style="background:#faf8f4;padding:6px 12px;font-weight:700;font-size:11.5px"><i class="bi bi-chevron-down muted"></i>&nbsp; ${g} <span class="muted" style="font-weight:400">· ${ix.length*27} résidents · ${ix.filter(k=>R[k][8]=='al').length*4} à relancer</span></td></tr>`+ix.map(k=>{const r=R[k];return `<tr style="${k==4?'background:var(--orange-p);box-shadow:inset 3px 0 0 var(--orange)':''}"><td><span class="case"></span></td><td><div class="identite">${av(r,k)}<div><div class="nom">${r[0]}</div><div class="sous chiffres">${r[1]} · Promo ${r[3]}</div></div></div></td><td>${r[6]}</td><td>${r[9]}</td><td class="chiffres" style="text-align:center">${r[7]}</td><td>${pill(r[8])}</td></tr>`}).join("")).join("")}</tbody></table></div>`,
+ {apres:`<aside style="flex:0 0 330px;background:var(--blanc);border-left:1px solid var(--ligne);padding:18px 20px;display:flex;flex-direction:column;gap:14px;box-shadow:-8px 0 24px rgba(0,0,0,.04)">
+  <div style="display:flex;justify-content:space-between;color:var(--gris)"><span style="font-size:11px;text-transform:uppercase;letter-spacing:1px">Aperçu</span><i class="bi bi-x-lg"></i></div>
+  <div class="identite"><span class="avatar a5" style="width:46px;height:46px;font-size:15px">NE</span><div><div style="font:18px var(--titre)">Ellouze Nour</div><div class="sous chiffres">CIN 10293847 · R3 · Promo 2022</div></div></div>
+  <div style="display:flex;gap:6px">${pill("al")}<span class="pill p-ne">Psychiatrie</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${[["Fiches","6"],["Téléchargées","4"],["Faculté","Tunis"],["Connexion","21 oct."]].map(([l,v])=>`<div style="background:var(--beige);border-radius:12px;padding:10px"><div class="sous">${l}</div><div style="font:600 15px Arial" class="chiffres">${v}</div></div>`).join("")}</div>
+  <div><div style="font-weight:700;font-size:12px;margin-bottom:6px">Parcours</div>
+   ${[["S1 2026","Hédi Chaker · Psychiatrie B","al"],["S2 2025","Razi · Psychiatrie A","ok"],["S1 2025","Hédi Chaker · Neurologie","ok"],["S2 2024","H. Bourguiba · Urgences","ok"]].map(([s,l,st])=>`<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--ligne)"><span class="point" style="background:${ST[st][2]}"></span><div style="flex:1"><div class="chiffres" style="font-weight:600;font-size:12px">${s}</div><div class="sous">${l}</div></div><i class="bi bi-file-earmark-pdf muted"></i></div>`).join("")}</div>
+  <div style="margin-top:auto;display:flex;gap:8px"><span class="btn orange" style="flex:1;justify-content:center"><i class="bi bi-folder2-open"></i>Ouvrir le dossier</span><span class="btn leger icone"><i class="bi bi-envelope"></i></span></div>
+ </aside>`});
+
+document.getElementById("racine").innerHTML=[A(),B(),C(),D(),E()].join("");
+</script>
+</body>
+</html>

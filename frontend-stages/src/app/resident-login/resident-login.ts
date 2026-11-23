@@ -125,15 +125,15 @@ import { environment } from '../../environments/environment';
     
     .abstract-login-wrapper { padding: 20px; }
     .abstract-title { font-size: 2.2rem; font-weight: 300; color: #333; letter-spacing: 1px; margin-bottom: 5px; }
-    .abstract-subtitle { font-size: 1rem; color: #555; text-align: center; margin-bottom: 40px; }
+    .abstract-subtitle { font-size: 0.95rem; color: #555; text-align: center; margin-bottom: 40px; }
 
     .flat-input-group { position: relative; margin-bottom: 30px; }
-    .flat-input { width: 100%; background: transparent; border: none; border-bottom: 2px solid #555; color: #b5521f; padding: 10px 5px; font-size: 1.1rem; font-weight: 600; outline: none; transition: border-color 0.3s; }
+    .flat-input { width: 100%; background: transparent; border: none; border-bottom: 2px solid #555; color: #b5521f; padding: 10px 5px; font-size: 1rem; font-weight: 600; outline: none; transition: border-color 0.3s; }
     .flat-input:focus { border-bottom-color: #f47b45; }
-    .flat-label { position: absolute; top: 12px; left: 5px; color: #777; font-size: 1.1rem; pointer-events: none; transition: 0.3s ease all; }
-    .flat-input:focus ~ .flat-label, .flat-input:not(:placeholder-shown) ~ .flat-label { top: -20px; font-size: 0.85rem; color: #b5521f; }
+    .flat-label { position: absolute; top: 12px; left: 5px; color: #777; font-size: 1rem; pointer-events: none; transition: 0.3s ease all; }
+    .flat-input:focus ~ .flat-label, .flat-input:not(:placeholder-shown) ~ .flat-label { top: -20px; font-size: var(--fms-taille-petit); color: #b5521f; }
 
-    .pill-btn-orange { background: #f47b45; color: white; border: none; border-radius: 50rem; padding: 12px 20px; font-size: 1.1rem; font-weight: bold; display: block; box-shadow: 0 4px 15px rgba(244, 123, 69, 0.4); transition: transform 0.2s, box-shadow 0.2s; letter-spacing: 1px; }
+    .pill-btn-orange { background: #f47b45; color: white; border: none; border-radius: 50rem; padding: 12px 20px; font-size: 1rem; font-weight: bold; display: block; box-shadow: 0 4px 15px rgba(244, 123, 69, 0.4); transition: transform 0.2s, box-shadow 0.2s; letter-spacing: 1px; }
     .pill-btn-orange:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(244, 123, 69, 0.6); }
 
     .flat-input.code-input { font-size: 1.8rem; letter-spacing: 10px; font-weight: 800; color: #b5521f; }
@@ -145,7 +145,7 @@ import { environment } from '../../environments/environment';
     .fade-in { animation: simpleFadeIn 0.5s ease-out; }
     .flat-label-centre { left: 50%; transform: translateX(-50%); }
     .compte-a-rebours { color: #b5521f; font-variant-numeric: tabular-nums; }
-    .contact-service { margin: 24px 0 0; text-align: center; font-size: 0.85rem; color: #555; overflow-wrap: anywhere; }
+    .contact-service { margin: 24px 0 0; text-align: center; font-size: var(--fms-taille-petit); color: #555; overflow-wrap: anywhere; }
     .contact-service a { color: #b5521f; font-weight: 600; text-decoration: none; }
     .contact-service a:hover { text-decoration: underline; }
 

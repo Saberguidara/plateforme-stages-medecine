@@ -89,6 +89,14 @@ npm test --prefix backend
 npm test --prefix frontend-stages -- --watch=false
 ```
 
+Tests de bout en bout avec Playwright, sur ordinateur et téléphone (première fois : `npx playwright install chromium`) :
+
+```bash
+npm install               # à la racine
+npm run test:e2e          # serveur local et base MySQL locale démarrée
+BASE_URL=https://mon-site.onrender.com npm run test:e2e   # site déployé : tests publics uniquement
+```
+
 ---
 
 ## Déploiement

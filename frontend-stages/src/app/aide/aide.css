@@ -26,7 +26,7 @@
 
 .aide-surtitre {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: var(--fms-taille-petit);
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--fms-orange-fonce);
@@ -144,11 +144,11 @@
 .aide-coordonnees a {
     color: var(--fms-beige);
     font-weight: 600;
-    font-size: 0.92rem;
+    font-size: var(--fms-taille-texte);
 }
 
 .aide-contact-conseil {
-    font-size: 0.85rem;
+    font-size: var(--fms-taille-petit);
     color: rgba(245, 240, 230, 0.7);
     margin: 0;
 }

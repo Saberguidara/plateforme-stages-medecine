@@ -30,10 +30,10 @@ import {
         <div class="col-12" id="sfConflit" aria-live="polite">
           @if (conflits().occupee; as f) {
           <div class="alerte-saisie bloquante"><i class="bi bi-x-circle" aria-hidden="true"></i>
-            <span>La période {{ modele.periode }} {{ modele.annee }} est déjà occupée ({{ f.hopital || 'hôpital non renseigné' }}, {{ f.service || 'service non renseigné' }}).</span></div>
+            <span>Ce stage existe déjà en {{ modele.periode }} {{ modele.annee }} ({{ f.hopital || 'hôpital non renseigné' }}, {{ f.service || 'service non renseigné' }}).</span></div>
           } @else if (conflits().chevauchements.length) {
           <div class="alerte-saisie"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-            <span>Attention : {{ listeChevauchements() }} {{ modele.annee }} {{ conflits().chevauchements.length > 1 ? 'couvrent' : 'couvre' }} déjà ces mois.</span></div>
+            <span>Attention : {{ listeChevauchements() }} {{ conflits().chevauchements.length > 1 ? 'couvrent' : 'couvre' }} déjà ces mois. Enregistrez quand même s'il s'agit d'un stage en parallèle.</span></div>
           }
           @if (anneeImprimee()) {
           <div class="indication-calcul"><i class="bi bi-printer" aria-hidden="true"></i> Imprimé sur la fiche : {{ anneeImprimee() }}</div>
@@ -107,11 +107,15 @@ export class StageForm implements OnInit {
   }
 
   conflits() {
-    return conflitsPeriode(this.resident().fiches, { periode: this.modele.periode, annee: Number(this.modele.annee) }, this.fiche()?.id);
+    const { periode, annee, service, hopital } = this.modele;
+    return conflitsPeriode(this.resident().fiches, { periode, annee: Number(annee), service, hopital }, this.fiche()?.id);
   }
 
+  // « T3 2026 (Psychiatrie) et S2 2026 (CSB Hencha) »
   listeChevauchements() {
-    return this.conflits().chevauchements.map((f) => f.periode).join(' et ');
+    return this.conflits().chevauchements
+      .map((f) => `${f.periode} ${f.annee}${f.service ? ` (${f.service})` : ''}`)
+      .join(' et ');
   }
 
   anneeImprimee() {

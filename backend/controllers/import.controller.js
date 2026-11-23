@@ -5,6 +5,7 @@ const { normalizeString } = require('../utils/validation');
 const { SPECIALITES } = require('../config/specialites');
 const { lireClasseur } = require('../services/import/excel');
 const { analyserClasseur } = require('../services/import/registres');
+const { enregistrerAnalyse } = require('../services/import/enregistrer');
 const { journaliser } = require('../utils/journal');
 
 // Semestre le plus représenté dans le rapport (un classeur porte en pratique un seul semestre).
@@ -62,96 +63,33 @@ exports.importExcel = async (req, res) => {
             );
             const importId = historique.insertId;
 
-            const cins = [...new Set([...residents.map((r) => r.cin), ...emails.map((e) => e.cin)])];
-            const existants = new Map();
-            if (cins.length > 0) {
-                const [rows] = await connection.query('SELECT id, cin, email FROM residents WHERE cin IN (?) FOR UPDATE', [cins]);
-                for (const r of rows) existants.set(String(r.cin).toUpperCase(), r);
-            }
-
-            const nouveaux = residents.filter((r) => !existants.has(r.cin));
-            let residentIdsCrees = [];
-            if (nouveaux.length > 0) {
-                await connection.query(
-                    'INSERT INTO residents (cin, nom_prenom, email, specialite, faculte_origine, promotion, niveau) VALUES ?',
-                    [nouveaux.map((r) => [
-                        r.cin, r.nomPrenom, r.email, specialite.libelle, r.faculte,
-                        r.niveau ? r.annee - r.niveau + 1 : null, r.niveau
-                    ])]
-                );
-                const [crees] = await connection.query('SELECT id, cin FROM residents WHERE cin IN (?)', [nouveaux.map((r) => r.cin)]);
-                for (const r of crees) existants.set(String(r.cin).toUpperCase(), { id: r.id, email: null, cree: true });
-                residentIdsCrees = crees.map((r) => r.id);
-            }
-
-            // Registres : un e-mail n'est ajouté qu'aux résidents qui n'en ont pas.
-            // Liste d'e-mails : choix explicite de l'administration, l'adresse est remplacée.
-            let emailsAjoutes = 0;
-            for (const r of residents) {
-                const existant = existants.get(r.cin);
-                if (existant && !existant.cree && !existant.email && r.email) {
-                    await connection.query('UPDATE residents SET email = ? WHERE id = ? AND email IS NULL', [r.email, existant.id]);
-                    existant.email = r.email;
-                    emailsAjoutes++;
-                }
-            }
-            let emailsInconnus = 0;
-            for (const e of emails) {
-                const existant = existants.get(e.cin);
-                if (!existant) { emailsInconnus++; continue; }
-                if (existant.email !== e.email) {
-                    await connection.query('UPDATE residents SET email = ? WHERE id = ?', [e.email, existant.id]);
-                    existant.email = e.email;
-                    emailsAjoutes++;
-                }
-            }
-
-            const fiches = [];
-            for (const r of residents) {
-                const id = existants.get(r.cin).id;
-                for (const s of r.stages) fiches.push([id, s.periode, s.annee, s.service, s.hopital, importId]);
-            }
-            let fichesCreees = 0;
-            if (fiches.length > 0) {
-                // Une fiche déjà présente (même résident, période et année) est conservée telle quelle.
-                const [resultat] = await connection.query(
-                    'INSERT IGNORE INTO formulaires_stage (resident_id, periode, annee, service, hopital, import_id) VALUES ?',
-                    [fiches]
-                );
-                fichesCreees = resultat.affectedRows;
-            }
+            const enregistrement = await enregistrerAnalyse(connection, analyse, { specialite, importId });
+            const { residentIdsCrees, residentIdsVus, niveaux, corrections, conflits } = enregistrement;
+            const { fichesCreees, fichesCorrigees, emailsAjoutes } = enregistrement.resume;
 
             // Résidents présents dans le registre et années couvertes : servent à repérer les absents.
-            const residentIdsVus = [...new Set(residents.map((r) => existants.get(r.cin).id))];
-            const niveaux = [...new Set(residents.map((r) => r.niveau).filter(Boolean))].sort();
+            // Les corrections gardent l'ancienne valeur pour pouvoir annuler l'import.
             await connection.query(
                 'UPDATE historique_imports SET residents_created = ?, fiches_created = ?, residents_vus = ?, undo_data = ? WHERE id = ?',
                 [residentIdsCrees.length, fichesCreees, residentIdsVus.length,
-                    JSON.stringify({ residentIds: residentIdsCrees, residentIdsVus, niveaux }), importId]
+                    JSON.stringify({ residentIds: residentIdsCrees, residentIdsVus, niveaux, corrections }), importId]
             );
             await journaliser(connection, req, {
                 action: 'import', entite: 'import', entiteId: importId,
                 apres: {
                     fichier: req.file.originalname || 'import.xlsx', semestre, annee,
-                    residentsCrees: residentIdsCrees.length, fichesCreees, emailsAjoutes
+                    residentsCrees: residentIdsCrees.length, fichesCreees, fichesCorrigees, emailsAjoutes
                 }
             });
             await connection.commit();
 
-            const resume = {
-                residentsCrees: residentIdsCrees.length,
-                residentsExistants: residents.length - nouveaux.length,
-                fichesCreees,
-                fichesExistantes: fiches.length - fichesCreees,
-                emailsAjoutes,
-                emailsInconnus,
-                ...bilan
-            };
+            const resume = { ...enregistrement.resume, ...bilan };
             res.json({
-                message: `Import terminé : ${resume.residentsCrees} nouveaux résidents, ${fichesCreees} fiches créées, ${emailsAjoutes} e-mails enregistrés.`,
+                message: `Import terminé : ${resume.residentsCrees} nouveaux résidents, ${fichesCreees} fiches créées, ${fichesCorrigees} corrigées, ${emailsAjoutes} e-mails enregistrés.`,
                 importId,
                 rapport,
-                bilan: resume
+                bilan: resume,
+                conflits
             });
         } catch (error) {
             await connection.rollback();
@@ -204,8 +142,17 @@ exports.undoImport = async (req, res) => {
             });
         }
 
-        const { residentIds = [] } = JSON.parse(rows[0].undo_data || '{}');
+        const { residentIds = [], corrections = [] } = JSON.parse(rows[0].undo_data || '{}');
         const [fiches] = await connection.query('DELETE FROM formulaires_stage WHERE import_id = ?', [importId]);
+        // Fiches corrigées par l'import : ancienne valeur rétablie, sauf si la fiche a été retouchée depuis.
+        let fichesRetablies = 0;
+        for (const c of corrections) {
+            const [retour] = await connection.query(
+                'UPDATE formulaires_stage SET service = ?, hopital = ?, modifie_le = modifie_le WHERE id = ? AND modifie_le IS NULL',
+                [c.service, c.hopital, c.id]
+            );
+            fichesRetablies += retour.affectedRows;
+        }
         let residentsSupprimes = 0;
         if (residentIds.length > 0) {
             const [resultat] = await connection.query(
@@ -218,11 +165,11 @@ exports.undoImport = async (req, res) => {
         await connection.query('UPDATE historique_imports SET undone = 1 WHERE id = ?', [importId]);
         await journaliser(connection, req, {
             action: 'annulation', entite: 'import', entiteId: importId,
-            avant: { fichier: rows[0].filename, fichesSupprimees: fiches.affectedRows, residentsSupprimes }
+            avant: { fichier: rows[0].filename, fichesSupprimees: fiches.affectedRows, fichesRetablies, residentsSupprimes }
         });
         await connection.commit();
 
-        res.json({ message: `Import annulé : ${fiches.affectedRows} fiches et ${residentsSupprimes} résidents supprimés.` });
+        res.json({ message: `Import annulé : ${fiches.affectedRows} fiches et ${residentsSupprimes} résidents supprimés${fichesRetablies ? `, ${fichesRetablies} fiches rétablies` : ''}.` });
     } catch (error) {
         if (connection) await connection.rollback().catch(() => { });
         logger.error("Erreur lors de l'annulation de l'import : " + error.stack);

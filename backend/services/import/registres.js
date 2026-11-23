@@ -6,7 +6,9 @@
 //   Détails référence lot, Hôpital, Service, Type de session, Faculté d'origine…).
 // - « emails » : simple liste CIN + e-mail, pour compléter les adresses de connexion.
 // Le choix national couvre tous les résidents du pays : seuls ceux de la faculté de Sfax sont retenus.
+// - « registre complet » : cursus de toute une promotion, trimestre par trimestre (voir cursus.js).
 const { normaliserEntete } = require('./excel');
+const { estCursus, lireCursus } = require('./cursus');
 const { specialiteDe } = require('../../config/specialites');
 
 const FACULTE_LOCALE = 'FMSfax';
@@ -226,6 +228,52 @@ function lireEmails(feuille) {
         .filter((l) => l.cin && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(l.email));
 }
 
+// Registre complet d'une promotion : tous les résidents sont repris, quelle que soit leur faculté d'origine
+// (choix de l'administration : les résidents d'autres facultés en stage à Sfax gardent leurs fiches).
+function analyserCursus(feuille, residents, bilan) {
+    const { promotion, trimestres, lignes } = lireCursus(feuille, { normaliserCin, faculteDe });
+    const annees = trimestres.map((t) => t.annee);
+    // Le niveau est calculé pour la dernière année couverte : la promotion s'en déduit à l'enregistrement.
+    const anneeRef = annees.length > 0 ? Math.max(...annees) : new Date().getFullYear();
+    const dernier = trimestres.filter((t) => t.annee === anneeRef && t.periode).at(-1);
+    const premier = trimestres.find((t) => t.periode);
+
+    let retenues = 0;
+    let fiches = 0;
+    for (const ligne of lignes) {
+        bilan.lignes++;
+        for (const s of ligne.situations) bilan.situations[s] = (bilan.situations[s] || 0) + 1;
+        for (const a of ligne.anomalies) {
+            if (bilan.anomalies.length < 50) bilan.anomalies.push(`${feuille.nom}, ligne ${ligne.numero} (${ligne.cin}) : ${a}`);
+        }
+        if (residents.has(ligne.cin)) { bilan.doublons++; continue; }
+        if (ligne.stages.length === 0) bilan.sansStage++;
+        residents.set(ligne.cin, {
+            cin: ligne.cin,
+            nomPrenom: ligne.nomPrenom || 'Non renseigné',
+            email: null,
+            faculte: ligne.faculte || 'Autre',
+            niveau: promotion ? anneeRef - promotion + 1 : null,
+            annee: anneeRef,
+            stages: ligne.stages
+        });
+        retenues++;
+        fiches += ligne.stages.length;
+    }
+
+    return {
+        feuille: feuille.nom,
+        format: 'registre complet',
+        promotion,
+        annee: anneeRef,
+        semestre: dernier ? (['T1', 'T2', 'S1'].includes(dernier.periode) ? 'S1' : 'S2') : null,
+        source: premier && dernier ? `stages du ${premier.debut}/${premier.annee} au ${dernier.fin}/${dernier.annee}` : 'aucune colonne de période',
+        lignes: lignes.length,
+        retenues,
+        fiches
+    };
+}
+
 /**
  * Analyse toutes les feuilles d'un classeur, sans toucher à la base.
  * @param {ReturnType<import('./excel').lireClasseur>} feuilles
@@ -236,9 +284,17 @@ function analyserClasseur(feuilles, nomFichier, codeSpecialite) {
     const residents = new Map();
     const emails = [];
     const rapport = [];
-    const bilan = { lignes: 0, autresFacultes: 0, autresSpecialites: 0, sansCin: 0, sansStage: 0, doublons: 0, emailsInvalides: 0 };
+    const bilan = {
+        lignes: 0, autresFacultes: 0, autresSpecialites: 0, sansCin: 0, sansStage: 0, doublons: 0, emailsInvalides: 0,
+        // Registre complet : cellules sans stage (mobilité, mutation, report…) et cellules mal datées
+        situations: {}, anomalies: []
+    };
 
     for (const feuille of feuilles) {
+        if (estCursus(feuille)) {
+            rapport.push(analyserCursus(feuille, residents, bilan));
+            continue;
+        }
         const format = formatDeFeuille(feuille);
         if (!format) {
             rapport.push({ feuille: feuille.nom, format: 'ignorée', detail: 'colonnes non reconnues' });

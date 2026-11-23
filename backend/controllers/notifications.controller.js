@@ -4,7 +4,7 @@
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { journaliser } = require('../utils/journal');
-const { PERIODES_DU_SEMESTRE, semestreCourant } = require('../config/specialites');
+const { PERIODES_DU_SEMESTRE, ORDRE_PERIODES_SQL, semestreCourant } = require('../config/specialites');
 const { envoyerMail, envoiPossible, gabarit, echapper } = require('../services/mail');
 
 async function fichesEnAttente() {
@@ -15,7 +15,7 @@ async function fichesEnAttente() {
          JOIN residents r ON r.id = f.resident_id
          LEFT JOIN notifications_fiches n ON n.fiche_id = f.id
          WHERE n.fiche_id IS NULL AND f.periode IN (?) AND f.annee = ?
-         ORDER BY r.id, FIELD(f.periode,'T1','T2','S1','T3','T4','S2','R1','R2')`,
+         ORDER BY r.id, FIELD(f.periode,${ORDRE_PERIODES_SQL})`,
         [PERIODES_DU_SEMESTRE[semestre], annee]
     );
     const parResident = new Map();
