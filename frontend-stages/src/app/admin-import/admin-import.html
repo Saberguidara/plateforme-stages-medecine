@@ -96,6 +96,8 @@
                         }
                         @if (bilan.fichesHorsFichier) { <li>{{ bilan.fichesHorsFichier }} fiches en base absentes du fichier, gardées (rattrapage, stage ajouté à la main…)</li> }
                         @if (bilan.sansStage) { <li>{{ bilan.sansStage }} résidents sans stage (mutation, mobilité, report…)</li> }
+                        @if (bilan.residentsSupprimesIgnores) { <li>{{ bilan.residentsSupprimesIgnores }} résidents supprimés sur la plateforme, non recréés</li> }
+                        @if (bilan.residentsSansStageIgnores) { <li>{{ bilan.residentsSansStageIgnores }} nouveaux résidents sans aucun stage, non créés</li> }
                         @if (situationsListe().length) {
                         <li>Cellules sans stage, sans fiche créée : {{ situationsListe() }}</li>
                         }

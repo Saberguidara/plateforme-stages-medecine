@@ -21,13 +21,33 @@ const LIMITE_LISTES = 50;
  * @param {{ residents: Array, emails: Array }} analyse
  * @param {{ specialite: { libelle: string }, importId: number }} options
  */
-async function enregistrerAnalyse(connection, { residents, emails }, { specialite, importId }) {
-    const cins = [...new Set([...residents.map((r) => r.cin), ...emails.map((e) => e.cin)])];
+async function enregistrerAnalyse(connection, { residents: duFichier, emails }, { specialite, importId }) {
+    const cins = [...new Set([...duFichier.map((r) => r.cin), ...emails.map((e) => e.cin)])];
     const existants = new Map();
     if (cins.length > 0) {
         const [rows] = await connection.query('SELECT id, cin, email FROM residents WHERE cin IN (?) FOR UPDATE', [cins]);
         for (const r of rows) existants.set(String(r.cin).toUpperCase(), r);
     }
+
+    // Un résident absent de la base n'est pas recréé s'il a été supprimé à la main sur la plateforme
+    // (mobilité totale hors Sfax, démission…), ni s'il n'a aucun stage dans le fichier.
+    const absents = duFichier.filter((r) => !existants.has(r.cin)).map((r) => r.cin);
+    const supprimes = new Set();
+    if (absents.length > 0) {
+        const [rows] = await connection.query(
+            `SELECT DISTINCT JSON_UNQUOTE(JSON_EXTRACT(avant, '$.cin')) AS cin FROM journal_actions
+             WHERE action = 'suppression' AND entite = 'resident' AND JSON_UNQUOTE(JSON_EXTRACT(avant, '$.cin')) IN (?)`,
+            [absents]
+        );
+        for (const r of rows) supprimes.add(String(r.cin).toUpperCase());
+    }
+    const residentsIgnores = { supprimes: 0, sansStage: 0 };
+    const residents = duFichier.filter((r) => {
+        if (existants.has(r.cin)) return true;
+        if (supprimes.has(r.cin)) { residentsIgnores.supprimes++; return false; }
+        if (r.stages.length === 0) { residentsIgnores.sansStage++; return false; }
+        return true;
+    });
 
     const nouveaux = residents.filter((r) => !existants.has(r.cin));
     let residentIdsCrees = [];
@@ -156,7 +176,9 @@ async function enregistrerAnalyse(connection, { residents, emails }, { specialit
             fichesConservees,
             fichesHorsFichier: horsFichier.length,
             emailsAjoutes,
-            emailsInconnus
+            emailsInconnus,
+            residentsSupprimesIgnores: residentsIgnores.supprimes,
+            residentsSansStageIgnores: residentsIgnores.sansStage
         },
         conflits
     };

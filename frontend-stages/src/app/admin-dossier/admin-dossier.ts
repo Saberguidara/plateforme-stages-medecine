@@ -57,6 +57,21 @@ export class AdminDossier implements OnInit {
   readonly confirmation = signal<{ titre: string; message: string; action: () => void } | null>(null);
   readonly suppressionEnCours = signal(false);
 
+  // Retour à la liste des résidents avec les filtres et la page d'où l'on vient (onglet, recherche…).
+  // Recalculé une fois la navigation vers le dossier terminée ; liste complète si l'on vient d'ailleurs.
+  readonly lienListe = computed(() => {
+    const precedente = this.router.lastSuccessfulNavigation()?.previousNavigation?.finalUrl;
+    const url = precedente ? this.router.serializeUrl(precedente) : '';
+    return /^\/admin\/residents(\?|$)/.test(url) ? url : '/admin/residents';
+  });
+
+  retourListe(evenement: MouseEvent) {
+    // Ctrl/Cmd-clic : laisser le navigateur ouvrir la liste dans un nouvel onglet
+    if (evenement.ctrlKey || evenement.metaKey || evenement.shiftKey) return;
+    evenement.preventDefault();
+    this.router.navigateByUrl(this.lienListe());
+  }
+
   readonly parcours = computed<AnneeParcours[]>(() => {
     const d = this.dossier();
     if (!d) return [];

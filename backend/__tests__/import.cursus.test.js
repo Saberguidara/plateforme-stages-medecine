@@ -210,4 +210,26 @@ describe('Registre complet - enregistrement', () => {
             .toEqual([[7, 'S2', 2025, 'CSB Amra', 'DRS Sfax', 43]]);
         expect(r.resume).toMatchObject({ fichesCreees: 1, fichesExistantes: 1, fichesCorrigees: 0 });
     });
+    it('ne recrée pas un résident supprimé à la main, ni un nouveau résident sans aucun stage', async () => {
+        const appels = [];
+        const c = { query: jest.fn(async (sql, params) => {
+            appels.push({ sql, params });
+            if (/^SELECT id, cin, email FROM residents/.test(sql)) return [[]];
+            if (/FROM journal_actions/.test(sql)) return [[{ cin: '11107076' }]];
+            if (/^SELECT id, cin FROM residents/.test(sql)) return [[{ id: 30, cin: '11111111' }]];
+            if (/FROM formulaires_stage WHERE resident_id IN/.test(sql)) return [[]];
+            if (/^INSERT IGNORE INTO formulaires_stage/.test(sql)) return [{ affectedRows: params[0].length }];
+            return [{ affectedRows: 1 }];
+        }) };
+        const stage = { periode: 'S1', annee: 2026, service: 'Urgences', hopital: 'Hôpital A' };
+        const fichier = { emails: [], residents: [
+            { cin: '11107076', nomPrenom: 'ABID ASMA', faculte: 'FMSfax', niveau: 2, annee: 2026, stages: [stage] },
+            { cin: '22222222', nomPrenom: 'MOBILITE TOTALE', faculte: 'FMSfax', niveau: 2, annee: 2026, stages: [] },
+            { cin: '11111111', nomPrenom: 'NOUVEAU', faculte: 'FMSfax', niveau: 1, annee: 2026, stages: [stage] }
+        ] };
+        const r = await enregistrerAnalyse(c, fichier, { specialite: { libelle: 'Médecine de famille' }, importId: 44 });
+        const creation = appels.find((a) => /^INSERT INTO residents/.test(a.sql));
+        expect(creation.params[0].map((l) => l[0])).toEqual(['11111111']);
+        expect(r.resume).toMatchObject({ residentsCrees: 1, residentsSupprimesIgnores: 1, residentsSansStageIgnores: 1, fichesCreees: 1 });
+    });
 });
