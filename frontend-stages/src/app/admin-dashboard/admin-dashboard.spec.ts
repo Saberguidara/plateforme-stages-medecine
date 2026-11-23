@@ -69,10 +69,18 @@ describe('AdminDashboard', () => {
     await fixture.whenStable();
 
     const page: HTMLElement = fixture.nativeElement;
-    expect(page.textContent).toContain('Erreurs signalées par les résidents');
+    expect(page.textContent).toContain('Signalements');
+    expect(page.textContent).not.toContain('Aucun signalement');
     expect(page.textContent).toContain("L'hôpital");
     expect(page.textContent).toContain('Mauvais hôpital');
     expect(page.querySelector('a[href="/admin/residents/4"]')).toBeTruthy();
+  });
+
+  it("garde le bloc des signalements quand il n'y en a aucun", async () => {
+    httpMock.expectOne(`${environment.apiUrl}/admin/statistiques`).flush(STATS);
+    signalements([]);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).toContain('Aucun signalement');
   });
 
   it('propose de prévenir par e-mail les résidents dont la fiche est disponible', async () => {
