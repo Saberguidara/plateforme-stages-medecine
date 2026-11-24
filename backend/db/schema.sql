@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS formulaires_stage (
     -- Plusieurs stages possibles sur une même période (stages en parallèle), jamais deux fois le même
     UNIQUE KEY uq_stage_par_resident_service (resident_id, annee, periode, service, hopital),
     KEY idx_formulaires_import (import_id),
+    KEY idx_formulaires_annee_periode (annee, periode),
     CONSTRAINT fk_formulaires_resident FOREIGN KEY (resident_id)
         REFERENCES residents (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -96,6 +97,7 @@ CREATE TABLE IF NOT EXISTS telechargements (
     PRIMARY KEY (id),
     KEY idx_telechargements_resident (resident_id),
     KEY idx_telechargements_fiche (fiche_id),
+    KEY idx_telechargements_date (telecharge_le),
     CONSTRAINT fk_telechargements_fiche FOREIGN KEY (fiche_id)
         REFERENCES formulaires_stage (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -115,6 +117,7 @@ CREATE TABLE IF NOT EXISTS signalements (
     PRIMARY KEY (id),
     KEY idx_signalements_ouverts (traite_le, cree_le),
     KEY idx_signalements_fiche (fiche_id),
+    KEY idx_signalements_date (cree_le),
     CONSTRAINT fk_signalements_fiche FOREIGN KEY (fiche_id)
         REFERENCES formulaires_stage (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -126,6 +129,7 @@ CREATE TABLE IF NOT EXISTS notifications_fiches (
     envoye_le DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (fiche_id),
     KEY idx_notifications_resident (resident_id),
+    KEY idx_notifications_date (envoye_le),
     CONSTRAINT fk_notifications_fiche FOREIGN KEY (fiche_id)
         REFERENCES formulaires_stage (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

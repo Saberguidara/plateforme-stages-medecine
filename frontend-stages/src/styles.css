@@ -2046,3 +2046,240 @@ a.lien-alerte:hover {
     text-decoration: line-through;
     text-decoration-color: rgba(0, 0, 0, 0.35);
 }
+
+/* ==========================================================================
+   Tableau de bord : semestre analysé, indicateurs, sujets à traiter, graphiques
+   ========================================================================== */
+.barre-semestre {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.barre-semestre-libelle {
+    font-weight: 600;
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.barre-semestre-libelle .bi { color: var(--fms-orange); }
+
+.barre-semestre-choix {
+    width: auto;
+    border-radius: 999px;
+    padding-left: 14px;
+}
+
+.kpi-grille {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+@media (max-width: 1099.98px) {
+    .kpi-grille { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 575.98px) {
+    .kpi-grille { grid-template-columns: 1fr; }
+}
+
+.kpi-carte {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    background: var(--fms-blanc);
+    border: 0;
+    border-radius: var(--fms-rayon-carte);
+    box-shadow: var(--fms-ombre-carte);
+    padding: 16px 18px 12px;
+    color: var(--fms-noir);
+    text-decoration: none;
+    text-align: left;
+    font: inherit;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+a.kpi-carte:hover,
+button.kpi-carte:hover,
+a.kpi-carte:focus-visible,
+button.kpi-carte:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 40px rgba(244, 123, 69, 0.15);
+    color: var(--fms-noir);
+}
+
+.kpi-libelle {
+    color: var(--fms-gris);
+    font-size: var(--fms-taille-petit);
+    font-weight: 600;
+}
+
+.kpi-valeur {
+    font-family: var(--fms-titre);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.kpi-valeur small { font-size: 1.1rem; }
+.kpi-valeur-alerte { color: var(--fms-erreur); }
+
+.kpi-evolution {
+    font-size: var(--fms-taille-petit);
+    font-weight: 600;
+    color: var(--fms-gris);
+    min-height: 1.3em;
+}
+
+.kpi-evolution[data-sens="hausse"] { color: var(--fms-succes); }
+.kpi-evolution[data-sens="baisse"] { color: var(--fms-erreur); }
+.kpi-evolution[data-sens="inconnu"] { font-weight: 400; }
+.kpi-carte-signalements .kpi-evolution { margin-top: auto; }
+
+.sparkline {
+    display: block;
+    width: 100%;
+    height: 32px;
+    margin-top: 6px;
+    overflow: visible;
+}
+
+.sparkline-ligne { fill: none; stroke: var(--fms-noir); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.sparkline-point { fill: var(--fms-noir); }
+.sparkline-aire { fill: var(--fms-orange-pale); }
+.kpi-carte-accent .sparkline-ligne { stroke: var(--fms-orange); stroke-width: 2; }
+.kpi-carte-accent .sparkline-point { fill: var(--fms-orange); }
+
+/* Sujets à traiter : un liseré de couleur indique la gravité */
+.liste-sujets {
+    list-style: none;
+    margin: 0;
+    padding: 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+}
+
+.sujet {
+    --gravite: var(--fms-gris);
+    border-radius: 12px;
+    background: #faf8f4;
+    box-shadow: inset 4px 0 0 var(--gravite);
+}
+
+.sujet[data-gravite="critique"] { --gravite: var(--fms-erreur); }
+.sujet[data-gravite="attention"] { --gravite: var(--fms-orange); }
+.sujet[data-gravite="info"] { --gravite: #3b6ea8; }
+
+.sujet-corps {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px 10px 18px;
+    color: var(--fms-noir);
+    text-decoration: none;
+    border-radius: 12px;
+}
+
+a.sujet-corps:hover {
+    background: var(--fms-orange-pale);
+    color: var(--fms-noir);
+}
+
+.sujet-icone {
+    color: var(--gravite);
+    font-size: 1.1rem;
+}
+
+.sujet-texte {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.sujet-texte small {
+    overflow-wrap: anywhere;
+    color: var(--fms-gris);
+    font-size: var(--fms-taille-petit);
+}
+
+.sujet-nombre {
+    font-family: var(--fms-titre);
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.sujet-fleche { color: var(--fms-gris); }
+
+/* Diffusion des fiches : une barre par étape, rapportée aux fiches créées */
+.entonnoir {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.entonnoir li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+}
+
+.entonnoir-barre {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    height: 14px;
+    border-radius: 7px;
+    background: #f3eee6;
+    overflow: hidden;
+}
+
+.entonnoir-barre span {
+    display: block;
+    height: 100%;
+    border-radius: 7px;
+    background: var(--fms-orange);
+}
+
+.entonnoir li:first-child .entonnoir-barre span { background: var(--fms-noir); }
+.entonnoir-valeur { color: var(--fms-gris); font-size: var(--fms-taille-petit); }
+.entonnoir-valeur strong { color: var(--fms-noir); font-size: var(--fms-taille-texte); }
+
+/* Histogramme des téléchargements */
+.graphe { display: block; width: 100%; height: auto; }
+.graphe-grille { stroke: #ece6db; stroke-width: 1; }
+.graphe-texte { fill: var(--fms-gris); font-size: 11px; font-family: Arial, Helvetica, sans-serif; }
+.graphe-texte-fort { fill: var(--fms-noir); font-weight: 700; }
+.graphe-barre { fill: #f6b896; }
+.graphe-barre-max { fill: var(--fms-orange); }
+.graphe-envoi { stroke: var(--fms-noir); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.55; }
+.graphe-envoi-marque { fill: var(--fms-noir); }
+
+.legende-graphe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 8px;
+    font-size: var(--fms-taille-petit);
+    color: var(--fms-gris);
+}
+
+.legende-graphe i {
+    display: inline-block;
+    vertical-align: -1px;
+    margin-right: 6px;
+}
+
+.legende-barre { width: 10px; height: 10px; border-radius: 3px; background: #f6b896; }
+.legende-envoi { width: 0; height: 12px; border-left: 2px dashed var(--fms-noir); }
+
+.skeleton-bloc { height: 220px; display: block; }
+.tuiles-compactes { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.activite-recente .journal-liste { margin: 0; }

@@ -19,12 +19,12 @@
     </div>
   </div>
   } @else if (!stats()) {
-  <div class="tuiles-grille" aria-busy="true" aria-label="Chargement des statistiques">
+  <div class="kpi-grille" aria-busy="true" aria-label="Chargement des statistiques">
     @for (n of tuilesChargement; track n) { <span class="skeleton skeleton-carte"></span> }
   </div>
-  <span class="skeleton skeleton-titre mt-4"></span>
-  <div class="tuiles-grille">
-    @for (n of tuilesChargement; track n) { <span class="skeleton skeleton-carte"></span> }
+  <div class="row g-4 mt-1">
+    <div class="col-lg-7"><span class="skeleton skeleton-carte skeleton-bloc"></span></div>
+    <div class="col-lg-5"><span class="skeleton skeleton-carte skeleton-bloc"></span></div>
   </div>
   } @else {
   @let s = stats()!;
@@ -42,13 +42,182 @@
   </div>
   }
 
-  <!-- Signalements (rouge) et alertes (orange) sur une même ligne -->
-  <div class="row g-4 mb-2 ligne-suivi">
-    <!-- Erreurs signalées par les résidents, à traiter (bloc toujours présent) -->
-    <div class="col-lg-6 d-flex flex-column">
-      <h3 class="section-titre-page mt-0 titre-signalements"><i class="bi bi-flag" aria-hidden="true"></i> Signalements
+  <!-- Semestre analysé : les indicateurs, la diffusion et les téléchargements suivent ce choix -->
+  <div class="barre-semestre">
+    <label for="choixSemestre" class="barre-semestre-libelle"><i class="bi bi-calendar3" aria-hidden="true"></i> Semestre</label>
+    <select id="choixSemestre" class="form-select form-select-sm barre-semestre-choix"
+      [value]="cleSemestre(semestreChoisi())" (change)="choisirSemestre($any($event.target).value)">
+      @for (x of semestres; track cleSemestre(x); let premier = $first) {
+      <option [value]="cleSemestre(x)">{{ x.semestre }} {{ x.annee }}@if (premier) { (en cours) }</option>
+      }
+    </select>
+    @if (synthese(); as sy) {
+    <span class="text-muted small">comparé à {{ sy.comparaison.libelle }}</span>
+    }
+  </div>
+
+  <!-- Indicateurs clés -->
+  @if (erreurSynthese()) {
+  <div class="card dashboard-card">
+    <div class="etat-vide py-4">
+      <i class="bi bi-graph-down etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Indicateurs du semestre indisponibles</div>
+      <p class="etat-vide-texte">Le calcul n'a pas abouti. Les sujets à traiter ci-dessous restent à jour.</p>
+      <button type="button" class="btn pill-btn-dark" (click)="chargerSynthese()"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Réessayer</button>
+    </div>
+  </div>
+  } @else if (indicateurs(); as k) {
+  @let sy = synthese()!;
+  <div class="kpi-grille">
+    <a class="kpi-carte" routerLink="/admin/residents" [queryParams]="sy.enCours ? { alerte: 'avec-fiche-semestre' } : { actifs: 1 }">
+      <span class="kpi-libelle">Résidents en stage</span>
+      <span class="kpi-valeur chiffres">{{ k.residents.valeur }}</span>
+      <span class="kpi-evolution" [attr.data-sens]="k.residents.evolution.sens">{{ k.residents.evolution.texte }}</span>
+      <app-sparkline [valeurs]="k.residents.serie"></app-sparkline>
+    </a>
+    <div class="kpi-carte">
+      <span class="kpi-libelle">Fiches du semestre</span>
+      <span class="kpi-valeur chiffres">{{ k.fiches.valeur }}</span>
+      <span class="kpi-evolution" [attr.data-sens]="k.fiches.evolution.sens">{{ k.fiches.evolution.texte }}</span>
+      <app-sparkline [valeurs]="k.fiches.serie"></app-sparkline>
+    </div>
+    <a class="kpi-carte kpi-carte-accent" routerLink="/admin/residents" [queryParams]="sy.enCours ? { alerte: 'fiche-recuperee', actifs: 1 } : { actifs: 1 }">
+      <span class="kpi-libelle">Fiches récupérées</span>
+      <span class="kpi-valeur chiffres">@if (k.taux.valeur === null) { – } @else { {{ k.taux.valeur }}<small> %</small> }</span>
+      <span class="kpi-evolution" [attr.data-sens]="k.taux.evolution.sens">{{ k.taux.evolution.texte }}</span>
+      <app-sparkline [valeurs]="k.taux.serie" [aire]="true"></app-sparkline>
+    </a>
+    <button type="button" class="kpi-carte kpi-carte-signalements" (click)="allerAuxSignalements()">
+      <span class="kpi-libelle">Signalements ouverts</span>
+      <span class="kpi-valeur chiffres" [class.kpi-valeur-alerte]="k.signalements.ouverts > 0">{{ k.signalements.ouverts }}</span>
+      <span class="kpi-evolution" data-sens="inconnu">{{ k.signalements.detail }}</span>
+    </button>
+  </div>
+  } @else {
+  <div class="kpi-grille" aria-busy="true" aria-label="Chargement des indicateurs">
+    @for (n of tuilesChargement; track n) { <span class="skeleton skeleton-carte"></span> }
+  </div>
+  }
+
+  <div class="row g-4 mt-0">
+    <!-- À traiter maintenant -->
+    <div class="col-lg-7 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-list-check" aria-hidden="true"></i> À traiter
+        @if (sujets().length > 0) { <span class="pastille pastille-neutre fw-normal">{{ sujets().length }} sujet(s), du plus urgent au moins urgent</span> }</h3>
+      <div class="card dashboard-card flex-grow-1">
+        @if (sujets().length === 0) {
+        <div class="etat-vide py-4">
+          <i class="bi bi-check2-circle etat-vide-icone" aria-hidden="true"></i>
+          <div class="etat-vide-titre">Rien à traiter</div>
+          <p class="etat-vide-texte mb-0">Aucun signalement ouvert, toutes les fiches sont annoncées et récupérées.</p>
+        </div>
+        } @else {
+        <ul class="liste-sujets">
+          @for (sujet of sujets(); track sujet.cle) {
+          <li class="sujet" [attr.data-gravite]="sujet.gravite">
+            @if (sujet.queryParams) {
+            <a class="sujet-corps" routerLink="/admin/residents" [queryParams]="sujet.queryParams">
+              <i [class]="'bi ' + sujet.icone + ' sujet-icone'" aria-hidden="true"></i>
+              <span class="sujet-texte"><strong>{{ sujet.titre }}</strong><small>{{ sujet.detail }}</small></span>
+              <span class="sujet-nombre chiffres">{{ sujet.nombre }}</span>
+              <i class="bi bi-chevron-right sujet-fleche" aria-hidden="true"></i>
+            </a>
+            } @else {
+            <div class="sujet-corps">
+              <i [class]="'bi ' + sujet.icone + ' sujet-icone'" aria-hidden="true"></i>
+              <span class="sujet-texte"><strong>{{ sujet.titre }}</strong><small>{{ sujet.detail }}</small>
+                @if (sujet.action === 'notifier' && notifications() && !notifications()!.envoiPossible) {
+                <small class="text-danger">L'envoi d'e-mails n'est pas configuré sur le serveur.</small>
+                }</span>
+              @if (sujet.action === 'signalements') {
+              <span class="sujet-nombre chiffres">{{ sujet.nombre }}</span>
+              <button type="button" class="btn btn-sm pill-btn-outline-dark flex-shrink-0" (click)="allerAuxSignalements()">Voir</button>
+              } @else if (peutModifier) {
+              <button type="button" class="btn btn-sm pill-btn-orange flex-shrink-0" (click)="envoyerNotifications()"
+                [disabled]="envoiEnCours() || !notifications()?.envoiPossible">
+                @if (envoiEnCours()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Envoi… }
+                @else { <i class="bi bi-send" aria-hidden="true"></i> Prévenir par e-mail }
+              </button>
+              } @else {
+              <span class="sujet-nombre chiffres">{{ sujet.nombre }}</span>
+              }
+            </div>
+            }
+          </li>
+          }
+        </ul>
+        }
+      </div>
+    </div>
+
+    <!-- Diffusion des fiches du semestre choisi -->
+    <div class="col-lg-5 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-send-check" aria-hidden="true"></i> Diffusion des fiches
+        @if (synthese(); as sy) { <small class="text-muted fw-normal fs-6">{{ sy.semestre.libelle }}</small> }</h3>
+      <div class="card dashboard-card flex-grow-1 p-3">
+        @if (synthese(); as sy) {
+        @if (sy.diffusion.creees === 0) {
+        <div class="etat-vide py-4">
+          <i class="bi bi-file-earmark etat-vide-icone" aria-hidden="true"></i>
+          <div class="etat-vide-titre">Aucune fiche pour {{ sy.semestre.libelle }}</div>
+        </div>
+        } @else {
+        <ul class="entonnoir">
+          @for (etape of diffusion(); track etape.libelle) {
+          <li>
+            <span class="entonnoir-libelle">{{ etape.libelle }}</span>
+            <span class="entonnoir-barre" aria-hidden="true"><span [style.width.%]="etape.part"></span></span>
+            <span class="entonnoir-valeur chiffres"><strong>{{ etape.valeur }}</strong> {{ etape.detail }}</span>
+          </li>
+          }
+        </ul>
+        <p class="small text-muted mb-0 mt-3">Une fiche compte comme téléchargée dès que le résident l'a récupérée une fois.</p>
+        }
+        } @else if (!erreurSynthese()) {
+        <span class="skeleton skeleton-ligne my-2"></span><span class="skeleton skeleton-ligne my-2"></span><span class="skeleton skeleton-ligne my-2"></span>
+        }
+      </div>
+    </div>
+
+    <!-- Téléchargements par semaine -->
+    <div class="col-lg-7 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-bar-chart" aria-hidden="true"></i> Téléchargements par semaine
+        @if (synthese()) { <small class="text-muted fw-normal fs-6 chiffres">{{ totalTelechargements() }} au total</small> }</h3>
+      <div class="card dashboard-card flex-grow-1 p-3">
+        @if (synthese(); as sy) {
+        @if (totalTelechargements() === 0) {
+        <div class="etat-vide py-4">
+          <i class="bi bi-download etat-vide-icone" aria-hidden="true"></i>
+          <div class="etat-vide-titre">Aucun téléchargement pour {{ sy.semestre.libelle }}</div>
+          <p class="etat-vide-texte mb-0">La courbe se remplira dès que les résidents récupéreront leurs fiches.</p>
+        </div>
+        } @else {
+        <app-histogramme-semaines [semaines]="sy.semaines"></app-histogramme-semaines>
+        <div class="legende-graphe">
+          <span><i class="legende-barre" aria-hidden="true"></i>Téléchargements des fiches du {{ sy.semestre.libelle }}</span>
+          <span><i class="legende-envoi" aria-hidden="true"></i>Semaine d'envoi des e-mails « fiche disponible »</span>
+        </div>
+        }
+        } @else if (!erreurSynthese()) {
+        <span class="skeleton skeleton-carte skeleton-bloc"></span>
+        }
+      </div>
+    </div>
+
+    <!-- Activité récente de l'équipe -->
+    <div class="col-lg-5 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-activity" aria-hidden="true"></i> Activité récente
+        <a class="ms-auto small fw-normal" routerLink="/admin/historique">Tout l'historique</a></h3>
+      <div class="card dashboard-card flex-grow-1 p-3 activite-recente">
+        <app-journal-liste [compact]="true" [limite]="6" [afficherResident]="true"></app-journal-liste>
+      </div>
+    </div>
+
+    <!-- Erreurs signalées par les résidents (bloc toujours présent) -->
+    <div class="col-lg-7 d-flex flex-column" id="bloc-signalements">
+      <h3 class="section-titre-page titre-signalements"><i class="bi bi-flag" aria-hidden="true"></i> Signalements
         @if (signalements().length > 0) { <span class="chiffre-alerte">{{ signalements().length }}</span> }</h3>
-      <div class="card dashboard-card flex-grow-1 bloc-signalements">
+      <div class="card dashboard-card flex-grow-1 bloc-signalements ligne-suivi">
         @if (signalements().length === 0) {
         <div class="etat-vide py-4">
           <i class="bi bi-flag etat-vide-icone" aria-hidden="true"></i>
@@ -79,114 +248,21 @@
       </div>
     </div>
 
-    <!-- Alertes -->
-    <div class="col-lg-6 d-flex flex-column">
-      <h3 class="section-titre-page mt-0 titre-alertes"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Alertes</h3>
-      <div class="card dashboard-card flex-grow-1 bloc-alertes">
-        @if (s.sansStage === 0 && (!s.absentsRegistre || s.absentsRegistre.total === 0)) {
-        <div class="etat-vide py-4">
-          <i class="bi bi-check2-circle etat-vide-icone" aria-hidden="true"></i>
-          <div class="etat-vide-titre">Rien à signaler</div>
-          <p class="etat-vide-texte mb-0">Tous les résidents en cours ont au moins un stage et figurent dans le dernier registre.</p>
-        </div>
-        } @else {
-        <ul class="liste-alertes">
-          @if (s.sansStage > 0) {
-          <li>
-            <a class="lien-alerte" routerLink="/admin/residents" [queryParams]="{ alerte: 'sans-stage' }">
-              <i class="bi bi-journal-x" aria-hidden="true"></i>
-              <span><strong>Résidents sans aucun stage</strong><br><small class="text-muted">Mutation, mobilité, report… à vérifier</small></span>
-              <span class="chiffre-alerte">{{ s.sansStage }}</span>
-            </a>
-          </li>
-          }
-          @if (s.absentsRegistre && s.absentsRegistre.total > 0) {
-          <li>
-            <a class="lien-alerte" routerLink="/admin/residents" [queryParams]="{ alerte: 'absents-registre' }">
-              <i class="bi bi-person-dash" aria-hidden="true"></i>
-              <span class="text-break"><strong>Absents du dernier registre</strong><br>
-                <small class="text-muted">{{ s.absentsRegistre.import.filename }}
-                  @if (s.absentsRegistre.import.semestre) { ({{ s.absentsRegistre.import.semestre }} {{ s.absentsRegistre.import.annee }}) }</small></span>
-              <span class="chiffre-alerte">{{ s.absentsRegistre.total }}</span>
-            </a>
-          </li>
-          }
-        </ul>
+    <!-- Résidents en cours de résidanat, par année -->
+    <div class="col-lg-5 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-people" aria-hidden="true"></i> Résidents en cours
+        <small class="text-muted fw-normal fs-6 chiffres">{{ s.actifs }} au total</small></h3>
+      <div class="tuiles-grille tuiles-compactes">
+        @for (p of s.promotions; track p.niveau) {
+        <a class="tuile" routerLink="/admin/residents" [queryParams]="{ promo: p.promotion, actifs: 1 }">
+          <div class="tuile-chiffre">{{ p.total }}</div>
+          <div class="tuile-libelle">{{ libelleNiveau(p.niveau) }}</div>
+          <div class="tuile-detail">Promotion {{ p.promotion }}</div>
+        </a>
         }
       </div>
     </div>
-
   </div>
-
-  <!-- Résidents en cours de résidanat, par promotion -->
-  <h3 class="section-titre-page"><i class="bi bi-people" aria-hidden="true"></i> Résidents en cours
-    <small class="text-muted fw-normal fs-6 chiffres">{{ s.actifs }} au total</small></h3>
-  <div class="tuiles-grille">
-    @for (p of s.promotions; track p.niveau) {
-    <a class="tuile" routerLink="/admin/residents" [queryParams]="{ promo: p.promotion, actifs: 1 }">
-      <div class="tuile-chiffre">{{ p.total }}</div>
-      <div class="tuile-libelle">{{ libelleNiveau(p.niveau) }}</div>
-      <div class="tuile-detail">Promotion {{ p.promotion }}</div>
-    </a>
-    }
-    <a class="tuile" [class.tuile-alerte]="s.sansEmail > 0" routerLink="/admin/residents" [queryParams]="{ email: 'sans', actifs: 1 }">
-      <div class="tuile-chiffre">{{ s.sansEmail }}</div>
-      <div class="tuile-libelle">Sans e-mail</div>
-      <div class="tuile-detail">Ne peuvent pas se connecter</div>
-    </a>
-  </div>
-
-  <!-- Semestre en cours -->
-  <h3 class="section-titre-page"><i class="bi bi-calendar3" aria-hidden="true"></i> Semestre en cours · {{ s.semestre.semestre }} {{ s.semestre.annee }}</h3>
-  <div class="tuiles-grille">
-    <a class="tuile" routerLink="/admin/residents" [queryParams]="{ alerte: 'avec-fiche-semestre' }">
-      <div class="tuile-chiffre">{{ s.fichesSemestre }}</div>
-      <div class="tuile-libelle">Fiches du semestre</div>
-      <div class="tuile-detail">{{ s.residentsAvecFiche }} résident(s) concerné(s)</div>
-    </a>
-    <a class="tuile" [class.tuile-alerte]="s.sansFicheSemestre > 0" routerLink="/admin/residents" [queryParams]="{ alerte: 'sans-fiche-semestre' }">
-      <div class="tuile-chiffre">{{ s.sansFicheSemestre }}</div>
-      <div class="tuile-libelle">Sans fiche ce semestre</div>
-      <div class="tuile-detail">Résidents en cours sans stage enregistré</div>
-    </a>
-    <a class="tuile" routerLink="/admin/residents" [queryParams]="{ alerte: 'fiche-recuperee', actifs: 1 }">
-      <div class="tuile-chiffre">{{ s.ficheRecuperee }}</div>
-      <div class="tuile-libelle">Fiche récupérée</div>
-      <div class="tuile-detail">{{ pourcentage(s.ficheRecuperee, s.residentsAvecFiche) }} % des résidents ayant une fiche</div>
-    </a>
-    <a class="tuile" [class.tuile-alerte]="s.aRelancer > 0" routerLink="/admin/residents" [queryParams]="{ alerte: 'a-relancer' }">
-      <div class="tuile-chiffre">{{ s.aRelancer }}</div>
-      <div class="tuile-libelle">À relancer</div>
-      <div class="tuile-detail">Fiche disponible, jamais téléchargée</div>
-    </a>
-  </div>
-
-  <!-- Prévenir par e-mail les résidents dont la fiche du semestre est disponible -->
-  @if (notifications(); as n) {
-  @if (n.residents > 0 || n.sansEmail > 0) {
-  <div class="bandeau-notification mt-3">
-    <i class="bi bi-envelope-paper" aria-hidden="true"></i>
-    <div class="flex-grow-1 min-w-0">
-      @if (n.residents > 0) {
-      <strong>{{ n.fiches }} fiche(s) du semestre pas encore annoncée(s)</strong>
-      <div class="small text-muted">{{ n.residents }} résident(s) recevront un e-mail « votre fiche est disponible ».
-        @if (n.sansEmail > 0) { {{ n.sansEmail }} autre(s) n'ont pas d'e-mail et ne seront pas prévenus. }</div>
-      } @else {
-      <strong>Toutes les fiches annonçables ont été annoncées</strong>
-      <div class="small text-muted">{{ n.sansEmail }} résident(s) sans e-mail ne peuvent pas être prévenus.</div>
-      }
-      @if (!n.envoiPossible) { <div class="small text-danger">L'envoi d'e-mails n'est pas configuré sur le serveur.</div> }
-    </div>
-    @if (peutModifier && n.residents > 0) {
-    <button type="button" class="btn pill-btn-orange flex-shrink-0" (click)="envoyerNotifications()" [disabled]="envoiEnCours() || !n.envoiPossible">
-      @if (envoiEnCours()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Envoi… }
-      @else { <i class="bi bi-send" aria-hidden="true"></i> Prévenir par e-mail }
-    </button>
-    }
-  </div>
-  }
-  }
-
   }
 </div>
 

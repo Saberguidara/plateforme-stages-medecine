@@ -123,6 +123,47 @@ export interface Statistiques {
   derniersImports: ResumeImport[];
 }
 
+export interface SemestreCivil {
+  semestre: 'S1' | 'S2';
+  annee: number;
+}
+
+export interface Indicateur {
+  valeur: number | null;
+  precedent: number | null;
+}
+
+// Un semestre de la série d'évolution (fiches des périodes rattachées au semestre civil)
+export interface BilanSemestre extends SemestreCivil {
+  libelle: string;
+  fiches: number;
+  residents: number;
+  annoncees: number;
+  telechargees: number;
+  tauxRecuperation: number | null;
+}
+
+export interface SemaineActivite {
+  debut: string; // lundi, AAAA-MM-JJ
+  telechargements: number;
+  envois: number;
+}
+
+export interface SyntheseStatistiques {
+  semestre: SemestreCivil & { libelle: string };
+  comparaison: SemestreCivil & { libelle: string };
+  enCours: boolean;
+  indicateurs: {
+    residents: Indicateur;
+    fiches: Indicateur;
+    tauxRecuperation: Indicateur;
+    signalements: { ouverts: number; plusAncien: string | null; recus: number; traites: number; delaiMedianHeures: number | null };
+  };
+  diffusion: { creees: number; annoncees: number; telechargees: number };
+  semestres: BilanSemestre[];
+  semaines: SemaineActivite[];
+}
+
 export interface ActionJournal {
   id: number;
   cree_le: string;
@@ -328,6 +369,12 @@ export class ApiService {
 
   getStatistiques(): Observable<Statistiques> {
     return this.http.get<Statistiques>(`${this.apiUrl}/admin/statistiques`);
+  }
+
+  getSynthese(s: SemestreCivil): Observable<SyntheseStatistiques> {
+    return this.http.get<SyntheseStatistiques>(`${this.apiUrl}/admin/statistiques/synthese`, {
+      params: { semestre: s.semestre, annee: s.annee }
+    });
   }
 
   getImports(): Observable<ResumeImport[]> {

@@ -60,15 +60,17 @@ function texte(valeur: unknown): string {
                   · <a [routerLink]="['/admin/residents', a.resident_id]">{{ a.resident_nom }}</a>
                 }
               </div>
-              @for (c of changements(a); track c.champ) {
-                <div class="journal-diff">{{ c.champ }} : <del>{{ c.avant }}</del> → <ins>{{ c.apres }}</ins></div>
+              @if (!compact()) {
+                @for (c of changements(a); track c.champ) {
+                  <div class="journal-diff">{{ c.champ }} : <del>{{ c.avant }}</del> → <ins>{{ c.apres }}</ins></div>
+                }
               }
               <div class="journal-pied">
                 <span class="journal-date chiffres">{{ a.cree_le | date: 'dd/MM/yyyy à HH:mm' }}</span>
                 @if (a.annule_le) {
                   <span class="pastille pastille-neutre"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
                     Annulée le {{ a.annule_le | date: 'dd/MM/yyyy à HH:mm' }}@if (a.annule_par) { par {{ a.annule_par }} }</span>
-                } @else if (peutModifier && a.annulable) {
+                } @else if (peutModifier && a.annulable && !compact()) {
                   <button type="button" class="btn btn-sm pill-btn-outline-dark journal-annuler" (click)="aAnnuler.set(a)"
                     [attr.aria-label]="'Annuler : ' + description(a)">
                     <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Annuler</button>
@@ -78,7 +80,7 @@ function texte(valeur: unknown): string {
           </li>
         }
       </ul>
-      @if (actions().length < total()) {
+      @if (actions().length < total() && !compact()) {
         <div class="text-center mt-2">
           <button type="button" class="btn btn-sm pill-btn-outline-dark" [disabled]="chargement()" (click)="suite()">
             @if (chargement()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
@@ -104,6 +106,9 @@ export class JournalListe {
   readonly entite = input<string>('');
   readonly action = input<string>('');
   readonly afficherResident = input<boolean>(false);
+  // Version courte (tableau de bord) : dernières actions seulement, sans détail ni bouton « Annuler »
+  readonly compact = input<boolean>(false);
+  readonly limite = input<number>(20);
   // Incrémenté par le parent pour recharger le journal après une modification
   readonly version = input<number>(0);
   // Émis après une annulation réussie : le parent recharge ce qu'il affiche (dossier, historique des imports)
@@ -170,7 +175,7 @@ export class JournalListe {
       entite: this.entite() || undefined,
       action: this.action() || undefined,
       page: this.page,
-      limit: 20
+      limit: this.limite()
     }).subscribe({
       next: (res) => {
         this.actions.update((liste) => (this.page === 1 ? res.data : [...liste, ...res.data]));
