@@ -21,6 +21,7 @@ const zipLimiter = rateLimit({
 
 router.get('/statistiques', requireAdmin, stats.getStatistiques);
 router.get('/journal', requireAdmin, journal.getJournal);
+router.post('/journal/:id/annuler', requireAdmin, journal.annuler);
 
 router.get('/referentiels/suggestions', requireAdmin, referentiels.getSuggestions);
 router.get('/referentiels/:type', requireAdmin, referentiels.getReferentiel);

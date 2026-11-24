@@ -134,6 +134,12 @@ export interface ActionJournal {
   resident_nom: string | null;
   avant: any;
   apres: any;
+  // Annulation : date et auteur si l'action a été annulée, sinon si elle peut l'être (et pourquoi pas)
+  annule_le: string | null;
+  annule_par: string | null;
+  annulation_de: number | null;
+  annulable: boolean;
+  raison?: string;
 }
 
 export interface SuggestionResident {
@@ -332,8 +338,12 @@ export class ApiService {
     return this.http.post<{ message: string }>(`${this.apiUrl}/admin/import/undo`, { importId });
   }
 
-  getJournal(filtres: { resident_id?: number; entite?: string; page?: number; limit?: number }): Observable<{ data: ActionJournal[]; total: number; page: number; limit: number }> {
+  getJournal(filtres: { resident_id?: number; entite?: string; action?: string; page?: number; limit?: number }): Observable<{ data: ActionJournal[]; total: number; page: number; limit: number }> {
     return this.http.get<any>(`${this.apiUrl}/admin/journal`, { params: versParams(filtres) });
+  }
+
+  annulerAction(id: number): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/admin/journal/${id}/annuler`, {});
   }
 
   // ===== Exports =====

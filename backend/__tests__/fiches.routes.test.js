@@ -48,7 +48,7 @@ describe('Fiches Controller', () => {
         expect(journal[0]).toContain('INSERT INTO journal_actions');
         expect(journal[1]).toEqual([null, null, 'modification', 'fiche', 12, 3,
             JSON.stringify({ periode: 'S1', annee: 2026, service: 'Cardio', hopital: 'CHU' }),
-            JSON.stringify({ periode: 'T1', annee: 2026, service: 'Onco', hopital: 'CHU' })]);
+            JSON.stringify({ periode: 'T1', annee: 2026, service: 'Onco', hopital: 'CHU' }), null]);
     });
 
     it('deletes a fiche', async () => {

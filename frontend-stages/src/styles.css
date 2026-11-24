@@ -3,6 +3,7 @@
    Les couleurs sont centralisées ici ; les composants les reprennent par variable.
    ========================================================================== */
 :root {
+    --fms-erreur-pale: #fef3f2;
     --fms-beige: #f5f0e6;
     --fms-noir: #1a1a1a;
     --fms-orange: #f47b45;
@@ -1956,7 +1957,7 @@ a.lien-alerte:hover {
     color: var(--fms-orange-fonce);
 }
 
-/* Tableau de bord : signalements, alertes et derniers imports côte à côte, à hauteur égale ;
+/* Tableau de bord : signalements (rouge) et alertes (orange) côte à côte, à hauteur égale ;
    une longue liste défile dans son bloc au lieu d'étirer toute la ligne. */
 .ligne-suivi .liste-alertes {
     max-height: 340px;
@@ -1996,4 +1997,52 @@ a.lien-alerte:hover {
 .etapes-creation span {
     color: var(--bs-secondary-color);
     font-size: var(--fms-taille-petit);
+}
+
+.bloc-signalements,
+.bloc-alertes {
+    border-top: 4px solid var(--theme-bloc);
+}
+
+.bloc-signalements { --theme-bloc: var(--fms-erreur); --theme-bloc-pale: var(--fms-erreur-pale); }
+.bloc-alertes { --theme-bloc: var(--fms-orange); --theme-bloc-pale: var(--fms-orange-pale); }
+
+.titre-signalements .bi,
+.titre-signalements .chiffre-alerte { color: var(--fms-erreur); }
+.titre-alertes .bi { color: var(--fms-orange); }
+
+.bloc-signalements .lien-alerte > .bi:first-child,
+.bloc-signalements .etat-vide-icone,
+.bloc-signalements .chiffre-alerte,
+.bloc-alertes .lien-alerte > .bi:first-child,
+.bloc-alertes .chiffre-alerte {
+    color: var(--theme-bloc);
+}
+
+.bloc-alertes .chiffre-alerte { color: var(--fms-orange-fonce); }
+
+.bloc-signalements .liste-alertes li:hover,
+.bloc-alertes a.lien-alerte:hover {
+    background: var(--theme-bloc-pale);
+}
+
+/* Journal : date, état d'annulation et bouton « Annuler » sur une même ligne */
+.journal-pied {
+    display: flex;
+    align-items: center;
+    gap: 8px 12px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+
+.journal-annuler {
+    --bs-btn-padding-y: 2px;
+    --bs-btn-padding-x: 10px;
+}
+
+/* Action annulée : texte barré et atténué, l'historique reste lisible */
+.journal-annule {
+    color: var(--fms-gris);
+    text-decoration: line-through;
+    text-decoration-color: rgba(0, 0, 0, 0.35);
 }

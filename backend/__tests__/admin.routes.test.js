@@ -411,6 +411,7 @@ describe("Routes de l'administration", () => {
 
         it("refuse l'annulation quand une fiche de l'import a été modifiée depuis", async () => {
             connexion.query
+                .mockResolvedValueOnce([[]]) // import antérieur au journal
                 .mockResolvedValueOnce([[{ filename: 'x.xlsx', undo_data: '{}', undone: 0 }]])
                 .mockResolvedValueOnce([[{ n: 2 }]]);
 
@@ -424,6 +425,7 @@ describe("Routes de l'administration", () => {
 
         it('annule un import intact et le journalise', async () => {
             connexion.query
+                .mockResolvedValueOnce([[]]) // import antérieur au journal
                 .mockResolvedValueOnce([[{ filename: 'x.xlsx', undo_data: '{"residentIds":[4]}', undone: 0 }]])
                 .mockResolvedValueOnce([[{ n: 0 }]])
                 .mockResolvedValueOnce([{ affectedRows: 5 }])
@@ -436,6 +438,32 @@ describe("Routes de l'administration", () => {
             expect(res.body.message).toBe('Import annulé : 5 fiches et 1 résidents supprimés.');
             expect(connexion.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO journal_actions'), expect.arrayContaining(['annulation', 'import', 3]));
             expect(connexion.commit).toHaveBeenCalled();
+        });
+
+        it("passe par le journal quand l'import y figure et marque l'action comme annulée", async () => {
+            connexion.query.mockImplementation(async (sql) => {
+                if (/^SELECT id FROM journal_actions/.test(sql)) return [[{ id: 50 }]];
+                if (/^SELECT \* FROM journal_actions/.test(sql)) return [[{ id: 50, action: 'import', entite: 'import', entite_id: 3, resident_id: null, avant: null, apres: '{}', annule_le: null }]];
+                if (/FROM historique_imports/.test(sql)) return [[{ filename: 'x.xlsx', undo_data: '{}', undone: 0 }]];
+                if (/COUNT/.test(sql)) return [[{ n: 0 }]];
+                if (/^DELETE FROM formulaires_stage/.test(sql)) return [{ affectedRows: 2 }];
+                return [{ affectedRows: 1 }];
+            });
+
+            const res = await request(app).post('/api/admin/import/undo').set('Authorization', jeton(ADMIN)).send({ importId: 3 });
+
+            expect(res.status).toBe(200);
+            expect(connexion.query).toHaveBeenCalledWith(expect.stringContaining('SET annule_le = NOW()'), ['admin', 50]);
+            expect(connexion.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO journal_actions'), expect.arrayContaining(['annulation', 'import', 3, 50]));
+        });
+
+        it("refuse d'annuler un rechargement complet des fiches", async () => {
+            connexion.query
+                .mockResolvedValueOnce([[]])
+                .mockResolvedValueOnce([[{ filename: 'registre.xlsx', undo_data: '{"rechargement":true}', undone: 0 }]]);
+            const res = await request(app).post('/api/admin/import/undo').set('Authorization', jeton(ADMIN)).send({ importId: 9 });
+            expect(res.status).toBe(409);
+            expect(connexion.query).not.toHaveBeenCalledWith(expect.stringContaining('DELETE'), expect.anything());
         });
     });
 

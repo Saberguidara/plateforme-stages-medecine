@@ -7,6 +7,7 @@ const { lireClasseur } = require('../services/import/excel');
 const { analyserClasseur } = require('../services/import/registres');
 const { enregistrerAnalyse } = require('../services/import/enregistrer');
 const { journaliser } = require('../utils/journal');
+const { annulerAction, annulerImport, ErreurAnnulation } = require('../services/annulation');
 
 // Semestre le plus représenté dans le rapport (un classeur porte en pratique un seul semestre).
 function semestreDuRapport(rapport) {
@@ -108,6 +109,7 @@ exports.importExcel = async (req, res) => {
 
 // Annule un import à partir de son historique côté serveur : supprime ses fiches,
 // puis les résidents qu'il a créés et qui n'ont pas reçu d'autres fiches depuis.
+// Même logique que l'annulation depuis le journal (services/annulation.js), qui marque aussi l'import annulé.
 exports.undoImport = async (req, res) => {
     const importId = parseInt(String(req.body.importId), 10);
     if (Number.isNaN(importId) || importId <= 0) {
@@ -119,59 +121,30 @@ exports.undoImport = async (req, res) => {
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        const [rows] = await connection.query('SELECT filename, undo_data, undone FROM historique_imports WHERE id = ? FOR UPDATE', [importId]);
-        if (rows.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({ message: 'Import introuvable.' });
-        }
-        if (rows[0].undone) {
-            await connection.rollback();
-            return res.status(409).json({ message: 'Cet import a déjà été annulé.' });
-        }
-
-        // Une fiche modifiée depuis l'import (correction manuelle, fusion d'hôpitaux…) ne doit pas être perdue.
-        const [modifiees] = await connection.query(
-            'SELECT COUNT(*) AS n FROM formulaires_stage WHERE import_id = ? AND modifie_le IS NOT NULL',
+        const [entrees] = await connection.query(
+            "SELECT id FROM journal_actions WHERE action = 'import' AND entite = 'import' AND entite_id = ? AND annule_le IS NULL ORDER BY id DESC LIMIT 1",
             [importId]
         );
-        if (modifiees[0].n > 0) {
-            await connection.rollback();
-            return res.status(409).json({
-                message: `Annulation impossible : ${modifiees[0].n} fiche(s) de cet import ont été modifiées depuis.`,
-                fichesModifiees: modifiees[0].n
+        let message;
+        if (entrees.length > 0) {
+            ({ message } = await annulerAction(connection, entrees[0].id, req));
+        } else {
+            // Import plus ancien que le journal : annulé directement, puis journalisé.
+            const resultat = await annulerImport(connection, importId);
+            await journaliser(connection, req, {
+                action: 'annulation', entite: 'import', entiteId: importId,
+                avant: { fichier: resultat.fichier, fichesSupprimees: resultat.fichesSupprimees,
+                    fichesRetablies: resultat.fichesRetablies, residentsSupprimes: resultat.residentsSupprimes }
             });
+            message = resultat.message;
         }
-
-        const { residentIds = [], corrections = [] } = JSON.parse(rows[0].undo_data || '{}');
-        const [fiches] = await connection.query('DELETE FROM formulaires_stage WHERE import_id = ?', [importId]);
-        // Fiches corrigées par l'import : ancienne valeur rétablie, sauf si la fiche a été retouchée depuis.
-        let fichesRetablies = 0;
-        for (const c of corrections) {
-            const [retour] = await connection.query(
-                'UPDATE formulaires_stage SET service = ?, hopital = ?, modifie_le = modifie_le WHERE id = ? AND modifie_le IS NULL',
-                [c.service, c.hopital, c.id]
-            );
-            fichesRetablies += retour.affectedRows;
-        }
-        let residentsSupprimes = 0;
-        if (residentIds.length > 0) {
-            const [resultat] = await connection.query(
-                `DELETE FROM residents WHERE id IN (?)
-                 AND NOT EXISTS (SELECT 1 FROM formulaires_stage f WHERE f.resident_id = residents.id)`,
-                [residentIds]
-            );
-            residentsSupprimes = resultat.affectedRows;
-        }
-        await connection.query('UPDATE historique_imports SET undone = 1 WHERE id = ?', [importId]);
-        await journaliser(connection, req, {
-            action: 'annulation', entite: 'import', entiteId: importId,
-            avant: { fichier: rows[0].filename, fichesSupprimees: fiches.affectedRows, fichesRetablies, residentsSupprimes }
-        });
         await connection.commit();
-
-        res.json({ message: `Import annulé : ${fiches.affectedRows} fiches et ${residentsSupprimes} résidents supprimés${fichesRetablies ? `, ${fichesRetablies} fiches rétablies` : ''}.` });
+        res.json({ message });
     } catch (error) {
         if (connection) await connection.rollback().catch(() => { });
+        if (error instanceof ErreurAnnulation) {
+            return res.status(error.statut).json({ message: error.message, ...(error.fichesModifiees ? { fichesModifiees: error.fichesModifiees } : {}) });
+        }
         logger.error("Erreur lors de l'annulation de l'import : " + error.stack);
         res.status(500).json({ message: 'Erreur serveur lors de la suppression des données.' });
     } finally {
@@ -186,6 +159,7 @@ exports.listerImports = async (req, res) => {
         const [rows] = await db.query(
             `SELECT h.id, h.filename, h.imported_at, h.admin_login, h.semestre, h.annee,
                     h.residents_created, h.fiches_created, h.residents_vus, h.undone,
+                    JSON_EXTRACT(h.undo_data, '$.rechargement') = true AS rechargement,
                     (SELECT COUNT(*) FROM formulaires_stage f WHERE f.import_id = h.id) AS fiches_restantes,
                     (SELECT COUNT(*) FROM formulaires_stage f WHERE f.import_id = h.id AND f.modifie_le IS NOT NULL) AS fiches_modifiees
              FROM historique_imports h
@@ -193,7 +167,7 @@ exports.listerImports = async (req, res) => {
              LIMIT ?`,
             [limit]
         );
-        res.json(rows.map((r) => ({ ...r, undone: Boolean(r.undone), annulable: !r.undone && r.fiches_modifiees === 0 })));
+        res.json(rows.map((r) => ({ ...r, undone: Boolean(r.undone), annulable: !r.undone && r.fiches_modifiees === 0 && !r.rechargement })));
     } catch (error) {
         logger.error('Historique des imports : ' + error);
         res.status(500).json({ message: "Erreur lors du chargement de l'historique." });

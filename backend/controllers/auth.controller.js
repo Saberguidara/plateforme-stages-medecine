@@ -5,6 +5,13 @@ const db = require('../config/db');
 const logger = require('../utils/logger');
 const { validateCin, validateEmail, normalizeString } = require('../utils/validation');
 const { envoyerMail, mailConfigure } = require('../services/mail');
+const { journaliser } = require('../utils/journal');
+
+// Connexions réussies, gardées dans le journal des actions ; une panne du journal ne bloque pas la connexion.
+function journaliserConnexion(req, donnees) {
+    journaliser(null, req, { action: 'connexion', ...donnees })
+        .catch((error) => logger.error('Journal des connexions : ' + error));
+}
 
 const OTP_VALIDITE_MS = 10 * 60 * 1000;
 const OTP_DELAI_RENVOI_S = 120;
@@ -61,6 +68,7 @@ exports.adminLogin = async (req, res) => {
             { expiresIn: '8h' }
         );
 
+        journaliserConnexion({ admin: { id: admin.id, login: admin.login } }, { entite: 'administrateur', entiteId: admin.id });
         res.json({ success: true, token });
     } catch (error) {
         logger.error('Admin login error: ' + error);
@@ -172,6 +180,7 @@ exports.verifyOTP = async (req, res) => {
             { expiresIn: '8h' }
         );
 
+        journaliserConnexion(null, { entite: 'resident', entiteId: resident.id, residentId: resident.id });
         res.json({ success: true, token, cin: resident.cin });
     } catch (error) {
         logger.error('Erreur serveur lors de la vérification OTP : ' + error);

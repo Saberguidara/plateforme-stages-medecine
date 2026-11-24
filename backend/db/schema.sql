@@ -78,9 +78,13 @@ CREATE TABLE IF NOT EXISTS journal_actions (
     resident_id INT DEFAULT NULL COMMENT 'dossier concerné, pour l''afficher dans le dossier résident',
     avant JSON DEFAULT NULL,
     apres JSON DEFAULT NULL,
+    annule_le DATETIME DEFAULT NULL COMMENT 'NULL tant que l''action n''a pas été annulée',
+    annule_par VARCHAR(50) DEFAULT NULL COMMENT 'login de l''administrateur qui a annulé',
+    annulation_de INT DEFAULT NULL COMMENT 'pour une annulation : id de l''action annulée',
     PRIMARY KEY (id),
     KEY idx_journal_resident (resident_id, cree_le),
-    KEY idx_journal_date (cree_le)
+    KEY idx_journal_date (cree_le),
+    KEY idx_journal_entite (entite, entite_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Chaque fiche générée par un résident lui-même (POST /api/generate-pdf)

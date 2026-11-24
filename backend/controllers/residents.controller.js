@@ -291,7 +291,11 @@ exports.deleteResident = async (req, res) => {
     try {
         const [avant] = await db.query('SELECT * FROM residents WHERE id = ?', [residentId]);
         if (avant.length === 0) return res.status(404).json({ message: 'Résident introuvable.' });
-        const [fiches] = await db.query('SELECT periode, annee, service, hopital FROM formulaires_stage WHERE resident_id = ?', [residentId]);
+        // Tout ce qu'il faut pour rétablir le dossier et ses fiches depuis le journal (annulation).
+        const [fiches] = await db.query(
+            'SELECT id, periode, annee, service, hopital, url_pdf, import_id FROM formulaires_stage WHERE resident_id = ?',
+            [residentId]
+        );
 
         // Les fiches et leurs téléchargements suivent par clé étrangère (ON DELETE CASCADE).
         await db.query('DELETE FROM residents WHERE id = ?', [residentId]);

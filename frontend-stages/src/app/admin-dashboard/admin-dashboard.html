@@ -42,13 +42,13 @@
   </div>
   }
 
-  <!-- Signalements, alertes et derniers imports sur une même ligne -->
+  <!-- Signalements (rouge) et alertes (orange) sur une même ligne -->
   <div class="row g-4 mb-2 ligne-suivi">
     <!-- Erreurs signalées par les résidents, à traiter (bloc toujours présent) -->
-    <div class="col-xl-4 col-lg-6 d-flex flex-column">
-      <h3 class="section-titre-page mt-0"><i class="bi bi-flag" aria-hidden="true"></i> Signalements
+    <div class="col-lg-6 d-flex flex-column">
+      <h3 class="section-titre-page mt-0 titre-signalements"><i class="bi bi-flag" aria-hidden="true"></i> Signalements
         @if (signalements().length > 0) { <span class="chiffre-alerte">{{ signalements().length }}</span> }</h3>
-      <div class="card dashboard-card flex-grow-1">
+      <div class="card dashboard-card flex-grow-1 bloc-signalements">
         @if (signalements().length === 0) {
         <div class="etat-vide py-4">
           <i class="bi bi-flag etat-vide-icone" aria-hidden="true"></i>
@@ -80,9 +80,9 @@
     </div>
 
     <!-- Alertes -->
-    <div class="col-xl-4 col-lg-6 d-flex flex-column">
-      <h3 class="section-titre-page mt-0"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Alertes</h3>
-      <div class="card dashboard-card flex-grow-1">
+    <div class="col-lg-6 d-flex flex-column">
+      <h3 class="section-titre-page mt-0 titre-alertes"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Alertes</h3>
+      <div class="card dashboard-card flex-grow-1 bloc-alertes">
         @if (s.sansStage === 0 && (!s.absentsRegistre || s.absentsRegistre.total === 0)) {
         <div class="etat-vide py-4">
           <i class="bi bi-check2-circle etat-vide-icone" aria-hidden="true"></i>
@@ -116,34 +116,6 @@
       </div>
     </div>
 
-    <!-- Derniers imports -->
-    <div class="col-xl-4 col-lg-6 d-flex flex-column">
-      <h3 class="section-titre-page mt-0"><i class="bi bi-clock-history" aria-hidden="true"></i> Derniers imports
-        <a class="ms-auto small fw-normal" routerLink="/admin/historique">Tout l'historique</a></h3>
-      <div class="card dashboard-card flex-grow-1">
-        @if (s.derniersImports.length === 0) {
-        <div class="etat-vide py-4">
-          <i class="bi bi-cloud-arrow-up etat-vide-icone" aria-hidden="true"></i>
-          <div class="etat-vide-titre">Aucun import</div>
-          <p class="etat-vide-texte mb-0">Les registres importés apparaîtront ici.</p>
-        </div>
-        } @else {
-        <ul class="liste-alertes">
-          @for (i of s.derniersImports; track i.id) {
-          <li class="lien-alerte">
-            <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i>
-            <span class="min-w-0 flex-grow-1">
-              <span class="d-block texte-tronque fw-semibold" [title]="i.filename">{{ i.filename }}</span>
-              <small class="text-muted chiffres">{{ i.imported_at | date: 'dd/MM/yyyy HH:mm' }}
-                @if (i.semestre) { · {{ i.semestre }} {{ i.annee }} } · {{ i.fiches_created }} fiche(s)</small>
-            </span>
-            @if (i.undone) { <span class="pastille pastille-neutre">Annulé</span> }
-          </li>
-          }
-        </ul>
-        }
-      </div>
-    </div>
   </div>
 
   <!-- Résidents en cours de résidanat, par promotion -->

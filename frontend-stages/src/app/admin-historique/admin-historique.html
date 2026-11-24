@@ -86,7 +86,7 @@
     </div>
     <div class="card dashboard-card">
       <div class="card-body px-4 py-2">
-        <app-journal-liste [entite]="entite()" [afficherResident]="true" [version]="versionJournal()"></app-journal-liste>
+        <app-journal-liste [entite]="entite() === 'connexion' ? '' : entite()" [action]="entite() === 'connexion' ? 'connexion' : ''" [afficherResident]="true" [version]="versionJournal()" (annule)="charger()"></app-journal-liste>
       </div>
     </div>
   </section>

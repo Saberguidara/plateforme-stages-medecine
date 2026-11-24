@@ -178,7 +178,7 @@
       <h5 id="titreJournal"><i class="bi bi-journal-text text-muted" aria-hidden="true"></i> Journal du dossier</h5>
     </div>
     <div class="card-body px-4 py-2">
-      <app-journal-liste [residentId]="d.id" [version]="versionJournal()"></app-journal-liste>
+      <app-journal-liste [residentId]="d.id" [version]="versionJournal()" (annule)="charger()"></app-journal-liste>
     </div>
   </section>
 
