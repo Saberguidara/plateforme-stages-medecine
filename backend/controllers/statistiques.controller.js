@@ -10,6 +10,7 @@ const { calculerDiffusion, rappelsAEnvoyer } = require('../services/statistiques
 const { calculerQualite } = require('../services/statistiques/qualite');
 const { semestreCourant } = require('../config/specialites');
 const { lireSemestre } = require('../services/statistiques/semestres');
+const { genererRapport } = require('../services/statistiques/rapport');
 const db = require('../config/db');
 const { journaliser } = require('../utils/journal');
 const { envoyerMail, gabarit, echapper } = require('../services/mail');
@@ -194,5 +195,19 @@ exports.envoyerRappels = async (req, res) => {
     } catch (error) {
         logger.error('Envoi des rappels : ' + error.stack);
         res.status(500).json({ message: "Erreur lors de l'envoi des rappels." });
+    }
+};
+
+// Rapport semestriel en PDF : ?semestre=S1|S2&annee=AAAA (le semestre en cours par défaut)
+exports.exporterRapport = async (req, res) => {
+    const s = lireSemestre(req.query);
+    if (!s.valid) return res.status(400).json({ error: s.message });
+    try {
+        const pdf = await genererRapport({ semestre: s.semestre, annee: s.annee });
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="rapport-stages-${s.semestre}-${s.annee}.pdf"`);
+        res.send(pdf);
+    } catch (error) {
+        erreurServeur(res, 'Rapport semestriel', error);
     }
 };

@@ -48,7 +48,11 @@ describe('AdminStatistiques', () => {
       .flush({ annees: [2026, 2025], promotions: [2026, 2025, 2024], facultes: ['FMSfax'], hopitaux: ['Hôpital Hédi Chaker de Sfax'] });
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    // Liste des vues enregistrées, chargée par le bouton « Enregistrer la vue »
+    httpMock.match((r) => r.url === `${environment.apiUrl}/admin/vues`).forEach((r) => r.flush({ disponible: true, vues: [] }));
+    httpMock.verify();
+  });
 
   async function rendre() {
     await fixture.whenStable();

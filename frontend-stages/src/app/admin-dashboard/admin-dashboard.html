@@ -1,12 +1,14 @@
 <div class="largeur-page">
   <div class="admin-page-header">
     <h2 class="admin-page-title"><i class="bi bi-speedometer2" aria-hidden="true"></i> Tableau de bord</h2>
-    @if (peutModifier) {
     <div class="d-flex gap-2 flex-wrap">
+      <button type="button" class="btn pill-btn-outline-dark" (click)="personnaliser.set(!personnaliser())" [attr.aria-expanded]="personnaliser()">
+        <i class="bi bi-sliders" aria-hidden="true"></i> Personnaliser</button>
+    @if (peutModifier) {
       <a class="btn pill-btn-outline-dark" routerLink="/admin/residents/nouveau"><i class="bi bi-person-plus" aria-hidden="true"></i> Nouveau résident</a>
       <a class="btn pill-btn-orange" routerLink="/admin/imports"><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Importer un registre</a>
-    </div>
     }
+    </div>
   </div>
 
   @if (erreur()) {
@@ -42,6 +44,33 @@
   </div>
   }
 
+  <!-- Personnalisation : sections affichées et leur ordre, propres à chaque administrateur -->
+  @if (personnaliser()) {
+  <div class="card dashboard-card p-3 mb-4 panneau-personnaliser" aria-labelledby="titrePersonnaliser">
+    <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+      <h3 id="titrePersonnaliser" class="h6 fw-bold mb-0">Personnaliser mon tableau de bord</h3>
+      <span class="small text-muted">Ces réglages sont gardés sur ce navigateur.</span>
+      <button type="button" class="btn btn-sm btn-link ms-auto" (click)="retablir()">Rétablir</button>
+      <button type="button" class="btn btn-sm pill-btn-dark" (click)="personnaliser.set(false)">Terminé</button>
+    </div>
+    <ul class="liste-sections">
+      @for (sec of sectionsOrdonnees(); track sec.cle; let premier = $first; let dernier = $last) {
+      <li [class.masquee]="!visible(sec.cle)">
+        <div class="form-check form-switch mb-0 flex-grow-1">
+          <input class="form-check-input" type="checkbox" role="switch" [id]="'section-' + sec.cle" [checked]="visible(sec.cle)" (change)="basculer(sec.cle)">
+          <label class="form-check-label" [for]="'section-' + sec.cle">{{ sec.libelle }}</label>
+        </div>
+        <button type="button" class="btn btn-sm btn-light" (click)="deplacer(sec.cle, -1)" [disabled]="premier" [attr.aria-label]="'Monter : ' + sec.libelle"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-sm btn-light" (click)="deplacer(sec.cle, 1)" [disabled]="dernier" [attr.aria-label]="'Descendre : ' + sec.libelle"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+      </li>
+      }
+    </ul>
+  </div>
+  }
+
+  <div class="row g-4">
+  @if (visible('indicateurs')) {
+  <div class="col-12" [style.order]="ordre('indicateurs')">
   <!-- Semestre analysé : les indicateurs, la diffusion et les téléchargements suivent ce choix -->
   <div class="barre-semestre">
     <label for="choixSemestre" class="barre-semestre-libelle"><i class="bi bi-calendar3" aria-hidden="true"></i> Semestre</label>
@@ -99,9 +128,11 @@
   </div>
   }
 
-  <div class="row g-4 mt-0">
+  </div>
+  }
     <!-- À traiter maintenant -->
-    <div class="col-lg-7 d-flex flex-column">
+    @if (visible('a-traiter')) {
+    <div [style.order]="ordre('a-traiter')" class="col-lg-7 d-flex flex-column">
       <h3 class="section-titre-page"><i class="bi bi-list-check" aria-hidden="true"></i> À traiter
         @if (sujets().length > 0) { <span class="pastille pastille-neutre fw-normal">{{ sujets().length }} sujet(s), du plus urgent au moins urgent</span> }</h3>
       <div class="card dashboard-card flex-grow-1">
@@ -150,8 +181,10 @@
       </div>
     </div>
 
+    }
     <!-- Diffusion des fiches du semestre choisi -->
-    <div class="col-lg-5 d-flex flex-column">
+    @if (visible('diffusion')) {
+    <div [style.order]="ordre('diffusion')" class="col-lg-5 d-flex flex-column">
       <h3 class="section-titre-page"><i class="bi bi-send-check" aria-hidden="true"></i> Diffusion des fiches
         @if (synthese(); as sy) { <small class="text-muted fw-normal fs-6">{{ sy.semestre.libelle }}</small> }</h3>
       <div class="card dashboard-card flex-grow-1 p-3">
@@ -179,8 +212,10 @@
       </div>
     </div>
 
+    }
     <!-- Téléchargements par semaine -->
-    <div class="col-lg-7 d-flex flex-column">
+    @if (visible('telechargements')) {
+    <div [style.order]="ordre('telechargements')" class="col-lg-7 d-flex flex-column">
       <h3 class="section-titre-page"><i class="bi bi-bar-chart" aria-hidden="true"></i> Téléchargements par semaine
         @if (synthese()) { <small class="text-muted fw-normal fs-6 chiffres">{{ totalTelechargements() }} au total</small> }</h3>
       <div class="card dashboard-card flex-grow-1 p-3">
@@ -204,8 +239,10 @@
       </div>
     </div>
 
+    }
     <!-- Activité récente de l'équipe -->
-    <div class="col-lg-5 d-flex flex-column">
+    @if (visible('activite')) {
+    <div [style.order]="ordre('activite')" class="col-lg-5 d-flex flex-column">
       <h3 class="section-titre-page"><i class="bi bi-activity" aria-hidden="true"></i> Activité récente
         <a class="ms-auto small fw-normal" routerLink="/admin/historique">Tout l'historique</a></h3>
       <div class="card dashboard-card flex-grow-1 p-3 activite-recente">
@@ -213,8 +250,10 @@
       </div>
     </div>
 
+    }
     <!-- Erreurs signalées par les résidents (bloc toujours présent) -->
-    <div class="col-lg-7 d-flex flex-column" id="bloc-signalements">
+    @if (visible('signalements')) {
+    <div [style.order]="ordre('signalements')" class="col-lg-7 d-flex flex-column" id="bloc-signalements">
       <h3 class="section-titre-page titre-signalements"><i class="bi bi-flag" aria-hidden="true"></i> Signalements
         @if (signalements().length > 0) { <span class="chiffre-alerte">{{ signalements().length }}</span> }</h3>
       <div class="card dashboard-card flex-grow-1 bloc-signalements ligne-suivi">
@@ -248,8 +287,10 @@
       </div>
     </div>
 
+    }
     <!-- Résidents en cours de résidanat, par année -->
-    <div class="col-lg-5 d-flex flex-column">
+    @if (visible('promotions')) {
+    <div [style.order]="ordre('promotions')" class="col-lg-5 d-flex flex-column">
       <h3 class="section-titre-page"><i class="bi bi-people" aria-hidden="true"></i> Résidents en cours
         <small class="text-muted fw-normal fs-6 chiffres">{{ s.actifs }} au total</small></h3>
       <div class="tuiles-grille tuiles-compactes">
@@ -262,6 +303,7 @@
         }
       </div>
     </div>
+    }
   </div>
   }
 </div>

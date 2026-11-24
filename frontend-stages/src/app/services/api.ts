@@ -284,6 +284,16 @@ export interface Qualite {
   };
 }
 
+export type EcranVue = 'residents' | 'statistiques' | 'parcours';
+
+export interface VueEnregistree {
+  id: number;
+  nom: string;
+  ecran: EcranVue;
+  parametres: Record<string, string>;
+  cree_par: string | null;
+}
+
 export interface ActionJournal {
   id: number;
   cree_le: string;
@@ -529,6 +539,22 @@ export class ApiService {
 
   getQualite(): Observable<Qualite> {
     return this.http.get<Qualite>(`${this.apiUrl}/admin/statistiques/qualite`);
+  }
+
+  telechargerRapport(s: SemestreCivil): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/admin/statistiques/rapport.pdf`, { params: { semestre: s.semestre, annee: s.annee }, responseType: 'blob' });
+  }
+
+  getVues(): Observable<{ disponible: boolean; vues: VueEnregistree[] }> {
+    return this.http.get<{ disponible: boolean; vues: VueEnregistree[] }>(`${this.apiUrl}/admin/vues`);
+  }
+
+  creerVue(vue: { nom: string; ecran: EcranVue; parametres: Record<string, string> }): Observable<VueEnregistree & { message: string }> {
+    return this.http.post<VueEnregistree & { message: string }>(`${this.apiUrl}/admin/vues`, vue);
+  }
+
+  supprimerVue(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/admin/vues/${id}`);
   }
 
   getImports(): Observable<ResumeImport[]> {

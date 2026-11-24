@@ -2,6 +2,7 @@
   <h2 class="admin-page-title"><i class="bi bi-people" aria-hidden="true"></i> Résidents
     <span class="compteur-titre chiffres" title="Résidents affichés avec ces filtres">{{ total() }}</span></h2>
   <div class="d-flex gap-2 flex-wrap">
+    <app-enregistrer-vue ecran="residents"></app-enregistrer-vue>
     <button type="button" class="btn pill-btn-outline-dark" (click)="exporter()" [disabled]="export() || total() === 0">
       @if (export()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
       @else { <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> } Exporter en Excel

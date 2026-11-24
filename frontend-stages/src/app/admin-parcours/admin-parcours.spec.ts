@@ -47,7 +47,11 @@ describe('AdminParcours', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    // Liste des vues enregistrées, chargée par le bouton « Enregistrer la vue »
+    httpMock.match((r) => r.url === `${environment.apiUrl}/admin/vues`).forEach((r) => r.flush({ disponible: true, vues: [] }));
+    httpMock.verify();
+  });
 
   const noms = () => Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.tableau-parcours tbody th a')).map((a) => a.textContent);
 

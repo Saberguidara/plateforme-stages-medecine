@@ -9,6 +9,7 @@ import { StatsDiffusion } from './stats-diffusion';
 import { StatsQualite } from './stats-qualite';
 import { ToastService } from '../services/toast';
 import { libelleNiveau } from '../services/residanat';
+import { EnregistrerVue } from '../admin-shared/enregistrer-vue';
 
 export type Onglet = 'ensemble' | 'affectations' | 'diffusion' | 'qualite';
 const ONGLETS: Onglet[] = ['ensemble', 'affectations', 'diffusion', 'qualite'];
@@ -54,7 +55,7 @@ export function intensite(valeur: number, max: number): number {
 @Component({
   selector: 'app-admin-statistiques',
   standalone: true,
-  imports: [RouterLink, CourbeSemestres, StatsDiffusion, StatsQualite],
+  imports: [RouterLink, CourbeSemestres, StatsDiffusion, StatsQualite, EnregistrerVue],
   templateUrl: './admin-statistiques.html'
 })
 export class AdminStatistiques implements OnInit {
@@ -74,6 +75,7 @@ export class AdminStatistiques implements OnInit {
   readonly donnees = signal<Affectations | null>(null);
   readonly erreur = signal(false);
   readonly exportEnCours = signal(false);
+  readonly rapportEnCours = signal(false);
   readonly tousLesHopitaux = signal(false);
 
   readonly caseChoisie = signal<{ hopital: string; colonne: string } | null>(null);
@@ -215,6 +217,22 @@ export class AdminStatistiques implements OnInit {
       error: () => {
         this.exportEnCours.set(false);
         this.toast.erreur("L'export Excel n'a pas pu être généré.");
+      }
+    });
+  }
+
+  // Rapport PDF du semestre analysé (celui des filtres, sinon le dernier commencé)
+  rapport() {
+    const s = this.semestreDiffusion();
+    this.rapportEnCours.set(true);
+    this.api.telechargerRapport(s).subscribe({
+      next: (blob) => {
+        this.rapportEnCours.set(false);
+        enregistrerFichier(blob, `rapport-stages-${s.semestre}-${s.annee}.pdf`);
+      },
+      error: () => {
+        this.rapportEnCours.set(false);
+        this.toast.erreur("Le rapport n'a pas pu être généré.");
       }
     });
   }

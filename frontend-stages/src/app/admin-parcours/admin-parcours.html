@@ -1,7 +1,10 @@
 <div class="largeur-page">
   <div class="admin-page-header">
     <h2 class="admin-page-title"><i class="bi bi-diagram-3" aria-hidden="true"></i> Parcours des résidents</h2>
-    <a class="btn pill-btn-outline-dark" routerLink="/admin/statistiques"><i class="bi bi-graph-up" aria-hidden="true"></i> Statistiques</a>
+    <div class="d-flex gap-2 flex-wrap">
+      <app-enregistrer-vue ecran="parcours"></app-enregistrer-vue>
+      <a class="btn pill-btn-outline-dark" routerLink="/admin/statistiques"><i class="bi bi-graph-up" aria-hidden="true"></i> Statistiques</a>
+    </div>
   </div>
 
   @if (erreur()) {

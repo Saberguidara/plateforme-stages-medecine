@@ -33,6 +33,34 @@ export interface Evolution {
 }
 
 const ORDRE_GRAVITE: Record<Gravite, number> = { critique: 0, attention: 1, info: 2 };
+
+// Sections du tableau de bord, dans leur ordre par défaut
+export const SECTIONS = [
+  { cle: 'indicateurs', libelle: 'Indicateurs du semestre' },
+  { cle: 'a-traiter', libelle: 'À traiter' },
+  { cle: 'diffusion', libelle: 'Diffusion des fiches' },
+  { cle: 'telechargements', libelle: 'Téléchargements par semaine' },
+  { cle: 'activite', libelle: 'Activité récente' },
+  { cle: 'signalements', libelle: 'Signalements' },
+  { cle: 'promotions', libelle: 'Résidents en cours' }
+] as const;
+
+export interface DispositionTableau {
+  ordre: string[];
+  masquees: string[];
+}
+
+// Disposition enregistrée, complétée des sections apparues depuis et sans les sections disparues
+export function lireDisposition(brut: string | null): DispositionTableau {
+  const cles: string[] = SECTIONS.map((s) => s.cle);
+  let d: Partial<DispositionTableau> = {};
+  try { d = brut ? JSON.parse(brut) : {}; } catch { d = {}; }
+  const ordre = (Array.isArray(d.ordre) ? d.ordre : []).filter((c) => cles.includes(c));
+  return {
+    ordre: [...new Set([...ordre, ...cles])],
+    masquees: (Array.isArray(d.masquees) ? d.masquees : []).filter((c) => cles.includes(c))
+  };
+}
 const NB_SEMESTRES_PROPOSES = 6;
 
 export function semestreDuJour(date = new Date()): SemestreCivil {
@@ -93,6 +121,51 @@ export class AdminDashboard implements OnInit {
   readonly synthese = signal<SyntheseStatistiques | null>(null);
   readonly erreurSynthese = signal(false);
   readonly delaiLisible = delaiLisible;
+
+  // ===== Personnalisation (propre à chaque administrateur, sur ce navigateur) =====
+  private readonly cleDisposition = `tableau-de-bord:${inject(AuthService).getUserName() || 'admin'}`;
+  readonly personnaliser = signal(false);
+  readonly disposition = signal<DispositionTableau>(this.chargerDisposition());
+  readonly sectionsOrdonnees = computed(() =>
+    this.disposition().ordre.map((cle) => SECTIONS.find((s) => s.cle === cle)!).filter(Boolean));
+
+  visible(cle: string): boolean {
+    return !this.disposition().masquees.includes(cle);
+  }
+
+  ordre(cle: string): number {
+    return this.disposition().ordre.indexOf(cle);
+  }
+
+  basculer(cle: string) {
+    this.modifierDisposition((d) => ({
+      ...d, masquees: d.masquees.includes(cle) ? d.masquees.filter((c) => c !== cle) : [...d.masquees, cle]
+    }));
+  }
+
+  deplacer(cle: string, pas: number) {
+    this.modifierDisposition((d) => {
+      const ordre = [...d.ordre];
+      const i = ordre.indexOf(cle);
+      const j = i + pas;
+      if (i < 0 || j < 0 || j >= ordre.length) return d;
+      [ordre[i], ordre[j]] = [ordre[j], ordre[i]];
+      return { ...d, ordre };
+    });
+  }
+
+  retablir() {
+    this.modifierDisposition(() => lireDisposition(null));
+  }
+
+  private chargerDisposition(): DispositionTableau {
+    try { return lireDisposition(localStorage.getItem(this.cleDisposition)); } catch { return lireDisposition(null); }
+  }
+
+  private modifierDisposition(f: (d: DispositionTableau) => DispositionTableau) {
+    this.disposition.set(f(this.disposition()));
+    try { localStorage.setItem(this.cleDisposition, JSON.stringify(this.disposition())); } catch { /* stockage indisponible */ }
+  }
 
   ngOnInit() {
     this.charger();

@@ -8,7 +8,8 @@ import { ApiService, FiltresResidents, enregistrerFichier } from '../services/ap
 import { AuthService } from '../services/auth';
 import { ToastService } from '../services/toast';
 import { anneeCourte, semestreCourant } from '../services/residanat';
-import { Confirmation } from '../admin-shared/confirmation';
+import { Confirmation } from '../admin-shared/confirmation';
+import { EnregistrerVue } from '../admin-shared/enregistrer-vue';
 
 // Libellés des filtres ouverts depuis le tableau de bord
 const LIBELLES_ALERTES: Record<string, string> = {
@@ -34,7 +35,7 @@ interface FiltreRapide {
 @Component({
   selector: 'app-admin-data',
   standalone: true,
-  imports: [FormsModule, RouterLink, Confirmation],
+  imports: [FormsModule, RouterLink, Confirmation, EnregistrerVue],
   templateUrl: './admin-data.html'
 })
 export class AdminData implements OnInit {

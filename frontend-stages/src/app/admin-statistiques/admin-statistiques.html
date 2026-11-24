@@ -2,7 +2,12 @@
   <div class="admin-page-header">
     <h2 class="admin-page-title"><i class="bi bi-graph-up" aria-hidden="true"></i> Statistiques</h2>
     <div class="d-flex gap-2 flex-wrap">
-      <a class="btn pill-btn-outline-dark" routerLink="/admin/parcours"><i class="bi bi-diagram-3" aria-hidden="true"></i> Parcours des résidents</a>
+      <app-enregistrer-vue ecran="statistiques"></app-enregistrer-vue>
+      <button type="button" class="btn pill-btn-outline-dark" (click)="rapport()" [disabled]="rapportEnCours()"
+        [title]="'Rapport PDF du semestre ' + semestreDiffusion().semestre + ' ' + semestreDiffusion().annee">
+        @if (rapportEnCours()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Rapport… }
+        @else { <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Rapport {{ semestreDiffusion().semestre }} {{ semestreDiffusion().annee }} }
+      </button>
       @if (ongletAnalyse()) {
       <button type="button" class="btn pill-btn-dark" (click)="exporter()" [disabled]="exportEnCours() || !donnees()">
         @if (exportEnCours()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Export… }

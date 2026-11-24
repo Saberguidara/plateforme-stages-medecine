@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ApiService, LIBELLES_MOTIFS, MotifSignalement, enregistrerFichier } from '../services/api';
+import { ApiService, LIBELLES_MOTIFS, MotifSignalement, enregistrerFichier, EtatSemestre, SemestreParcours } from '../services/api';
 import { environment } from '../../environments/environment';
 import { ToastService } from '../services/toast';
 import { PdfViewerService } from '../services/pdf-viewer';
@@ -34,7 +34,15 @@ interface DossierPersonnel {
   duree: number;
   fiches: FicheResident[];
   semestreCourant: { semestre: string; annee: number; periodes: string[] };
+  // Semestres du résidanat, de l'entrée en 1re année à la dernière année
+  parcours?: { semestres: SemestreParcours[]; faits: number; total: number; incomplets: number } | null;
 }
+
+// Libellés des états d'un semestre pour le résident
+export const ETATS_RESIDENT: Record<EtatSemestre, string> = {
+  fait: 'Validé sur la plateforme', rattrape: 'Rattrapé', partiel: 'Incomplet', manquant: 'Aucune fiche',
+  'en-cours': 'En cours', prevu: 'Prévu', 'a-venir': 'À venir'
+};
 
 interface AnneeParcours {
   cle: string;
@@ -67,6 +75,7 @@ export class ResidentSearchComponent implements OnInit {
 
   readonly libellesPeriodes = LIBELLES_PERIODES;
   readonly dossier = signal<DossierPersonnel | null>(null);
+  readonly etatsResident = ETATS_RESIDENT;
   readonly messageErreur = signal('');
   readonly pdfEnCours = signal<number | null>(null);
 

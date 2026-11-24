@@ -10,6 +10,7 @@ const referentiels = require('../controllers/referentiels.controller');
 const exportsController = require('../controllers/exports.controller');
 const comptes = require('../controllers/comptes.controller');
 const notifications = require('../controllers/notifications.controller');
+const vues = require('../controllers/vues.controller');
 
 // La génération d'un ZIP de fiches est coûteuse : quelques exports par minute suffisent.
 const zipLimiter = rateLimit({
@@ -29,7 +30,12 @@ router.get('/statistiques/affectations.xlsx', requireAdmin, statistiques.exporte
 router.get('/statistiques/parcours', requireAdmin, statistiques.getParcours);
 router.get('/statistiques/diffusion', requireAdmin, statistiques.getDiffusion);
 router.get('/statistiques/qualite', requireAdmin, statistiques.getQualite);
+router.get('/statistiques/rapport.pdf', requireAdmin, statistiques.exporterRapport);
 router.get('/journal', requireAdmin, journal.getJournal);
+
+router.get('/vues', requireAdmin, vues.lister);
+router.post('/vues', requireAdmin, vues.creer);
+router.delete('/vues/:id', requireAdmin, vues.supprimer);
 router.post('/journal/:id/annuler', requireAdmin, journal.annuler);
 
 router.get('/referentiels/suggestions', requireAdmin, referentiels.getSuggestions);

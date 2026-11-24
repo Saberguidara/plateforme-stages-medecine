@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService, EtatSemestre, Parcours, ParcoursResident, SemestreParcours } from '../services/api';
 import { libelleNiveau } from '../services/residanat';
+import { EnregistrerVue } from '../admin-shared/enregistrer-vue';
 
 export const LIBELLES_ETATS: Record<EtatSemestre, string> = {
   fait: 'Stage enregistré',
@@ -35,7 +36,7 @@ export function detailSemestre(s: SemestreParcours): string {
 @Component({
   selector: 'app-admin-parcours',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, EnregistrerVue],
   templateUrl: './admin-parcours.html'
 })
 export class AdminParcours implements OnInit {

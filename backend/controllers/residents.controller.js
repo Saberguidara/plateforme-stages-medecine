@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { construireParcours } = require('../services/statistiques/parcours');
 const logger = require('../utils/logger');
 const { validateResidentPayload, validateCin, normalizeString, validatePagination } = require('../utils/validation');
 const {
@@ -55,7 +56,12 @@ exports.getResidentByCin = async (req, res) => {
         const fiches = lignes.map((f) => ({ ...f, dates: libellePeriode(specialite, f.periode, f.annee) }));
         const { semestre, annee } = semestreCourant();
 
-        res.json({ ...resident, fiches, semestreCourant: { semestre, annee, periodes: PERIODES_DU_SEMESTRE[semestre] } });
+        // Semestres du résidanat, pour la frise de l'espace résident
+        const parcours = construireParcours(resident, lignes, { semestre, annee });
+        res.json({
+            ...resident, fiches, semestreCourant: { semestre, annee, periodes: PERIODES_DU_SEMESTRE[semestre] },
+            parcours: parcours && { semestres: parcours.semestres, faits: parcours.faits, total: parcours.total, incomplets: parcours.incomplets }
+        });
     } catch (error) {
         logger.error('Erreur lors de la recherche : ' + error);
         res.status(500).json({ error: 'Erreur serveur lors de la recherche' });

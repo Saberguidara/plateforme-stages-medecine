@@ -2678,3 +2678,137 @@ button.carte-case:hover { box-shadow: 0 0 0 2px var(--fms-noir) inset; }
     .colonnes-delai { gap: 4px; }
     .colonne-delai small { font-size: 0.65rem; }
 }
+
+/* ==========================================================================
+   Confort : palette de commandes, vues enregistrées, personnalisation, semestres du résident
+   ========================================================================== */
+.bouton-palette { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.bouton-palette kbd, .palette kbd {
+    font-family: inherit;
+    font-size: 0.7rem;
+    color: var(--fms-gris);
+    background: #faf8f4;
+    border: 1px solid var(--fms-gris-clair);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 0 5px;
+}
+
+.palette-fond { position: fixed; inset: 0; background: rgba(26, 26, 26, 0.35); z-index: 1080; }
+
+.palette {
+    position: fixed;
+    top: 12vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(620px, calc(100vw - 32px));
+    max-height: 72vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--fms-blanc);
+    border-radius: 16px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+    z-index: 1090;
+    overflow: hidden;
+}
+
+.palette-saisie {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.palette-saisie .bi { color: var(--fms-gris); }
+.palette-champ { flex: 1; min-width: 0; border: 0; outline: 0; font-size: 1rem; background: transparent; }
+.palette-liste { list-style: none; margin: 0; padding: 6px 0; overflow-y: auto; }
+.palette-groupe { padding: 8px 16px 4px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fms-gris); font-weight: 600; }
+
+.palette-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+.palette-item.actif { background: var(--fms-orange-pale); }
+.palette-item .bi { color: var(--fms-orange-fonce); }
+.palette-libelle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-detail { margin-left: auto; color: var(--fms-gris); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.palette-vide { padding: 16px; color: var(--fms-gris); }
+
+.palette-pied {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    padding: 8px 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: 0.72rem;
+    color: var(--fms-gris);
+}
+
+/* Vues enregistrées dans le menu */
+.admin-nav-vue { display: flex; align-items: center; min-width: 0; }
+.admin-nav-vue .admin-nav-lien { flex: 1; min-width: 0; border: 0; background: transparent; text-align: left; }
+.admin-nav-vue .texte-tronque { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-nav-vue-supprimer {
+    border: 0;
+    background: transparent;
+    color: var(--fms-gris);
+    padding: 2px 6px;
+    border-radius: 50%;
+    opacity: 0;
+}
+
+.admin-nav-vue:hover .admin-nav-vue-supprimer,
+.admin-nav-vue-supprimer:focus-visible { opacity: 1; }
+.admin-nav-vue-supprimer:hover { color: var(--fms-erreur); background: var(--fms-erreur-pale); }
+
+@media (hover: none) {
+    .admin-nav-vue-supprimer { opacity: 1; }
+}
+
+/* Bouton « Enregistrer la vue » et son panneau */
+.enregistrer-vue { position: relative; display: inline-block; }
+
+.enregistrer-vue-panneau {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    width: 280px;
+    max-width: calc(100vw - 32px);
+    background: var(--fms-blanc);
+    border-radius: 14px;
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.18);
+    padding: 14px;
+    z-index: 1050;
+}
+
+/* Personnalisation du tableau de bord */
+.liste-sections { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.liste-sections li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 8px; background: #faf8f4; }
+.liste-sections li.masquee { opacity: 0.55; }
+
+/* Espace résident : semestres */
+.mes-semestres { grid-column: 1 / -1; display: grid; gap: 8px; margin-top: 8px; }
+.mes-semestres-titre { display: flex; justify-content: space-between; font-weight: 600; }
+.mes-semestres-liste {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 6px;
+}
+
+.mes-semestres-liste .parcours-case { min-height: 64px; justify-content: flex-start; gap: 2px; font-size: var(--fms-taille-petit); }
+.mes-semestres-quand { opacity: 0.8; font-size: 0.72rem; }
+.mes-semestres-alerte { margin: 0; color: var(--fms-erreur); font-size: var(--fms-taille-petit); }
+
+/* Dans l'en-tête sombre de l'espace résident, des fonds opaques pour rester lisibles */
+.mes-semestres .parcours-case[data-etat="fait"] { background: #e6f3ec; color: #17603c; }
+.mes-semestres .parcours-case[data-etat="a-venir"] { color: #d8d1c5; border-color: rgba(255, 255, 255, 0.35); }
+.mes-semestres .parcours-case[data-etat="prevu"] { background: #f4f1ec; }
+.mes-semestres-alerte { background: #fdecea; border-radius: 8px; padding: 8px 10px; }
