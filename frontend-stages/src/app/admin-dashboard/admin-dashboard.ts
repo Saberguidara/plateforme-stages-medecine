@@ -6,7 +6,9 @@ import {
 } from '../services/api';
 import { TraitementSignalement } from '../admin-shared/traitement-signalement';
 import { JournalListe } from '../admin-shared/journal-liste';
-import { HistogrammeSemaines, Sparkline } from '../admin-shared/graphiques';
+import { delaiLisible, HistogrammeSemaines, Sparkline } from '../admin-shared/graphiques';
+
+export { delaiLisible };
 import { AuthService } from '../services/auth';
 import { ToastService } from '../services/toast';
 import { libelleNiveau } from '../services/residanat';
@@ -62,12 +64,6 @@ export function evolution(ind: Indicateur, mode: 'nombre' | 'pourcentage' | 'poi
   return { texte: `${fleche} ${valeur} par rapport à ${reference}`, sens: ecart > 0 ? 'hausse' : 'baisse' };
 }
 
-export function delaiLisible(heures: number | null): string {
-  if (heures === null) return '';
-  if (heures < 1) return 'moins d\'une heure';
-  if (heures < 48) return `${nombre.format(Math.round(heures))} h`;
-  return `${nombre.format(Math.round((heures / 24) * 10) / 10)} jours`;
-}
 
 // Tableau de bord : ce qu'il faut traiter maintenant, puis l'état du semestre choisi
 // comparé au même semestre de l'année précédente. Chaque chiffre ouvre la liste correspondante.

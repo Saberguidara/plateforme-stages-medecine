@@ -2614,3 +2614,67 @@ button.carte-case:hover { box-shadow: 0 0 0 2px var(--fms-noir) inset; }
 .parcours-case[data-etat="prevu"] { background: #f4f1ec; color: var(--fms-gris); }
 .parcours-case[data-etat="a-venir"] { background: transparent; color: #a8a096; border: 1.5px dashed #d6cfc3; }
 .parcours-case-legende { display: inline-block; width: 18px; min-height: 12px; height: 12px; padding: 0; margin-right: 6px; vertical-align: -1px; }
+
+/* Diffusion : colonnes de délai ; Qualité : jauge et exemples des contrôles */
+.colonnes-delai {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+    align-items: end;
+    height: 210px;
+}
+
+.colonnes-mois { grid-template-columns: repeat(6, minmax(0, 1fr)); height: 170px; gap: 6px; }
+
+.colonne-delai {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: stretch;
+    gap: 4px;
+    height: 100%;
+    text-align: center;
+    min-width: 0;
+}
+
+.colonne-delai small { color: var(--fms-gris); font-size: 0.72rem; line-height: 1.2; min-height: 2.4em; }
+.colonne-delai strong { font-size: var(--fms-taille-petit); }
+.colonne-delai-barre { display: block; background: var(--fms-orange); border-radius: 6px 6px 2px 2px; }
+.colonne-delai[data-tranche="jamais"] .colonne-delai-barre {
+    background: repeating-linear-gradient(45deg, #f6c3a8 0 5px, #fde3d4 5px 10px);
+}
+.colonne-delai[data-tranche="avant"] .colonne-delai-barre { background: #d8b49d; }
+.barres-h-alerte { background: var(--fms-erreur) !important; }
+
+.jauge {
+    width: 160px;
+    max-width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    margin: 4px auto 0;
+}
+
+.jauge-centre {
+    width: 76%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--fms-blanc);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.jauge-centre strong { font-family: var(--fms-titre); font-size: 2.4rem; line-height: 1; }
+.jauge-centre small { color: var(--fms-gris); }
+.sujet[data-gravite="ok"] { --gravite: var(--fms-succes); }
+.controle-exemples { margin-top: 4px; font-size: var(--fms-taille-petit); }
+.controle-exemples summary { color: var(--fms-orange-fonce); cursor: pointer; }
+.controle-exemples ul { margin: 4px 0 0; padding-left: 16px; display: grid; gap: 2px; }
+
+@media (max-width: 575.98px) {
+    .colonnes-delai { gap: 4px; }
+    .colonne-delai small { font-size: 0.65rem; }
+}

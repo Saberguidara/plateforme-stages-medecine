@@ -2,6 +2,16 @@ import { Component, computed, input } from '@angular/core';
 import { SemaineActivite } from '../services/api';
 
 const FORMAT_JOUR = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
+const FORMAT_NOMBRE = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
+
+// Délai en heures, écrit en heures jusqu'à deux jours, puis en jours
+export function delaiLisible(heures: number | null): string {
+  if (heures === null) return '';
+  if (heures < 1) return 'moins d\'une heure';
+  if (heures < 48) return `${FORMAT_NOMBRE.format(Math.round(heures))} h`;
+  return `${FORMAT_NOMBRE.format(Math.round((heures / 24) * 10) / 10)} jours`;
+}
+
 
 function dateLocale(jour: string): Date {
   const [a, m, j] = jour.split('-').map(Number);

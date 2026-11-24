@@ -2,13 +2,25 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
-  Affectations, ApiService, DetailAffectation, enregistrerFichier, FiltresStatistiques, OptionsStatistiques
+  Affectations, ApiService, DetailAffectation, enregistrerFichier, FiltresStatistiques, OptionsStatistiques, SemestreCivil
 } from '../services/api';
 import { CourbeSemestres } from '../admin-shared/graphiques';
+import { StatsDiffusion } from './stats-diffusion';
+import { StatsQualite } from './stats-qualite';
 import { ToastService } from '../services/toast';
 import { libelleNiveau } from '../services/residanat';
 
-export type Onglet = 'ensemble' | 'affectations';
+export type Onglet = 'ensemble' | 'affectations' | 'diffusion' | 'qualite';
+const ONGLETS: Onglet[] = ['ensemble', 'affectations', 'diffusion', 'qualite'];
+
+// Semestre analysé par l'onglet Diffusion : celui des filtres, sinon le dernier semestre commencé de l'année
+export function semestreAnalyse(f: FiltresStatistiques, maintenant = new Date()): SemestreCivil {
+  const courant: SemestreCivil = { semestre: maintenant.getMonth() < 6 ? 'S1' : 'S2', annee: maintenant.getFullYear() };
+  if (f.annee > courant.annee) return courant;
+  const semestre = f.semestre || (f.annee === courant.annee ? courant.semestre : 'S2');
+  if (f.annee === courant.annee && semestre === 'S2' && courant.semestre === 'S1') return courant;
+  return { semestre, annee: f.annee };
+}
 
 export const LIBELLES_COLONNES: Record<string, string> = {
   T1: '1er trim.', T2: '2e trim.', S1: '1er sem.', T3: '3e trim.', T4: '4e trim.', S2: '2nd sem.',
@@ -42,7 +54,7 @@ export function intensite(valeur: number, max: number): number {
 @Component({
   selector: 'app-admin-statistiques',
   standalone: true,
-  imports: [RouterLink, CourbeSemestres],
+  imports: [RouterLink, CourbeSemestres, StatsDiffusion, StatsQualite],
   templateUrl: './admin-statistiques.html'
 })
 export class AdminStatistiques implements OnInit {
@@ -67,6 +79,9 @@ export class AdminStatistiques implements OnInit {
   readonly caseChoisie = signal<{ hopital: string; colonne: string } | null>(null);
   readonly detail = signal<DetailAffectation | null>(null);
   readonly erreurDetail = signal(false);
+
+  readonly ongletAnalyse = computed(() => this.onglet() === 'ensemble' || this.onglet() === 'affectations');
+  readonly semestreDiffusion = computed(() => semestreAnalyse(this.filtres()), { equal: (a, b) => a.semestre === b.semestre && a.annee === b.annee });
 
   readonly anneesProposees = computed(() => {
     const annees = new Set(this.options()?.annees ?? []);
@@ -119,9 +134,13 @@ export class AdminStatistiques implements OnInit {
   ngOnInit() {
     this.api.getOptionsStatistiques().subscribe({ next: (o) => this.options.set(o), error: () => this.options.set(null) });
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
-      this.onglet.set(params.get('onglet') === 'affectations' ? 'affectations' : 'ensemble');
-      this.filtres.set(filtresDepuis(params));
-      this.charger();
+      const onglet = params.get('onglet') as Onglet;
+      this.onglet.set(ONGLETS.includes(onglet) ? onglet : 'ensemble');
+      const filtres = filtresDepuis(params);
+      const changement = JSON.stringify(filtres) !== JSON.stringify(this.filtres());
+      this.filtres.set(filtres);
+      // Les onglets Diffusion et Qualité chargent leurs propres données
+      if (this.ongletAnalyse() && (changement || !this.donnees())) this.charger();
     });
   }
 

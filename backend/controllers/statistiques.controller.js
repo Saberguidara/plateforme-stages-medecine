@@ -6,6 +6,13 @@ const { memoriser } = require('../services/statistiques/cache');
 const { lireFiltres, cle } = require('../services/statistiques/filtres');
 const { calculerAffectations, detailCase, optionsFiltres, COLONNES } = require('../services/statistiques/affectations');
 const { calculerParcours } = require('../services/statistiques/parcours');
+const { calculerDiffusion, rappelsAEnvoyer } = require('../services/statistiques/diffusion');
+const { calculerQualite } = require('../services/statistiques/qualite');
+const { semestreCourant } = require('../config/specialites');
+const { lireSemestre } = require('../services/statistiques/semestres');
+const db = require('../config/db');
+const { journaliser } = require('../utils/journal');
+const { envoyerMail, gabarit, echapper } = require('../services/mail');
 
 function erreurServeur(res, contexte, error) {
     logger.error(`${contexte} : ${error.stack || error}`);
@@ -110,5 +117,82 @@ exports.exporterAffectations = async (req, res) => {
         res.end();
     } catch (error) {
         erreurServeur(res, 'Export des affectations', error);
+    }
+};
+
+// Diffusion d'un semestre : ?semestre=S1|S2&annee=AAAA (le semestre en cours par défaut)
+exports.getDiffusion = async (req, res) => {
+    const s = lireSemestre(req.query);
+    if (!s.valid) return res.status(400).json({ error: s.message });
+    try {
+        res.json(await memoriser(`diffusion:${s.semestre}:${s.annee}`, () => calculerDiffusion({ semestre: s.semestre, annee: s.annee })));
+    } catch (error) {
+        erreurServeur(res, 'Diffusion des fiches', error);
+    }
+};
+
+exports.getQualite = async (req, res) => {
+    try {
+        res.json(await memoriser('qualite', () => calculerQualite()));
+    } catch (error) {
+        erreurServeur(res, 'Qualité des données', error);
+    }
+};
+
+function messageRappel(resident) {
+    const lignes = resident.fiches.map((f) =>
+        `<strong>${echapper(f.periode)} ${f.annee}</strong> : ${echapper(f.hopital || 'hôpital non renseigné')}, ${echapper(f.service || 'service non renseigné')}`);
+    return {
+        to: resident.email,
+        subject: resident.fiches.length > 1 ? 'Rappel : vos fiches de stage vous attendent' : 'Rappel : votre fiche de stage vous attend',
+        html: gabarit({
+            titre: `Bonjour ${echapper(resident.nom_prenom)},`,
+            paragraphes: [
+                resident.fiches.length > 1
+                    ? "Vos fiches de validation de stage sont disponibles sur la plateforme, mais vous ne les avez pas encore téléchargées :"
+                    : "Votre fiche de validation de stage est disponible sur la plateforme, mais vous ne l'avez pas encore téléchargée :",
+                lignes.join('<br>'),
+                'Connectez-vous avec votre CIN et votre e-mail pour la récupérer. Si une information est fausse, signalez-la depuis votre espace.'
+            ]
+        })
+    };
+}
+
+// Rappel aux résidents du semestre en cours qui n'ont pas téléchargé une fiche annoncée depuis une semaine.
+exports.envoyerRappels = async (req, res) => {
+    try {
+        const { rappelsDisponibles, avecEmail } = await rappelsAEnvoyer();
+        if (!rappelsDisponibles) {
+            return res.status(503).json({ message: 'Les rappels ne sont pas encore activés sur la base (migration 009).' });
+        }
+        if (avecEmail.length === 0) return res.json({ success: true, envoyes: 0, fiches: 0, echecs: 0, message: 'Aucun rappel à envoyer.' });
+
+        let envoyes = 0;
+        let fiches = 0;
+        let echecs = 0;
+        for (const resident of avecEmail) {
+            try {
+                await envoyerMail(messageRappel(resident));
+                await db.query('INSERT INTO relances_fiches (fiche_id, resident_id) VALUES ?', [resident.fiches.map((f) => [f.id, resident.id])]);
+                envoyes++;
+                fiches += resident.fiches.length;
+            } catch (err) {
+                logger.error(`Rappel au résident ${resident.id} : ${err}`);
+                echecs++;
+            }
+        }
+        if (envoyes > 0) {
+            const { semestre, annee } = semestreCourant();
+            await journaliser(null, req, { action: 'notification', entite: 'relance', apres: { semestre, annee, residents: envoyes, fiches, echecs } });
+        }
+        res.json({
+            success: echecs === 0, envoyes, fiches, echecs,
+            message: echecs === 0
+                ? `Rappel envoyé à ${envoyes} résident(s).`
+                : `Rappel envoyé à ${envoyes} résident(s) ; ${echecs} envoi(s) en échec, à relancer plus tard.`
+        });
+    } catch (error) {
+        logger.error('Envoi des rappels : ' + error.stack);
+        res.status(500).json({ message: "Erreur lors de l'envoi des rappels." });
     }
 };

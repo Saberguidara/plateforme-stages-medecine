@@ -27,6 +27,8 @@ router.get('/statistiques/affectations', requireAdmin, statistiques.getAffectati
 router.get('/statistiques/affectations/detail', requireAdmin, statistiques.getDetailAffectation);
 router.get('/statistiques/affectations.xlsx', requireAdmin, statistiques.exporterAffectations);
 router.get('/statistiques/parcours', requireAdmin, statistiques.getParcours);
+router.get('/statistiques/diffusion', requireAdmin, statistiques.getDiffusion);
+router.get('/statistiques/qualite', requireAdmin, statistiques.getQualite);
 router.get('/journal', requireAdmin, journal.getJournal);
 router.post('/journal/:id/annuler', requireAdmin, journal.annuler);
 
@@ -50,6 +52,7 @@ const notificationLimiter = rateLimit({
 
 router.get('/notifications/fiches', requireAdmin, notifications.apercu);
 router.post('/notifications/fiches', requireAdmin, notifications.verifierEnvoi, notificationLimiter, notifications.envoyer);
+router.post('/statistiques/diffusion/rappels', requireAdmin, notifications.verifierEnvoi, notificationLimiter, statistiques.envoyerRappels);
 
 router.get('/moi', requireAdmin, comptes.moi);
 router.get('/comptes', requireGestionComptes, comptes.lister);

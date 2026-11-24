@@ -248,6 +248,42 @@ export interface Parcours {
   residents: ParcoursResident[];
 }
 
+export interface Diffusion {
+  semestre: SemestreCivil & { libelle: string };
+  enCours: boolean;
+  totaux: { fiches: number; annoncees: number; telechargees: number; residentsPrevenus: number; jamaisTelechargees: number; jamaisSansEmail: number };
+  delaiMedianHeures: number | null;
+  partMoins24h: number | null;
+  tranches: { cle: string; libelle: string; fiches: number }[];
+  parNiveau: { niveau: number; fiches: number; telechargees: number; taux: number | null }[];
+  rappels: { disponibles: boolean; migrationManquante: boolean; residents: number; fiches: number; sansEmail: number };
+}
+
+export interface ControleQualite {
+  cle: string;
+  gravite: 'critique' | 'attention' | 'info';
+  titre: string;
+  detail: string;
+  nombre: number;
+  base: number;
+  exemples: { id?: number; nom_prenom?: string; precision?: string; ids?: number[] }[];
+}
+
+export interface Qualite {
+  score: number;
+  poids: Record<string, number>;
+  residentsActifs: number;
+  anomalies: number;
+  controles: ControleQualite[];
+  signalements: {
+    ouverts: number;
+    recus12Mois: number;
+    parMotif: { motif: MotifSignalement; signalements: number }[];
+    parHopital: { hopital: string; signalements: number }[];
+    parMois: { mois: string; traites: number; delaiMedianHeures: number | null }[];
+  };
+}
+
 export interface ActionJournal {
   id: number;
   cree_le: string;
@@ -481,6 +517,18 @@ export class ApiService {
 
   getParcours(filtres: { promotion?: number | null; faculte?: string; etat?: string; search?: string }): Observable<Parcours> {
     return this.http.get<Parcours>(`${this.apiUrl}/admin/statistiques/parcours`, { params: versParams(filtres) });
+  }
+
+  getDiffusion(s: SemestreCivil): Observable<Diffusion> {
+    return this.http.get<Diffusion>(`${this.apiUrl}/admin/statistiques/diffusion`, { params: { semestre: s.semestre, annee: s.annee } });
+  }
+
+  envoyerRappels(): Observable<{ envoyes: number; fiches: number; echecs: number; message: string }> {
+    return this.http.post<any>(`${this.apiUrl}/admin/statistiques/diffusion/rappels`, {});
+  }
+
+  getQualite(): Observable<Qualite> {
+    return this.http.get<Qualite>(`${this.apiUrl}/admin/statistiques/qualite`);
   }
 
   getImports(): Observable<ResumeImport[]> {

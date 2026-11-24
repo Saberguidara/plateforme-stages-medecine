@@ -3,15 +3,18 @@
     <h2 class="admin-page-title"><i class="bi bi-graph-up" aria-hidden="true"></i> Statistiques</h2>
     <div class="d-flex gap-2 flex-wrap">
       <a class="btn pill-btn-outline-dark" routerLink="/admin/parcours"><i class="bi bi-diagram-3" aria-hidden="true"></i> Parcours des résidents</a>
+      @if (ongletAnalyse()) {
       <button type="button" class="btn pill-btn-dark" (click)="exporter()" [disabled]="exportEnCours() || !donnees()">
         @if (exportEnCours()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Export… }
         @else { <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Exporter en Excel }
       </button>
+      }
     </div>
   </div>
 
   <!-- Filtres communs aux onglets -->
   @let f = filtres();
+  @if (onglet() !== 'qualite') {
   <div class="barre-filtres-stats" role="group" aria-label="Filtres des statistiques">
     <label class="filtre-stats">
       <span>Année</span>
@@ -27,6 +30,7 @@
         <option value="S2" [selected]="f.semestre === 'S2'">2nd semestre</option>
       </select>
     </label>
+    @if (onglet() !== 'diffusion') {
     <label class="filtre-stats">
       <span>Promotion</span>
       <select class="form-select form-select-sm" id="filtrePromotion" (change)="modifier({ promotion: +valeur($event) || null })">
@@ -48,11 +52,15 @@
         @for (h of options()?.hopitaux ?? []; track h) { <option [value]="h" [selected]="h === f.hopital">{{ h }}</option> }
       </select>
     </label>
+    } @else {
+    <span class="small text-muted align-self-end pb-1">Semestre analysé : {{ semestreDiffusion().semestre }} {{ semestreDiffusion().annee }}</span>
+    }
     @if (filtresActifs() > 0) {
     <button type="button" class="btn btn-sm btn-link align-self-end" (click)="reinitialiser()">
       <i class="bi bi-x-circle" aria-hidden="true"></i> Retirer les filtres ({{ filtresActifs() }})</button>
     }
   </div>
+  }
 
   <div class="onglets-stats" role="tablist" aria-label="Rubriques des statistiques">
     <button type="button" role="tab" class="onglet-stats" id="onglet-ensemble" [class.actif]="onglet() === 'ensemble'"
@@ -61,10 +69,21 @@
     <button type="button" role="tab" class="onglet-stats" id="onglet-affectations" [class.actif]="onglet() === 'affectations'"
       [attr.aria-selected]="onglet() === 'affectations'" aria-controls="panneau-stats" (click)="choisirOnglet('affectations')">
       <i class="bi bi-hospital" aria-hidden="true"></i> Affectations</button>
+    <button type="button" role="tab" class="onglet-stats" id="onglet-diffusion" [class.actif]="onglet() === 'diffusion'"
+      [attr.aria-selected]="onglet() === 'diffusion'" aria-controls="panneau-stats" (click)="choisirOnglet('diffusion')">
+      <i class="bi bi-send-check" aria-hidden="true"></i> Diffusion</button>
+    <button type="button" role="tab" class="onglet-stats" id="onglet-qualite" [class.actif]="onglet() === 'qualite'"
+      [attr.aria-selected]="onglet() === 'qualite'" aria-controls="panneau-stats" (click)="choisirOnglet('qualite')">
+      <i class="bi bi-shield-check" aria-hidden="true"></i> Qualité</button>
   </div>
 
   <div id="panneau-stats" role="tabpanel" [attr.aria-labelledby]="'onglet-' + onglet()">
-  @if (erreur()) {
+  @if (onglet() === 'diffusion') {
+  <app-stats-diffusion [semestre]="semestreDiffusion()"></app-stats-diffusion>
+  } @else if (onglet() === 'qualite') {
+  <p class="small text-muted mt-0">Les contrôles portent sur toute la base, sans filtre.</p>
+  <app-stats-qualite></app-stats-qualite>
+  } @else if (erreur()) {
   <div class="card dashboard-card">
     <div class="etat-vide">
       <i class="bi bi-wifi-off etat-vide-icone" aria-hidden="true"></i>
