@@ -4,6 +4,7 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { requireAdmin, requireGestionComptes } = require('../middlewares/auth.middleware');
 const stats = require('../controllers/stats.controller');
+const statistiques = require('../controllers/statistiques.controller');
 const journal = require('../controllers/journal.controller');
 const referentiels = require('../controllers/referentiels.controller');
 const exportsController = require('../controllers/exports.controller');
@@ -21,6 +22,11 @@ const zipLimiter = rateLimit({
 
 router.get('/statistiques', requireAdmin, stats.getStatistiques);
 router.get('/statistiques/synthese', requireAdmin, stats.getSynthese);
+router.get('/statistiques/options', requireAdmin, statistiques.getOptions);
+router.get('/statistiques/affectations', requireAdmin, statistiques.getAffectations);
+router.get('/statistiques/affectations/detail', requireAdmin, statistiques.getDetailAffectation);
+router.get('/statistiques/affectations.xlsx', requireAdmin, statistiques.exporterAffectations);
+router.get('/statistiques/parcours', requireAdmin, statistiques.getParcours);
 router.get('/journal', requireAdmin, journal.getJournal);
 router.post('/journal/:id/annuler', requireAdmin, journal.annuler);
 

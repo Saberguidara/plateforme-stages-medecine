@@ -62,6 +62,16 @@ export const routes: Routes = [
         loadComponent: () => import('./admin-dashboard/admin-dashboard').then((m) => m.AdminDashboard)
       },
       {
+        path: 'statistiques',
+        title: 'Statistiques',
+        loadComponent: () => import('./admin-statistiques/admin-statistiques').then((m) => m.AdminStatistiques)
+      },
+      {
+        path: 'parcours',
+        title: 'Parcours des résidents',
+        loadComponent: () => import('./admin-parcours/admin-parcours').then((m) => m.AdminParcours)
+      },
+      {
         path: 'residents',
         title: 'Résidents',
         loadComponent: () => import('./admin-data/admin-data').then((m) => m.AdminData)

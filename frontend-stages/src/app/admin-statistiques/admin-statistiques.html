@@ -1,0 +1,294 @@
+<div class="largeur-page">
+  <div class="admin-page-header">
+    <h2 class="admin-page-title"><i class="bi bi-graph-up" aria-hidden="true"></i> Statistiques</h2>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn pill-btn-outline-dark" routerLink="/admin/parcours"><i class="bi bi-diagram-3" aria-hidden="true"></i> Parcours des résidents</a>
+      <button type="button" class="btn pill-btn-dark" (click)="exporter()" [disabled]="exportEnCours() || !donnees()">
+        @if (exportEnCours()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Export… }
+        @else { <i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i> Exporter en Excel }
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres communs aux onglets -->
+  @let f = filtres();
+  <div class="barre-filtres-stats" role="group" aria-label="Filtres des statistiques">
+    <label class="filtre-stats">
+      <span>Année</span>
+      <select class="form-select form-select-sm" id="filtreAnnee" (change)="modifier({ annee: +valeur($event) })">
+        @for (a of anneesProposees(); track a) { <option [value]="a" [selected]="a === f.annee">{{ a }}</option> }
+      </select>
+    </label>
+    <label class="filtre-stats">
+      <span>Semestre</span>
+      <select class="form-select form-select-sm" id="filtreSemestre" (change)="modifier({ semestre: $any(valeur($event)) })">
+        <option value="" [selected]="!f.semestre">Année entière</option>
+        <option value="S1" [selected]="f.semestre === 'S1'">1er semestre</option>
+        <option value="S2" [selected]="f.semestre === 'S2'">2nd semestre</option>
+      </select>
+    </label>
+    <label class="filtre-stats">
+      <span>Promotion</span>
+      <select class="form-select form-select-sm" id="filtrePromotion" (change)="modifier({ promotion: +valeur($event) || null })">
+        <option value="">Toutes</option>
+        @for (p of options()?.promotions ?? []; track p) { <option [value]="p" [selected]="p === f.promotion">{{ p }}</option> }
+      </select>
+    </label>
+    <label class="filtre-stats">
+      <span>Faculté d'origine</span>
+      <select class="form-select form-select-sm" id="filtreFaculte" (change)="modifier({ faculte: valeur($event) })">
+        <option value="">Toutes</option>
+        @for (x of options()?.facultes ?? []; track x) { <option [value]="x" [selected]="x === f.faculte">{{ x }}</option> }
+      </select>
+    </label>
+    <label class="filtre-stats filtre-stats-large">
+      <span>Hôpital</span>
+      <select class="form-select form-select-sm" id="filtreHopital" (change)="modifier({ hopital: valeur($event) })">
+        <option value="">Tous</option>
+        @for (h of options()?.hopitaux ?? []; track h) { <option [value]="h" [selected]="h === f.hopital">{{ h }}</option> }
+      </select>
+    </label>
+    @if (filtresActifs() > 0) {
+    <button type="button" class="btn btn-sm btn-link align-self-end" (click)="reinitialiser()">
+      <i class="bi bi-x-circle" aria-hidden="true"></i> Retirer les filtres ({{ filtresActifs() }})</button>
+    }
+  </div>
+
+  <div class="onglets-stats" role="tablist" aria-label="Rubriques des statistiques">
+    <button type="button" role="tab" class="onglet-stats" id="onglet-ensemble" [class.actif]="onglet() === 'ensemble'"
+      [attr.aria-selected]="onglet() === 'ensemble'" aria-controls="panneau-stats" (click)="choisirOnglet('ensemble')">
+      <i class="bi bi-grid-1x2" aria-hidden="true"></i> Vue d'ensemble</button>
+    <button type="button" role="tab" class="onglet-stats" id="onglet-affectations" [class.actif]="onglet() === 'affectations'"
+      [attr.aria-selected]="onglet() === 'affectations'" aria-controls="panneau-stats" (click)="choisirOnglet('affectations')">
+      <i class="bi bi-hospital" aria-hidden="true"></i> Affectations</button>
+  </div>
+
+  <div id="panneau-stats" role="tabpanel" [attr.aria-labelledby]="'onglet-' + onglet()">
+  @if (erreur()) {
+  <div class="card dashboard-card">
+    <div class="etat-vide">
+      <i class="bi bi-wifi-off etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Statistiques indisponibles</div>
+      <p class="etat-vide-texte">Le calcul n'a pas abouti. Vérifiez la connexion puis réessayez.</p>
+      <button type="button" class="btn pill-btn-dark" (click)="charger()"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Réessayer</button>
+    </div>
+  </div>
+  } @else if (!donnees()) {
+  <div class="kpi-grille" aria-busy="true" aria-label="Chargement des statistiques">
+    @for (n of [1, 2, 3, 4]; track n) { <span class="skeleton skeleton-carte"></span> }
+  </div>
+  <span class="skeleton skeleton-carte skeleton-bloc mt-4"></span>
+  } @else {
+  @let d = donnees()!;
+
+  <div class="kpi-grille">
+    <div class="kpi-carte"><span class="kpi-libelle">Fiches de stage</span><span class="kpi-valeur chiffres">{{ d.totaux.fiches }}</span></div>
+    <div class="kpi-carte"><span class="kpi-libelle">Résidents concernés</span><span class="kpi-valeur chiffres">{{ d.totaux.residents }}</span></div>
+    <div class="kpi-carte"><span class="kpi-libelle">Hôpitaux et structures</span><span class="kpi-valeur chiffres">{{ d.totaux.hopitaux }}</span></div>
+    <div class="kpi-carte"><span class="kpi-libelle">Services</span><span class="kpi-valeur chiffres">{{ d.totaux.services }}</span></div>
+  </div>
+
+  @if (d.totaux.fiches === 0) {
+  <div class="card dashboard-card mt-4">
+    <div class="etat-vide">
+      <i class="bi bi-funnel etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Aucune fiche pour ces filtres</div>
+      <p class="etat-vide-texte">Choisissez une autre année ou retirez un filtre.</p>
+    </div>
+  </div>
+  } @else if (onglet() === 'ensemble') {
+  <!-- ===== Vue d'ensemble ===== -->
+  <div class="row g-4 mt-0">
+    <div class="col-lg-7 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i> Fiches par semestre
+        <small class="text-muted fw-normal fs-6">jusqu'à 8 semestres</small></h3>
+      <div class="card dashboard-card flex-grow-1 p-3">
+        <app-courbe-semestres [points]="evolution()"></app-courbe-semestres>
+        <p class="small text-muted mb-0 mt-2">Tous semestres confondus, avec les filtres de promotion, faculté et hôpital.</p>
+      </div>
+    </div>
+    <div class="col-lg-5 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-pie-chart" aria-hidden="true"></i> Type de période</h3>
+      @if (types(); as t) {
+      <div class="card dashboard-card flex-grow-1 p-3 anneau-carte">
+        <div class="anneau" [style.background]="t.degrade" role="img"
+          [attr.aria-label]="t.lignes[0].part + ' % de trimestres, ' + t.lignes[1].part + ' % de semestres, ' + t.lignes[2].part + ' % de rattrapages'">
+          <span class="anneau-centre"><strong class="chiffres">{{ t.total }}</strong><small>fiches</small></span>
+        </div>
+        <ul class="legende-anneau">
+          @for (l of t.lignes; track l.libelle) {
+          <li><i [class]="l.classe" aria-hidden="true"></i><span>{{ l.libelle }}</span><strong class="chiffres">{{ l.valeur }}</strong>
+            <span class="text-muted chiffres">{{ l.part }} %</span></li>
+          }
+        </ul>
+      </div>
+      }
+    </div>
+
+    <div class="col-lg-6 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-mortarboard" aria-hidden="true"></i> Par année de résidanat</h3>
+      <div class="card dashboard-card flex-grow-1 p-3">
+        <ul class="barres-h">
+          @for (n of d.parNiveau; track n.niveau) {
+          <li>
+            <span class="barres-h-libelle">{{ libelleNiveau(n.niveau) }}</span>
+            <span class="barres-h-piste"><span class="barres-h-valeur" [style.width.%]="part(n.residents, maxNiveau())"></span></span>
+            <span class="barres-h-chiffre chiffres"><strong>{{ n.residents }}</strong> rés. · {{ n.fiches }} fiches</span>
+          </li>
+          }
+        </ul>
+        <p class="small text-muted mb-0 mt-3">Année de résidanat au moment du stage, déduite de la promotion.</p>
+      </div>
+    </div>
+    <div class="col-lg-6 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-building" aria-hidden="true"></i> Par faculté d'origine</h3>
+      <div class="card dashboard-card flex-grow-1 p-3">
+        <ul class="barres-h">
+          @for (x of d.parFaculte; track x.faculte) {
+          <li>
+            <span class="barres-h-libelle">{{ x.faculte }}</span>
+            <span class="barres-h-piste"><span class="barres-h-valeur barres-h-sombre" [style.width.%]="part(x.residents, maxFaculte())"></span></span>
+            <span class="barres-h-chiffre chiffres"><strong>{{ x.residents }}</strong> rés. · {{ x.fiches }} fiches</span>
+          </li>
+          }
+        </ul>
+      </div>
+    </div>
+  </div>
+  } @else {
+  <!-- ===== Affectations ===== -->
+  <div class="row g-4 mt-0">
+    <div class="col-lg-7 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-hospital" aria-hidden="true"></i> Fiches par hôpital
+        <small class="text-muted fw-normal fs-6">{{ d.parHopital.length }} hôpital(aux)</small></h3>
+      <div class="card dashboard-card flex-grow-1 p-3">
+        <ul class="barres-h barres-hopitaux">
+          @for (h of hopitauxAffiches(); track h.hopital) {
+          <li>
+            <a class="barres-h-libelle" routerLink="/admin/residents" [queryParams]="lienResidents(h.hopital)"
+              [title]="'Voir les résidents passés par ' + h.hopital">{{ h.hopital }}</a>
+            <span class="barres-h-piste" role="img"
+              [attr.aria-label]="h.trimestres + ' trimestres, ' + h.semestres + ' semestres, ' + h.rattrapages + ' rattrapages'">
+              <span class="couleur-trimestre" [style.width.%]="part(h.trimestres, maxHopital())"></span>
+              <span class="couleur-semestre" [style.width.%]="part(h.semestres, maxHopital())"></span>
+              <span class="couleur-rattrapage" [style.width.%]="part(h.rattrapages, maxHopital())"></span>
+            </span>
+            <span class="barres-h-chiffre chiffres"><strong>{{ h.fiches }}</strong></span>
+          </li>
+          }
+        </ul>
+        <div class="legende-graphe mt-3">
+          <span><i class="legende-carre couleur-trimestre" aria-hidden="true"></i>Trimestres et 45 jours</span>
+          <span><i class="legende-carre couleur-semestre" aria-hidden="true"></i>Semestres</span>
+          <span><i class="legende-carre couleur-rattrapage" aria-hidden="true"></i>Rattrapages</span>
+          @if (d.parHopital.length > 10) {
+          <button type="button" class="btn btn-link btn-sm p-0 ms-auto" (click)="tousLesHopitaux.set(!tousLesHopitaux())">
+            {{ tousLesHopitaux() ? 'Afficher les 10 premiers' : 'Afficher les ' + d.parHopital.length + ' hôpitaux' }}</button>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5 d-flex flex-column">
+      <h3 class="section-titre-page"><i class="bi bi-clipboard2-pulse" aria-hidden="true"></i> Services les plus sollicités</h3>
+      <div class="card dashboard-card flex-grow-1 p-3">
+        <table class="table table-sm tableau-stats mb-0">
+          <thead><tr><th scope="col">Service</th><th scope="col" class="text-end">Fiches</th><th scope="col" class="text-end">Hôpitaux</th></tr></thead>
+          <tbody>
+            @for (s of d.parService; track s.service) {
+            <tr>
+              <td class="texte-tronque-cellule" [title]="s.service">{{ s.service }}</td>
+              <td class="text-end chiffres"><span class="mini-barre" [style.width.px]="part(s.fiches, maxService()) * 0.4" aria-hidden="true"></span>{{ s.fiches }}</td>
+              <td class="text-end chiffres">{{ s.hopitaux }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carte des affectations : résidents accueillis par hôpital et par période -->
+  <h3 class="section-titre-page"><i class="bi bi-grid-3x3" aria-hidden="true"></i> Carte des affectations · {{ f.annee }}
+    <small class="text-muted fw-normal fs-6">résidents accueillis, cliquez une case pour le détail</small></h3>
+  <div class="row g-4">
+    <div [class]="caseChoisie() ? 'col-xl-8' : 'col-12'">
+      <div class="card dashboard-card p-3">
+        <div class="carte-defilement">
+          <table class="carte-chaleur">
+            <thead>
+              <tr>
+                <th scope="col" class="carte-hopital">Hôpital</th>
+                @for (col of d.carte.colonnes; track col) { <th scope="col" [title]="libellesColonnes[col]">{{ col }}</th> }
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of d.carte.lignes; track l.hopital) {
+              <tr>
+                <th scope="row" class="carte-hopital" [title]="l.hopital">{{ l.hopital }}</th>
+                @for (col of d.carte.colonnes; track col) {
+                @let v = l.valeurs[col];
+                <td>
+                  @if (v > 0 && !l.autres) {
+                  <button type="button" class="carte-case" [attr.data-niveau]="intensite(v, d.carte.max)"
+                    [class.choisie]="caseChoisie()?.hopital === l.hopital && caseChoisie()?.colonne === col"
+                    (click)="ouvrirCase(l.hopital, col, v)" [attr.aria-label]="l.hopital + ', ' + libellesColonnes[col] + ' : ' + v + ' résident(s)'">{{ v }}</button>
+                  } @else {
+                  <span class="carte-case" [attr.data-niveau]="intensite(v, d.carte.max)">{{ v }}</span>
+                  }
+                </td>
+                }
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="legende-graphe mt-3">
+          <span>Intensité :</span>
+          @for (n of [0, 1, 2, 3, 4]; track n) { <span class="carte-case carte-case-legende" [attr.data-niveau]="n" aria-hidden="true"></span> }
+          <span>de 0 à {{ d.carte.max }} résidents</span>
+        </div>
+      </div>
+    </div>
+
+    @if (caseChoisie(); as c) {
+    <div class="col-xl-4">
+      <aside class="card dashboard-card p-3 detail-case" aria-live="polite">
+        <div class="d-flex align-items-start gap-2">
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-bold">{{ c.hopital }}</div>
+            <div class="small text-muted">{{ libellesColonnes[c.colonne] }} {{ f.annee }}</div>
+          </div>
+          <button type="button" class="btn btn-sm btn-link text-muted p-0" (click)="fermerDetail()" aria-label="Fermer le détail">
+            <i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </div>
+        @if (erreurDetail()) {
+        <p class="text-muted small mt-3 mb-0">Le détail n'a pas pu être chargé.</p>
+        } @else if (detail(); as dt) {
+        <div class="kpi-valeur chiffres mt-2">{{ dt.residents }} <small class="fs-6 fw-normal text-muted">résident(s)</small></div>
+        <ul class="barres-h mt-2">
+          @for (s of dt.services; track s.service) {
+          <li>
+            <span class="barres-h-libelle" [title]="s.service">{{ s.service }}</span>
+            <span class="barres-h-piste"><span class="barres-h-valeur" [style.width.%]="part(s.residents, dt.services[0].residents)"></span></span>
+            <span class="barres-h-chiffre chiffres"><strong>{{ s.residents }}</strong></span>
+          </li>
+          }
+        </ul>
+        <div class="fw-semibold small mt-3 mb-1">Résidents</div>
+        <ul class="liste-detail-residents">
+          @for (r of dt.liste; track r.id + r.periode + r.service) {
+          <li><a [routerLink]="['/admin/residents', r.id]">{{ r.nom_prenom }}</a>
+            <small class="text-muted"> · {{ r.service }} · {{ r.periode }}@if (r.niveau) { · {{ r.niveau }}A }</small></li>
+          }
+        </ul>
+        } @else {
+        <span class="skeleton skeleton-ligne my-3"></span><span class="skeleton skeleton-ligne my-3"></span>
+        }
+      </aside>
+    </div>
+    }
+  </div>
+  }
+  }
+  </div>
+</div>

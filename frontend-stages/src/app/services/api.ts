@@ -164,6 +164,90 @@ export interface SyntheseStatistiques {
   semaines: SemaineActivite[];
 }
 
+// ===== Module Statistiques =====
+
+export interface FiltresStatistiques {
+  annee: number;
+  semestre: '' | 'S1' | 'S2';
+  promotion: number | null;
+  faculte: string;
+  hopital: string;
+}
+
+export interface OptionsStatistiques {
+  annees: number[];
+  promotions: number[];
+  facultes: string[];
+  hopitaux: string[];
+}
+
+export interface LigneCarte {
+  hopital: string;
+  autres?: boolean;
+  total: number;
+  valeurs: Record<string, number>;
+}
+
+export interface Affectations {
+  filtres: FiltresStatistiques;
+  totaux: { fiches: number; residents: number; hopitaux: number; services: number };
+  types: { trimestre: number; semestre: number; rattrapage: number };
+  parHopital: { hopital: string; fiches: number; residents: number; trimestres: number; semestres: number; rattrapages: number }[];
+  parService: { service: string; fiches: number; hopitaux: number }[];
+  parNiveau: { niveau: number; fiches: number; residents: number }[];
+  parFaculte: { faculte: string; residents: number; fiches: number }[];
+  carte: { colonnes: string[]; max: number; lignes: LigneCarte[] };
+  evolution: (SemestreCivil & { libelle: string; fiches: number; residents: number })[];
+}
+
+export interface DetailAffectation {
+  hopital: string;
+  colonne: string;
+  annee: number;
+  residents: number;
+  services: { service: string; residents: number }[];
+  liste: { id: number; nom_prenom: string; service: string; periode: string; niveau: number | null }[];
+}
+
+export type EtatSemestre = 'fait' | 'rattrape' | 'partiel' | 'manquant' | 'en-cours' | 'prevu' | 'a-venir';
+
+export interface SemestreParcours {
+  niveau: number;
+  semestre: 'S1' | 'S2';
+  annee: number;
+  etat: EtatSemestre;
+  stages: { periode: string; service: string | null; hopital: string | null }[];
+}
+
+export interface ParcoursResident {
+  id: number;
+  nom_prenom: string;
+  faculte: string | null;
+  niveau: number;
+  promotion: number;
+  semestres: SemestreParcours[];
+  faits: number;
+  total: number;
+  incomplets: number;
+  sansFicheCourant: boolean;
+  horsParcours: number;
+}
+
+export interface ResumePromotion {
+  promotion: number;
+  niveau: number;
+  residents: number;
+  aJour: number;
+  incomplets: number;
+  sansFicheCourant: number;
+}
+
+export interface Parcours {
+  courant: SemestreCivil;
+  promotions: ResumePromotion[];
+  residents: ParcoursResident[];
+}
+
 export interface ActionJournal {
   id: number;
   cree_le: string;
@@ -375,6 +459,28 @@ export class ApiService {
     return this.http.get<SyntheseStatistiques>(`${this.apiUrl}/admin/statistiques/synthese`, {
       params: { semestre: s.semestre, annee: s.annee }
     });
+  }
+
+  getOptionsStatistiques(): Observable<OptionsStatistiques> {
+    return this.http.get<OptionsStatistiques>(`${this.apiUrl}/admin/statistiques/options`);
+  }
+
+  getAffectations(f: FiltresStatistiques): Observable<Affectations> {
+    return this.http.get<Affectations>(`${this.apiUrl}/admin/statistiques/affectations`, { params: versParams({ ...f }) });
+  }
+
+  getDetailAffectation(f: FiltresStatistiques, hopital: string, colonne: string): Observable<DetailAffectation> {
+    return this.http.get<DetailAffectation>(`${this.apiUrl}/admin/statistiques/affectations/detail`, {
+      params: versParams({ ...f, hopital, colonne })
+    });
+  }
+
+  exporterAffectations(f: FiltresStatistiques): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/admin/statistiques/affectations.xlsx`, { params: versParams({ ...f }), responseType: 'blob' });
+  }
+
+  getParcours(filtres: { promotion?: number | null; faculte?: string; etat?: string; search?: string }): Observable<Parcours> {
+    return this.http.get<Parcours>(`${this.apiUrl}/admin/statistiques/parcours`, { params: versParams(filtres) });
   }
 
   getImports(): Observable<ResumeImport[]> {

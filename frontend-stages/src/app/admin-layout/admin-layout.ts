@@ -62,7 +62,9 @@ export class AdminLayout {
 
   readonly liensPrincipaux: LienMenu[] = [
     { chemin: 'tableau-de-bord', libelle: 'Tableau de bord', icone: 'bi-speedometer2' },
+    { chemin: 'statistiques', libelle: 'Statistiques', icone: 'bi-graph-up' },
     { chemin: 'residents', libelle: 'Résidents', icone: 'bi-people' },
+    { chemin: 'parcours', libelle: 'Parcours', icone: 'bi-diagram-3' },
     { chemin: 'imports', libelle: 'Imports', icone: 'bi-cloud-arrow-up' },
     { chemin: 'historique', libelle: 'Historique', icone: 'bi-clock-history' }
   ];

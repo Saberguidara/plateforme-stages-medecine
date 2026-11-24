@@ -58,6 +58,55 @@ export class Sparkline {
   });
 }
 
+// Courbe d'évolution par semestre, avec axe gradué ; le dernier point est mis en avant.
+@Component({
+  selector: 'app-courbe-semestres',
+  standalone: true,
+  template: `
+    @if (graphe(); as g) {
+      <svg class="graphe" viewBox="0 0 560 200" role="img" [attr.aria-label]="g.resume">
+        @for (t of g.graduations; track t.valeur) {
+          <line x1="40" x2="548" [attr.y1]="t.y" [attr.y2]="t.y" class="graphe-grille"></line>
+          <text x="34" [attr.y]="t.y + 3.5" text-anchor="end" class="graphe-texte">{{ t.valeur }}</text>
+        }
+        <path [attr.d]="g.aire" class="graphe-aire"></path>
+        <polyline [attr.points]="g.points" class="graphe-courbe"></polyline>
+        @for (p of g.pts; track p.libelle; let dernier = $last) {
+          <circle [attr.cx]="p.x" [attr.cy]="p.y" [attr.r]="dernier ? 5 : 3" [class]="dernier ? 'graphe-point-fort' : 'graphe-point'">
+            <title>{{ p.libelle }} : {{ p.valeur }} {{ unite() }}</title></circle>
+          @if (dernier || p.valeur === g.max) {
+            <text [attr.x]="p.x" [attr.y]="p.y - 10" text-anchor="middle" class="graphe-texte graphe-texte-fort">{{ p.valeur }}</text>
+          }
+          <text [attr.x]="p.x" y="192" text-anchor="middle" class="graphe-texte">{{ p.libelle }}</text>
+        }
+      </svg>
+    }
+  `
+})
+export class CourbeSemestres {
+  readonly points = input.required<{ libelle: string; valeur: number }[]>();
+  readonly unite = input('fiche(s)');
+
+  readonly graphe = computed(() => {
+    const points = this.points();
+    if (points.length < 2) return null;
+    const maxValeur = Math.max(...points.map((p) => p.valeur));
+    const { max, pas } = echelle(maxValeur);
+    const y = (v: number) => 170 - (v / max) * 150;
+    const pasX = 492 / (points.length - 1);
+    const pts = points.map((p, i) => ({ ...p, x: 48 + i * pasX, y: y(p.valeur) }));
+    const graduations = [];
+    for (let v = 0; v <= max; v += pas) graduations.push({ valeur: v, y: y(v) });
+    const ligne = pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const dernier = pts[pts.length - 1];
+    return {
+      pts, graduations, max: maxValeur, points: ligne,
+      aire: `M${pts[0].x},170 L${ligne.replaceAll(' ', ' L')} L${dernier.x},170 Z`,
+      resume: `Évolution sur ${points.length} semestres : de ${points[0].valeur} (${points[0].libelle}) à ${dernier.valeur} (${dernier.libelle}) ${this.unite()}.`
+    };
+  });
+}
+
 interface Barre {
   x: number;
   y: number;
