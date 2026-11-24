@@ -6,6 +6,8 @@ const logger = require('../utils/logger');
 const { journaliser } = require('../utils/journal');
 const { PERIODES_DU_SEMESTRE, ORDRE_PERIODES_SQL, semestreCourant } = require('../config/specialites');
 const { envoyerMail, envoiPossible, gabarit, echapper } = require('../services/mail');
+const { memoriser } = require('../services/statistiques/cache');
+const { rappelsAEnvoyer } = require('../services/statistiques/diffusion');
 
 async function fichesEnAttente() {
     const { semestre, annee } = semestreCourant();
@@ -116,5 +118,30 @@ exports.envoyer = async (req, res) => {
     } catch (error) {
         logger.error('Envoi des notifications : ' + error);
         res.status(500).json({ message: "Erreur lors de l'envoi des e-mails." });
+    }
+};
+
+// Résumé pour la cloche de l'administration : ce qui attend une action, recalculé au plus chaque minute.
+exports.resume = async (req, res) => {
+    try {
+        res.json(await memoriser('notifications:resume', async () => {
+            const [[signalements], attente, rappels] = await Promise.all([
+                db.query('SELECT COUNT(*) AS n, MIN(cree_le) AS plus_ancien FROM signalements WHERE traite_le IS NULL'),
+                fichesEnAttente(),
+                rappelsAEnvoyer()
+            ]);
+            return {
+                signalements: { ouverts: Number(signalements[0]?.n) || 0, plusAncien: signalements[0]?.plus_ancien || null },
+                fichesNonAnnoncees: {
+                    residents: attente.avecEmail.length,
+                    fiches: attente.avecEmail.reduce((n, r) => n + r.fiches.length, 0)
+                },
+                rappels: { disponibles: rappels.rappelsDisponibles, residents: rappels.avecEmail.length },
+                envoiPossible: envoiPossible()
+            };
+        }, 60 * 1000));
+    } catch (error) {
+        logger.error('Résumé des notifications : ' + error);
+        res.status(500).json({ message: 'Erreur lors du calcul des notifications.' });
     }
 };

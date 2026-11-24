@@ -2812,3 +2812,56 @@ button.carte-case:hover { box-shadow: 0 0 0 2px var(--fms-noir) inset; }
 .mes-semestres .parcours-case[data-etat="a-venir"] { color: #d8d1c5; border-color: rgba(255, 255, 255, 0.35); }
 .mes-semestres .parcours-case[data-etat="prevu"] { background: #f4f1ec; }
 .mes-semestres-alerte { background: #fdecea; border-radius: 8px; padding: 8px 10px; }
+
+/* Cloche de notifications */
+.cloche { position: relative; display: inline-block; }
+.cloche-bouton { position: relative; padding-left: 12px; padding-right: 12px; }
+.cloche-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 10px;
+    background: var(--fms-orange);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 20px;
+}
+
+.cloche-badge.critique { background: var(--fms-erreur); }
+
+.cloche-panneau {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    background: var(--fms-blanc);
+    border-radius: 14px;
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.18);
+    padding: 8px;
+    z-index: 1060;
+}
+
+.cloche-titre { padding: 6px 10px 4px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fms-gris); font-weight: 600; }
+
+.cloche-item {
+    --gravite: var(--fms-orange);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 10px;
+    border-radius: 10px;
+    color: var(--fms-noir);
+    text-decoration: none;
+    box-shadow: inset 3px 0 0 var(--gravite);
+}
+
+.cloche-item[data-gravite="critique"] { --gravite: var(--fms-erreur); }
+.cloche-item:hover { background: var(--fms-orange-pale); color: var(--fms-noir); }
+.cloche-item .bi { color: var(--gravite); margin-top: 2px; }
+.cloche-item small { display: block; color: var(--fms-gris); font-size: var(--fms-taille-petit); }
+.cloche-vide { padding: 10px; color: var(--fms-succes); }

@@ -56,6 +56,7 @@ const notificationLimiter = rateLimit({
     message: { message: 'Un envoi vient déjà d\'être lancé. Patientez une minute.' }
 });
 
+router.get('/notifications/resume', requireAdmin, notifications.resume);
 router.get('/notifications/fiches', requireAdmin, notifications.apercu);
 router.post('/notifications/fiches', requireAdmin, notifications.verifierEnvoi, notificationLimiter, notifications.envoyer);
 router.post('/statistiques/diffusion/rappels', requireAdmin, notifications.verifierEnvoi, notificationLimiter, statistiques.envoyerRappels);

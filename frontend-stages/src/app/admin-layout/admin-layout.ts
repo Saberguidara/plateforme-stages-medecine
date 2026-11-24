@@ -5,6 +5,7 @@ import { filter } from 'rxjs/operators';
 import { AuthService } from '../services/auth';
 import { RechercheGlobale } from './recherche-globale';
 import { PaletteCommandes } from './palette-commandes';
+import { ClocheNotifications } from './cloche-notifications';
 import { ApiService, VueEnregistree } from '../services/api';
 import { ToastService } from '../services/toast';
 import { VuesService, LIBELLES_ECRANS } from '../services/vues';
@@ -20,7 +21,7 @@ interface LienMenu {
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, RechercheGlobale, PaletteCommandes],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, RechercheGlobale, PaletteCommandes, ClocheNotifications],
   // Occupe toute la hauteur entre l'en-tête et le pied de page
   host: { class: 'd-flex flex-grow-1' },
   template: `
@@ -63,6 +64,7 @@ interface LienMenu {
           </button>
           <app-recherche-globale class="flex-grow-1 d-flex"></app-recherche-globale>
           <app-palette-commandes></app-palette-commandes>
+          <app-cloche-notifications></app-cloche-notifications>
           @if (lectureSeule) {
             <span class="pastille pastille-sombre" title="Votre compte permet de consulter, pas de modifier">
               <i class="bi bi-eye" aria-hidden="true"></i> Lecture seule

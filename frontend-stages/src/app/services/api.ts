@@ -284,6 +284,13 @@ export interface Qualite {
   };
 }
 
+export interface ResumeNotifications {
+  signalements: { ouverts: number; plusAncien: string | null };
+  fichesNonAnnoncees: { residents: number; fiches: number };
+  rappels: { disponibles: boolean; residents: number };
+  envoiPossible: boolean;
+}
+
 export type EcranVue = 'residents' | 'statistiques' | 'parcours';
 
 export interface VueEnregistree {
@@ -543,6 +550,10 @@ export class ApiService {
 
   telechargerRapport(s: SemestreCivil): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/admin/statistiques/rapport.pdf`, { params: { semestre: s.semestre, annee: s.annee }, responseType: 'blob' });
+  }
+
+  getResumeNotifications(): Observable<ResumeNotifications> {
+    return this.http.get<ResumeNotifications>(`${this.apiUrl}/admin/notifications/resume`);
   }
 
   getVues(): Observable<{ disponible: boolean; vues: VueEnregistree[] }> {

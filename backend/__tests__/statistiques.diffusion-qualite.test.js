@@ -168,3 +168,34 @@ describe('Routes Diffusion, Qualité et rappels', () => {
         expect(mail.envoyerMail).not.toHaveBeenCalled();
     });
 });
+
+describe('Résumé des notifications (cloche)', () => {
+    let app;
+    beforeAll(() => {
+        app = express();
+        app.use('/api/admin', require('../routes/admin.routes'));
+    });
+
+    it('compte les signalements ouverts, les fiches à annoncer et les rappels possibles', async () => {
+        db.query.mockReset();
+        comptes.compteActif.mockResolvedValue({ id: 2, login: 'consultation', role: 'lecture' });
+        repondre([
+            [/WHERE traite_le IS NULL/, [[{ n: 2, plus_ancien: '2026-11-20 10:00:00' }]]],
+            [/LEFT JOIN notifications_fiches n ON n\.fiche_id = f\.id\s+WHERE n\.fiche_id IS NULL/, [[
+                { id: 1, resident_id: 1, email: 'a@exemple.tn', periode: 'S2', annee: 2026 },
+                { id: 2, resident_id: 1, email: 'a@exemple.tn', periode: 'T3', annee: 2026 },
+                { id: 3, resident_id: 2, email: null, periode: 'S2', annee: 2026 }
+            ]]],
+            [/FROM formulaires_stage f JOIN residents r/, [[fiche(4, 3, { envoye_le: new Date(Date.now() - 9 * 86400000) })]]]
+        ]);
+        const res = await request(app).get('/api/admin/notifications/resume')
+            .set('Authorization', `Bearer ${jwt.sign({ id: 2, role: 'admin' }, 'test_secret')}`);
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({
+            signalements: { ouverts: 2, plusAncien: '2026-11-20 10:00:00' },
+            fichesNonAnnoncees: { residents: 1, fiches: 2 },
+            rappels: { disponibles: true, residents: 1 },
+            envoiPossible: true
+        });
+    });
+});
