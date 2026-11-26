@@ -1,7 +1,10 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ActionJournal, ApiService, LIBELLES_MOTIFS, MotifSignalement } from '../services/api';
+import { AuthService } from '../services/auth';
+import { ToastService } from '../services/toast';
+import { Confirmation } from './confirmation';
 
 interface Changement {
   champ: string;
@@ -17,8 +20,8 @@ const LIBELLES_CHAMPS: Record<string, string> = {
 
 const ICONES: Record<string, string> = {
   creation: 'bi-plus-lg', modification: 'bi-pencil', suppression: 'bi-trash3',
-  import: 'bi-cloud-arrow-up', annulation: 'bi-arrow-counterclockwise', fusion: 'bi-intersect',
-  signalement: 'bi-flag', traitement: 'bi-check2-circle', notification: 'bi-envelope'
+  import: 'bi-cloud-arrow-up', annulation: 'bi-arrow-counterclockwise', fusion: 'bi-intersect', separation: 'bi-slash-circle',
+  signalement: 'bi-flag', traitement: 'bi-check2-circle', notification: 'bi-envelope', connexion: 'bi-box-arrow-in-right'
 };
 
 function texte(valeur: unknown): string {
@@ -31,7 +34,7 @@ function texte(valeur: unknown): string {
 @Component({
   selector: 'app-journal-liste',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, Confirmation],
   template: `
     @if (chargement() && actions().length === 0) {
       <div aria-busy="true" aria-label="Chargement du journal">
@@ -52,20 +55,32 @@ function texte(valeur: unknown): string {
           <li class="journal-item">
             <span class="journal-icone"><i [class]="'bi ' + icone(a)" aria-hidden="true"></i></span>
             <div class="journal-texte">
-              <div><strong>{{ a.admin_login || (a.action === 'signalement' ? 'Le résident' : 'Système') }}</strong> {{ description(a) }}
+              <div [class.journal-annule]="a.annule_le"><strong>{{ a.admin_login || (a.action === 'signalement' || a.entite === 'resident' ? 'Le résident' : 'Système') }}</strong> {{ description(a) }}
                 @if (afficherResident() && a.resident_id && a.resident_nom) {
                   · <a [routerLink]="['/admin/residents', a.resident_id]">{{ a.resident_nom }}</a>
                 }
               </div>
-              @for (c of changements(a); track c.champ) {
-                <div class="journal-diff">{{ c.champ }} : <del>{{ c.avant }}</del> → <ins>{{ c.apres }}</ins></div>
+              @if (!compact()) {
+                @for (c of changements(a); track c.champ) {
+                  <div class="journal-diff">{{ c.champ }} : <del>{{ c.avant }}</del> → <ins>{{ c.apres }}</ins></div>
+                }
               }
-              <div class="journal-date chiffres">{{ a.cree_le | date: 'dd/MM/yyyy à HH:mm' }}</div>
+              <div class="journal-pied">
+                <span class="journal-date chiffres">{{ a.cree_le | date: 'dd/MM/yyyy à HH:mm' }}</span>
+                @if (a.annule_le) {
+                  <span class="pastille pastille-neutre"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                    Annulée le {{ a.annule_le | date: 'dd/MM/yyyy à HH:mm' }}@if (a.annule_par) { par {{ a.annule_par }} }</span>
+                } @else if (peutModifier && a.annulable && !compact()) {
+                  <button type="button" class="btn btn-sm pill-btn-outline-dark journal-annuler" (click)="aAnnuler.set(a)"
+                    [attr.aria-label]="'Annuler : ' + description(a)">
+                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Annuler</button>
+                }
+              </div>
             </div>
           </li>
         }
       </ul>
-      @if (actions().length < total()) {
+      @if (actions().length < total() && !compact()) {
         <div class="text-center mt-2">
           <button type="button" class="btn btn-sm pill-btn-outline-dark" [disabled]="chargement()" (click)="suite()">
             @if (chargement()) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
@@ -74,16 +89,33 @@ function texte(valeur: unknown): string {
         </div>
       }
     }
+
+    @if (aAnnuler(); as a) {
+      <app-confirmation titre="Annuler cette action ?" icone="bi-arrow-counterclockwise" libelleConfirmer="Annuler l'action"
+        [message]="messageAnnulation(a)" [enCours]="annulationEnCours()"
+        (confirmer)="annuler(a)" (annuler)="aAnnuler.set(null)"></app-confirmation>
+    }
   `
 })
 export class JournalListe {
   private api = inject(ApiService);
+  private toast = inject(ToastService);
+  readonly peutModifier = inject(AuthService).peutModifier();
 
   readonly residentId = input<number | null>(null);
   readonly entite = input<string>('');
+  readonly action = input<string>('');
   readonly afficherResident = input<boolean>(false);
+  // Version courte (tableau de bord) : dernières actions seulement, sans détail ni bouton « Annuler »
+  readonly compact = input<boolean>(false);
+  readonly limite = input<number>(20);
   // Incrémenté par le parent pour recharger le journal après une modification
   readonly version = input<number>(0);
+  // Émis après une annulation réussie : le parent recharge ce qu'il affiche (dossier, historique des imports)
+  readonly annule = output<void>();
+
+  readonly aAnnuler = signal<ActionJournal | null>(null);
+  readonly annulationEnCours = signal(false);
 
   readonly actions = signal<ActionJournal[]>([]);
   readonly total = signal(0);
@@ -95,8 +127,32 @@ export class JournalListe {
     effect(() => {
       this.residentId();
       this.entite();
+      this.action();
       this.version();
       this.recharger();
+    });
+  }
+
+  messageAnnulation(a: ActionJournal): string {
+    const qui = a.admin_login ? ` de ${a.admin_login}` : '';
+    return `Action${qui} : « ${this.description(a)} ». L'état précédent est rétabli si rien n'a changé depuis ; l'annulation est elle-même enregistrée dans le journal.`;
+  }
+
+  annuler(a: ActionJournal) {
+    this.annulationEnCours.set(true);
+    this.api.annulerAction(a.id).subscribe({
+      next: (res) => {
+        this.annulationEnCours.set(false);
+        this.aAnnuler.set(null);
+        this.toast.succes(res.message);
+        this.recharger();
+        this.annule.emit();
+      },
+      error: (err) => {
+        this.annulationEnCours.set(false);
+        this.aAnnuler.set(null);
+        this.toast.erreur(err.error?.message || "L'action n'a pas pu être annulée.");
+      }
     });
   }
 
@@ -117,8 +173,9 @@ export class JournalListe {
     this.api.getJournal({
       resident_id: this.residentId() ?? undefined,
       entite: this.entite() || undefined,
+      action: this.action() || undefined,
       page: this.page,
-      limit: 20
+      limit: this.limite()
     }).subscribe({
       next: (res) => {
         this.actions.update((liste) => (this.page === 1 ? res.data : [...liste, ...res.data]));
@@ -148,13 +205,19 @@ export class JournalListe {
       case 'fiche:suppression': return `a supprimé ${stage}`;
       case 'fiche:signalement': return `a signalé une erreur sur ${stage} (${this.motif(v.motif)})${v.message ? ` : « ${v.message} »` : ''}`;
       case 'fiche:traitement': return `a traité l'erreur signalée sur ${stage} (${this.motif(v.motif)})${v.reponse ? ` et a répondu : « ${v.reponse} »` : ''}`;
+      case 'relance:notification': return `a envoyé un rappel à ${v.residents} résident(s) qui n'avaient pas téléchargé leur fiche ${v.semestre} ${v.annee} (${v.fiches} fiche(s))`;
       case 'notification:notification': return `a prévenu par e-mail ${v.residents} résident(s) que leur fiche ${v.semestre} ${v.annee} est disponible (${v.fiches} fiche(s))`;
       case 'import:import': return `a importé « ${v.fichier} »${v.semestre ? ` (${v.semestre} ${v.annee})` : ''} : ${v.residentsCrees} résident(s) et ${v.fichesCreees} fiche(s) créés`;
-      case 'import:annulation': return `a annulé l'import « ${v.fichier} » : ${v.fichesSupprimees} fiche(s) supprimée(s)`;
+      case 'resident:connexion': return "s'est connecté à son espace";
+      case 'administrateur:connexion': return "s'est connecté";
+      case 'import:annulation': return `a annulé l'import « ${a.avant?.fichier ?? v.fichier} » : ${a.avant?.fichesSupprimees ?? v.fichesSupprimees} fiche(s) supprimée(s)`;
       case 'referentiel:fusion': return `a remplacé ${a.avant?.variantes?.length ?? 0} écriture(s) ${a.apres?.type === 'service' ? 'de service' : "d'hôpital"} par « ${a.apres?.valeur} » (${a.apres?.fichesModifiees} fiche(s))`;
+      case 'referentiel:separation': return `a choisi de ne pas fusionner ${a.apres?.valeurs?.length ?? 0} écritures ${a.apres?.type === 'service' ? 'de service' : "d'hôpital"} : ${(a.apres?.valeurs ?? []).map((v: string) => `« ${v} »`).join(', ')}`;
       case 'administrateur:creation': return `a créé le compte « ${v.login} » (${v.role === 'lecture' ? 'lecture seule' : 'administrateur'})`;
       case 'administrateur:modification': return `a modifié le compte « ${v.login} »`;
-      default: return `${a.action} ${a.entite}`;
+      default:
+        if (a.action === 'annulation') return `a annulé une action : ${a.apres?.message ?? ''}`;
+        return `${a.action} ${a.entite}`;
     }
   }
 

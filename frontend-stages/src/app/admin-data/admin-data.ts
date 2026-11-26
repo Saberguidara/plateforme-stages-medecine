@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, HostListener, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -8,7 +8,8 @@ import { ApiService, FiltresResidents, enregistrerFichier } from '../services/ap
 import { AuthService } from '../services/auth';
 import { ToastService } from '../services/toast';
 import { anneeCourte, semestreCourant } from '../services/residanat';
-import { Confirmation } from '../admin-shared/confirmation';
+import { Confirmation } from '../admin-shared/confirmation';
+import { EnregistrerVue } from '../admin-shared/enregistrer-vue';
 
 // Libellés des filtres ouverts depuis le tableau de bord
 const LIBELLES_ALERTES: Record<string, string> = {
@@ -26,6 +27,7 @@ const TAILLES_PAGE = [20, 50, 100];
 interface FiltreRapide {
   cle: string;
   libelle: string;
+  icone: string;
   filtres: { actifs?: string; alerte?: string; email?: string };
 }
 
@@ -33,7 +35,7 @@ interface FiltreRapide {
 @Component({
   selector: 'app-admin-data',
   standalone: true,
-  imports: [FormsModule, RouterLink, Confirmation],
+  imports: [FormsModule, RouterLink, Confirmation, EnregistrerVue],
   templateUrl: './admin-data.html'
 })
 export class AdminData implements OnInit {
@@ -49,22 +51,26 @@ export class AdminData implements OnInit {
   readonly taillesPage = TAILLES_PAGE;
   readonly lignesChargement = [1, 2, 3, 4, 5, 6, 7, 8];
   readonly colonnes = [
-    { cle: 'nom_prenom', libelle: 'Résident', classe: 'col-identite' },
-    { cle: 'promotion', libelle: 'Promotion', classe: 'col-promotion' },
-    { cle: 'faculte_origine', libelle: 'Faculté', classe: 'col-faculte' },
-    { cle: 'nb_fiches', libelle: 'Fiches', classe: 'col-fiches text-center' }
+    { cle: 'nom_prenom', libelle: 'Résident', classe: 'col-identite', triable: true },
+    { cle: 'cin', libelle: 'CIN', classe: 'col-cin', triable: true },
+    { cle: 'email', libelle: 'E-mail', classe: 'col-email', triable: false },
+    { cle: 'promotion', libelle: 'Promotion', classe: 'col-promotion', triable: true },
+    { cle: 'faculte_origine', libelle: 'Faculté', classe: 'col-faculte', triable: true },
+    { cle: 'nb_fiches', libelle: 'Fiches', classe: 'col-fiches', triable: true }
   ];
   readonly filtresRapides: FiltreRapide[] = [
-    { cle: 'tous', libelle: 'Tous', filtres: {} },
-    { cle: 'actifs', libelle: 'En cours', filtres: { actifs: '1' } },
-    { cle: 'sans-fiche-semestre', libelle: `Sans fiche ${this.semestre.semestre}`, filtres: { alerte: 'sans-fiche-semestre' } },
-    { cle: 'a-relancer', libelle: 'À relancer', filtres: { alerte: 'a-relancer' } },
-    { cle: 'email', libelle: 'Sans e-mail', filtres: { email: 'sans' } }
+    { cle: 'tous', libelle: 'Tous', icone: 'bi-people', filtres: {} },
+    { cle: 'actifs', libelle: 'En cours', icone: 'bi-play-circle', filtres: { actifs: '1' } },
+    { cle: 'sans-fiche-semestre', libelle: `Sans fiche ${this.semestre.semestre}`, icone: 'bi-file-earmark-x', filtres: { alerte: 'sans-fiche-semestre' } },
+    { cle: 'a-relancer', libelle: 'À relancer', icone: 'bi-bell', filtres: { alerte: 'a-relancer' } },
+    { cle: 'email', libelle: 'Sans e-mail', icone: 'bi-envelope-slash', filtres: { email: 'sans' } }
   ];
 
   readonly residents = signal<any[]>([]);
   readonly total = signal(0);
-  readonly sansEmail = signal(0);
+  // Nombre de résidents derrière chaque onglet (recherche et autres filtres compris)
+  readonly compteurs = signal<Record<string, number>>({});
+  readonly menuOuvert = signal<number | null>(null);
   readonly chargement = signal(true);
   readonly export = signal(false);
   readonly specialites = signal<string[]>([]);
@@ -122,7 +128,7 @@ export class AdminData implements OnInit {
       next: (res) => {
         this.residents.set(res.data);
         this.total.set(res.total);
-        this.sansEmail.set(res.sansEmail ?? 0);
+        this.compteurs.set(res.compteurs ?? {});
         this.chargement.set(false);
       },
       error: () => {
@@ -235,6 +241,21 @@ export class AdminData implements OnInit {
   }
 
   // ===== Lignes =====
+
+  basculerMenu(id: number) {
+    this.menuOuvert.set(this.menuOuvert() === id ? null : id);
+  }
+
+  // Le menu d'actions d'une ligne se ferme au clic ailleurs ou avec Échap
+  @HostListener('document:click', ['$event'])
+  fermerMenuAuClic(e: MouseEvent) {
+    if (this.menuOuvert() !== null && !(e.target as HTMLElement).closest('.lr-menu')) this.menuOuvert.set(null);
+  }
+
+  @HostListener('document:keydown.escape')
+  fermerMenu() {
+    this.menuOuvert.set(null);
+  }
 
   ouvrir(r: any) {
     this.router.navigate(['/admin/residents', r.id]);

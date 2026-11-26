@@ -1,0 +1,120 @@
+<div class="largeur-page">
+  <div class="admin-page-header">
+    <h2 class="admin-page-title"><i class="bi bi-diagram-3" aria-hidden="true"></i> Parcours des résidents</h2>
+    <div class="d-flex gap-2 flex-wrap">
+      <app-enregistrer-vue ecran="parcours"></app-enregistrer-vue>
+      <a class="btn pill-btn-outline-dark" routerLink="/admin/statistiques"><i class="bi bi-graph-up" aria-hidden="true"></i> Statistiques</a>
+    </div>
+  </div>
+
+  @if (erreur()) {
+  <div class="card dashboard-card">
+    <div class="etat-vide">
+      <i class="bi bi-wifi-off etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Parcours indisponibles</div>
+      <p class="etat-vide-texte">Le serveur n'a pas répondu. Vérifiez la connexion puis réessayez.</p>
+      <button type="button" class="btn pill-btn-dark" (click)="charger()"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Réessayer</button>
+    </div>
+  </div>
+  } @else if (!donnees()) {
+  <div class="kpi-grille" aria-busy="true" aria-label="Chargement des parcours">
+    @for (n of [1, 2, 3]; track n) { <span class="skeleton skeleton-carte"></span> }
+  </div>
+  <span class="skeleton skeleton-carte skeleton-bloc mt-4"></span>
+  } @else if (donnees()!.promotions.length === 0) {
+  <div class="card dashboard-card">
+    <div class="etat-vide">
+      <i class="bi bi-people etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Aucun résident en cours de résidanat</div>
+      <p class="etat-vide-texte">Les parcours apparaîtront après l'import du registre.</p>
+    </div>
+  </div>
+  } @else {
+  @let d = donnees()!;
+
+  <!-- Une carte par promotion : la proportion de parcours à jour -->
+  <div class="promotions-grille" role="tablist" aria-label="Promotions">
+    @for (p of d.promotions; track p.promotion) {
+    <button type="button" role="tab" class="promotion-carte" [class.actif]="p.promotion === promotionAffichee()"
+      [attr.aria-selected]="p.promotion === promotionAffichee()" (click)="choisirPromotion(p.promotion)">
+      <span class="promotion-titre">Promotion {{ p.promotion }} <small>{{ libelleNiveau(p.niveau) }} · {{ p.residents }} résidents</small></span>
+      <span class="progression" role="img" [attr.aria-label]="part(p.aJour, p.residents) + ' % de parcours à jour'">
+        <span [style.width.%]="part(p.aJour, p.residents)"></span></span>
+      <span class="promotion-detail">
+        <span><strong class="chiffres">{{ p.aJour }}</strong> à jour</span>
+        @if (p.incomplets > 0) { <span class="texte-alerte"><strong class="chiffres">{{ p.incomplets }}</strong> incomplet(s)</span> }
+        @if (p.sansFicheCourant > 0) { <span class="texte-attention"><strong class="chiffres">{{ p.sansFicheCourant }}</strong> sans fiche ce semestre</span> }
+      </span>
+    </button>
+    }
+  </div>
+
+  <div class="barre-outils-parcours">
+    <div class="input-group input-group-sm recherche-parcours">
+      <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+      <input type="search" class="form-control" id="rechercheParcours" placeholder="Nom du résident" aria-label="Chercher un résident"
+        [value]="recherche()" (input)="chercher($event)">
+    </div>
+    <div class="form-check form-switch mb-0">
+      <input class="form-check-input" type="checkbox" role="switch" id="incompletsSeulement"
+        [checked]="incompletsSeulement()" (change)="basculerIncomplets()">
+      <label class="form-check-label" for="incompletsSeulement">Parcours à reprendre uniquement</label>
+    </div>
+    <span class="ms-auto small text-muted chiffres">{{ residents().length }} résident(s) affiché(s)</span>
+  </div>
+
+  <div class="card dashboard-card p-3">
+    @if (residents().length === 0) {
+    <div class="etat-vide py-4">
+      <i class="bi bi-check2-circle etat-vide-icone" aria-hidden="true"></i>
+      <div class="etat-vide-titre">Aucun résident à afficher</div>
+      <p class="etat-vide-texte mb-0">
+        @if (incompletsSeulement()) { Tous les parcours de cette promotion sont à jour. } @else { Aucun nom ne correspond à la recherche. }</p>
+    </div>
+    } @else {
+    <div class="parcours-defilement">
+      <table class="tableau-parcours">
+        <caption class="visually-hidden">Semestres de résidanat de la promotion {{ promotionAffichee() }}</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="parcours-nom">Résident</th>
+            @for (c of colonnes(); track c.niveau + c.semestre) {
+            <th scope="col"><span class="d-block">Année {{ c.niveau }}</span><small class="text-muted fw-normal">{{ c.semestre }} {{ c.annee }}</small></th>
+            }
+            <th scope="col" class="text-end">Faits</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of residents(); track r.id) {
+          <tr>
+            <th scope="row" class="parcours-nom">
+              <a [routerLink]="['/admin/residents', r.id]">{{ r.nom_prenom }}</a>
+              @if (r.faculte) { <small class="d-block text-muted fw-normal">{{ r.faculte }}</small> }
+            </th>
+            @for (s of r.semestres; track s.niveau + s.semestre) {
+            <td>
+              <span class="parcours-case" [attr.data-etat]="s.etat" [title]="detailSemestre(s)">
+                <span class="parcours-case-texte">{{ resumeSemestre(s) }}</span>
+                @if (s.etat === 'en-cours' || s.etat === 'partiel' || s.etat === 'rattrape') {
+                <small class="parcours-case-etat">{{ libellesEtats[s.etat] }}</small>
+                }
+              </span>
+            </td>
+            }
+            <td class="text-end chiffres" [class.texte-alerte]="r.incomplets > 0"><strong>{{ r.faits }}</strong>/{{ r.total }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="legende-graphe mt-3">
+      @for (e of etatsLegende; track e) {
+      <span><span class="parcours-case parcours-case-legende" [attr.data-etat]="e" aria-hidden="true"></span>{{ libellesEtats[e] }}</span>
+      }
+    </div>
+    <p class="small text-muted mb-0 mt-2">Un semestre est fait quand ses deux trimestres sont couverts : stage semestriel, deux stages
+      trimestriels ou les moitiés de 45 jours. « Incomplet » : un seul trimestre couvert et pas de rattrapage.</p>
+    }
+  </div>
+  }
+</div>

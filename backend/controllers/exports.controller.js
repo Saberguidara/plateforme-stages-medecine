@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 const { listerResidents } = require('./residents.controller');
 const { preparerFiche } = require('./pdf.controller');
 const { genererFiche } = require('../services/pdf.service');
-const { PERIODES_DU_SEMESTRE, semestreCourant } = require('../config/specialites');
+const { PERIODES_DU_SEMESTRE, ORDRE_PERIODES_SQL, semestreCourant } = require('../config/specialites');
 const { normalizeString, parseBoundedYear } = require('../utils/validation');
 
 const MAX_FICHES_ZIP = 1500;
@@ -58,8 +58,9 @@ exports.exporterResidents = async (req, res) => {
     }
 };
 
-// Fiches d'un semestre, filtrables par promotion ou par hôpital.
-function filtresFiches(query) {
+// Fiches d'un semestre, filtrables par promotion, par hôpital puis par service de cet hôpital.
+// `avecLieu: false` ignore hôpital et service (liste des lieux proposés dans les filtres).
+function filtresFiches(query, { avecLieu = true } = {}) {
     const courant = semestreCourant();
     const semestre = ['S1', 'S2'].includes(query.semestre) ? query.semestre : courant.semestre;
     const annee = parseBoundedYear(query.annee) || courant.annee;
@@ -67,9 +68,24 @@ function filtresFiches(query) {
     const params = [PERIODES_DU_SEMESTRE[semestre], annee];
     const promo = parseInt(query.promo, 10);
     if (promo) { conditions.push('r.promotion = ?'); params.push(promo); }
-    const hopital = normalizeString(query.hopital);
-    if (hopital) { conditions.push('f.hopital = ?'); params.push(hopital); }
+    const hopital = avecLieu ? normalizeString(query.hopital) : '';
+    if (hopital) {
+        conditions.push('f.hopital = ?'); params.push(hopital);
+        const service = normalizeString(query.service);
+        if (service) { conditions.push('f.service = ?'); params.push(service); }
+    }
     return { semestre, annee, where: conditions.join(' AND '), params };
+}
+
+function regrouperLieux(paires) {
+    const hopitaux = new Map();
+    for (const { hopital, service, n } of paires) {
+        if (!hopitaux.has(hopital)) hopitaux.set(hopital, { hopital, fiches: 0, services: [] });
+        const h = hopitaux.get(hopital);
+        h.fiches += Number(n);
+        if (service) h.services.push({ service, fiches: Number(n) });
+    }
+    return [...hopitaux.values()];
 }
 
 exports.compterFiches = async (req, res) => {
@@ -79,7 +95,15 @@ exports.compterFiches = async (req, res) => {
             `SELECT COUNT(*) AS n FROM formulaires_stage f JOIN residents r ON r.id = f.resident_id WHERE ${where}`,
             params
         );
-        res.json({ semestre, annee, total: rows[0].n, maximum: MAX_FICHES_ZIP });
+        // Hôpitaux et services du semestre (selon la promotion), pour les listes de filtres
+        const lieux = filtresFiches(req.query, { avecLieu: false });
+        const [paires] = await db.query(
+            `SELECT f.hopital, f.service, COUNT(*) AS n FROM formulaires_stage f JOIN residents r ON r.id = f.resident_id
+             WHERE ${lieux.where} AND f.hopital IS NOT NULL AND f.hopital <> ''
+             GROUP BY f.hopital, f.service ORDER BY f.hopital ASC, f.service ASC`,
+            lieux.params
+        );
+        res.json({ semestre, annee, total: rows[0].n, maximum: MAX_FICHES_ZIP, hopitaux: regrouperLieux(paires) });
     } catch (error) {
         logger.error('Comptage des fiches : ' + error);
         res.status(500).json({ message: 'Erreur lors du comptage des fiches.' });
@@ -95,7 +119,7 @@ exports.exporterFichesZip = async (req, res) => {
                     r.cin, r.nom_prenom, r.specialite, r.niveau, r.promotion
              FROM formulaires_stage f JOIN residents r ON r.id = f.resident_id
              WHERE ${where}
-             ORDER BY r.promotion DESC, r.nom_prenom ASC, FIELD(f.periode,'T1','T2','S1','T3','T4','S2','R1','R2')`,
+             ORDER BY r.promotion DESC, r.nom_prenom ASC, FIELD(f.periode,${ORDRE_PERIODES_SQL})`,
             params
         );
     } catch (error) {
@@ -104,7 +128,7 @@ exports.exporterFichesZip = async (req, res) => {
     }
     if (fiches.length === 0) return res.status(404).json({ message: 'Aucune fiche pour ces critères.' });
     if (fiches.length > MAX_FICHES_ZIP) {
-        return res.status(413).json({ message: `Trop de fiches (${fiches.length}) : affinez par promotion ou par hôpital.` });
+        return res.status(413).json({ message: `Trop de fiches (${fiches.length}) : affinez par promotion, hôpital ou service.` });
     }
 
     res.set({

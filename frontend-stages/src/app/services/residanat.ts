@@ -4,7 +4,11 @@
 // Durée du résidanat en médecine de famille ; les autres spécialités seront configurées plus tard.
 export const DUREE_RESIDANAT = 3;
 
-export const ORDRE_PERIODES = ['T1', 'T2', 'S1', 'T3', 'T4', 'S2', 'R1', 'R2'];
+// Même ordre que le serveur : dans un trimestre, ses deux moitiés de 45 jours (T1A, T1B) d'abord.
+export const ORDRE_PERIODES = [
+  'T1A', 'T1B', 'T1', 'T2A', 'T2B', 'T2', 'S1',
+  'T3A', 'T3B', 'T3', 'T4A', 'T4B', 'T4', 'S2', 'R1', 'R2'
+];
 
 export const LIBELLES_PERIODES: Record<string, string> = {
   T1: '1er trimestre · janvier à mars',
@@ -13,20 +17,43 @@ export const LIBELLES_PERIODES: Record<string, string> = {
   T4: '4e trimestre · octobre à décembre',
   S1: '1er semestre · janvier à juin',
   S2: '2nd semestre · juillet à décembre',
+  T1A: '45 jours · 1er janvier au 15 février',
+  T1B: '45 jours · 16 février au 31 mars',
+  T2A: '45 jours · 1er avril au 15 mai',
+  T2B: '45 jours · 16 mai au 30 juin',
+  T3A: '45 jours · 1er juillet au 15 août',
+  T3B: '45 jours · 16 août au 30 septembre',
+  T4A: '45 jours · 1er octobre au 15 novembre',
+  T4B: '45 jours · 16 novembre au 31 décembre',
   R1: 'Rattrapage du 1er semestre',
   R2: 'Rattrapage du 2nd semestre'
 };
 
-// Périodes qui couvrent les mêmes mois (un semestre et ses deux trimestres)
-const CHEVAUCHEMENTS: Record<string, string[]> = {
-  S1: ['T1', 'T2'], T1: ['S1'], T2: ['S1'],
-  S2: ['T3', 'T4'], T3: ['S2'], T4: ['S2']
+// Périodes qui couvrent des mois en commun : un semestre, ses trimestres et leurs moitiés de 45 jours.
+const CONTENU: Record<string, string[]> = {
+  S1: ['T1', 'T2', 'T1A', 'T1B', 'T2A', 'T2B'], S2: ['T3', 'T4', 'T3A', 'T3B', 'T4A', 'T4B'],
+  T1: ['T1A', 'T1B'], T2: ['T2A', 'T2B'], T3: ['T3A', 'T3B'], T4: ['T4A', 'T4B']
 };
+const CHEVAUCHEMENTS: Record<string, string[]> = {};
+for (const [grande, petites] of Object.entries(CONTENU)) {
+  for (const petite of petites) {
+    (CHEVAUCHEMENTS[grande] ??= []).push(petite);
+    (CHEVAUCHEMENTS[petite] ??= []).push(grande);
+  }
+}
 
 export interface StageDate {
   periode: string;
   annee: number;
 }
+
+export interface StageLieu extends StageDate {
+  service?: string | null;
+  hopital?: string | null;
+}
+
+const cleLieu = (v: string | null | undefined) =>
+  (v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
 
 export function semestreCourant(date = new Date()) {
   return { semestre: date.getMonth() < 6 ? 'S1' : 'S2', annee: date.getFullYear() };
@@ -93,7 +120,15 @@ export function periodeSuivante(stages: StageDate[], periodesAutorisees: string[
       S1: { periode: 'S2', annee: dernier.annee },
       T3: { periode: 'T4', annee: dernier.annee },
       T4: { periode: 'T1', annee: dernier.annee + 1 },
-      S2: { periode: 'S1', annee: dernier.annee + 1 }
+      S2: { periode: 'S1', annee: dernier.annee + 1 },
+      T1A: { periode: 'T1B', annee: dernier.annee },
+      T1B: { periode: 'T2', annee: dernier.annee },
+      T2A: { periode: 'T2B', annee: dernier.annee },
+      T2B: { periode: 'T3', annee: dernier.annee },
+      T3A: { periode: 'T3B', annee: dernier.annee },
+      T3B: { periode: 'T4', annee: dernier.annee },
+      T4A: { periode: 'T4B', annee: dernier.annee },
+      T4B: { periode: 'T1', annee: dernier.annee + 1 }
     };
     suivant = suite[dernier.periode] ?? { periode: semestreCourant().semestre, annee: dernier.annee };
   }
@@ -106,12 +141,15 @@ export interface ConflitPeriode<T> {
   chevauchements: T[];
 }
 
-// Même période déjà enregistrée (bloquant) ou période qui couvre les mêmes mois (simple avertissement).
-export function conflitsPeriode<T extends StageDate & { id?: number }>(stages: T[], cible: StageDate, ignorerId?: number): ConflitPeriode<T> {
+// Même stage déjà enregistré sur la période (bloquant) ; autre stage sur la même période ou sur des mois
+// en commun (simple avertissement : les stages en parallèle existent, deux CSB sur un semestre par exemple).
+export function conflitsPeriode<T extends StageLieu & { id?: number }>(stages: T[], cible: StageLieu, ignorerId?: number): ConflitPeriode<T> {
   const autres = stages.filter((s) => s.id !== ignorerId && Number(s.annee) === Number(cible.annee));
+  const memeLieu = (s: T) => cleLieu(s.service) === cleLieu(cible.service) && cleLieu(s.hopital) === cleLieu(cible.hopital);
   return {
-    occupee: autres.find((s) => s.periode === cible.periode) ?? null,
-    chevauchements: autres.filter((s) => (CHEVAUCHEMENTS[cible.periode] ?? []).includes(s.periode))
+    occupee: autres.find((s) => s.periode === cible.periode && memeLieu(s)) ?? null,
+    chevauchements: autres.filter((s) => (s.periode === cible.periode && !memeLieu(s))
+      || (CHEVAUCHEMENTS[cible.periode] ?? []).includes(s.periode))
   };
 }
 

@@ -96,7 +96,7 @@ exports.traiter = async (req, res) => {
         );
         await journaliser(null, req, {
             action: 'traitement', entite: 'fiche', entiteId: s.fiche_id, residentId: s.resident_id,
-            apres: { periode: s.periode, annee: s.annee, motif: s.motif, message: s.message, reponse }
+            apres: { signalementId: s.id, periode: s.periode, annee: s.annee, motif: s.motif, message: s.message, reponse }
         });
 
         let prevenu = false;

@@ -6,10 +6,14 @@
     "node": ">=20.19"
   },
   "scripts": {
-    "build": "npm ci --prefix backend --omit=dev && npm ci --prefix frontend-stages --include=dev &&npm run build --prefix frontend-stages",
+    "build": "npm ci --prefix backend --omit=dev && npm ci --prefix frontend-stages --include=dev && npm run build --prefix frontend-stages",
     "start": "npm start --prefix backend",
     "test": "npm test --prefix backend",
     "db:init": "npm run db:init --prefix backend",
-    "db:migrate": "npm run db:migrate --prefix backend"
+    "db:migrate": "npm run db:migrate --prefix backend",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
   }
 }

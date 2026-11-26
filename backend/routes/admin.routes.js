@@ -4,11 +4,13 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { requireAdmin, requireGestionComptes } = require('../middlewares/auth.middleware');
 const stats = require('../controllers/stats.controller');
+const statistiques = require('../controllers/statistiques.controller');
 const journal = require('../controllers/journal.controller');
 const referentiels = require('../controllers/referentiels.controller');
 const exportsController = require('../controllers/exports.controller');
 const comptes = require('../controllers/comptes.controller');
 const notifications = require('../controllers/notifications.controller');
+const vues = require('../controllers/vues.controller');
 
 // La génération d'un ZIP de fiches est coûteuse : quelques exports par minute suffisent.
 const zipLimiter = rateLimit({
@@ -20,11 +22,26 @@ const zipLimiter = rateLimit({
 });
 
 router.get('/statistiques', requireAdmin, stats.getStatistiques);
+router.get('/statistiques/synthese', requireAdmin, stats.getSynthese);
+router.get('/statistiques/options', requireAdmin, statistiques.getOptions);
+router.get('/statistiques/affectations', requireAdmin, statistiques.getAffectations);
+router.get('/statistiques/affectations/detail', requireAdmin, statistiques.getDetailAffectation);
+router.get('/statistiques/affectations.xlsx', requireAdmin, statistiques.exporterAffectations);
+router.get('/statistiques/parcours', requireAdmin, statistiques.getParcours);
+router.get('/statistiques/diffusion', requireAdmin, statistiques.getDiffusion);
+router.get('/statistiques/qualite', requireAdmin, statistiques.getQualite);
+router.get('/statistiques/rapport.pdf', requireAdmin, statistiques.exporterRapport);
 router.get('/journal', requireAdmin, journal.getJournal);
+
+router.get('/vues', requireAdmin, vues.lister);
+router.post('/vues', requireAdmin, vues.creer);
+router.delete('/vues/:id', requireAdmin, vues.supprimer);
+router.post('/journal/:id/annuler', requireAdmin, journal.annuler);
 
 router.get('/referentiels/suggestions', requireAdmin, referentiels.getSuggestions);
 router.get('/referentiels/:type', requireAdmin, referentiels.getReferentiel);
 router.post('/referentiels/fusion', requireAdmin, referentiels.fusionner);
+router.post('/referentiels/ignorer', requireAdmin, referentiels.ignorerVariantes);
 
 router.get('/exports/residents.xlsx', requireAdmin, exportsController.exporterResidents);
 router.get('/exports/fiches/compte', requireAdmin, exportsController.compterFiches);
@@ -39,8 +56,10 @@ const notificationLimiter = rateLimit({
     message: { message: 'Un envoi vient déjà d\'être lancé. Patientez une minute.' }
 });
 
+router.get('/notifications/resume', requireAdmin, notifications.resume);
 router.get('/notifications/fiches', requireAdmin, notifications.apercu);
 router.post('/notifications/fiches', requireAdmin, notifications.verifierEnvoi, notificationLimiter, notifications.envoyer);
+router.post('/statistiques/diffusion/rappels', requireAdmin, notifications.verifierEnvoi, notificationLimiter, statistiques.envoyerRappels);
 
 router.get('/moi', requireAdmin, comptes.moi);
 router.get('/comptes', requireGestionComptes, comptes.lister);

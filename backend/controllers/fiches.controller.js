@@ -3,7 +3,8 @@ const logger = require('../utils/logger');
 const { validateFichePayload } = require('../utils/validation');
 const { journaliser, extraire, CHAMPS_FICHE } = require('../utils/journal');
 
-const periodeOccupee = (periode, annee) => `La période ${periode} ${annee} est déjà occupée pour ce résident.`;
+// Deux fiches peuvent partager une période (stages en parallèle), mais pas le même service dans le même hôpital.
+const periodeOccupee = (periode, annee) => `Ce résident a déjà une fiche ${periode} ${annee} pour ce service et cet hôpital.`;
 
 exports.createFiche = async (req, res) => {
     const validation = validateFichePayload(req.body, { requireResidentId: true });
@@ -84,14 +85,15 @@ exports.deleteFiche = async (req, res) => {
     }
 
     try {
-        const [avant] = await db.query('SELECT id, resident_id, periode, annee, service, hopital FROM formulaires_stage WHERE id = ?', [ficheId]);
+        const [avant] = await db.query('SELECT id, resident_id, periode, annee, service, hopital, url_pdf, import_id FROM formulaires_stage WHERE id = ?', [ficheId]);
         if (avant.length === 0) {
             return res.status(404).json({ success: false, message: 'Fiche introuvable.' });
         }
         await db.query('DELETE FROM formulaires_stage WHERE id = ?', [ficheId]);
         await journaliser(db, req, {
             action: 'suppression', entite: 'fiche', entiteId: ficheId, residentId: avant[0].resident_id,
-            avant: extraire(avant[0], CHAMPS_FICHE)
+            // Lien PDF et import d'origine : la fiche est rétablie à l'identique si la suppression est annulée.
+            avant: extraire(avant[0], [...CHAMPS_FICHE, 'url_pdf', 'import_id'])
         });
         res.json({ success: true, message: 'Fiche supprimée.' });
     } catch (error) {

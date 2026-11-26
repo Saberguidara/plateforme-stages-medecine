@@ -37,7 +37,8 @@ export class AdminHistorique implements OnInit {
     { valeur: 'fiche', libelle: 'Fiches' },
     { valeur: 'import', libelle: 'Imports' },
     { valeur: 'referentiel', libelle: 'Hôpitaux et services' },
-    { valeur: 'administrateur', libelle: 'Comptes' }
+    { valeur: 'administrateur', libelle: 'Comptes' },
+    { valeur: 'connexion', libelle: 'Connexions' }
   ];
 
   ngOnInit() {

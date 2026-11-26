@@ -35,6 +35,8 @@ export class AdminReferentiels implements OnInit {
   readonly selection = signal<Set<string>>(new Set());
   readonly fusion = signal<Fusion | null>(null);
   readonly fusionEnCours = signal(false);
+  // Groupe en cours d'enregistrement « ne pas fusionner »
+  readonly ignorance = signal<number | null>(null);
 
   // Valeur retenue pour chaque groupe proposé, modifiable avant la fusion
   ciblesGroupes: Record<number, string> = {};
@@ -82,6 +84,30 @@ export class AdminReferentiels implements OnInit {
     else suivante.add(valeur);
     this.selection.set(suivante);
     if (suivante.size === 1 || !suivante.has(this.cibleManuelle)) this.cibleManuelle = [...suivante][0] ?? '';
+  }
+
+  viderSelection() {
+    this.selection.set(new Set());
+    this.cibleManuelle = '';
+  }
+
+  // Les écritures du groupe désignent des lieux différents : elles ne seront plus proposées ensemble.
+  ignorerGroupe(index: number) {
+    const groupe = this.groupes()[index];
+    this.ignorance.set(index);
+    this.api.ignorerVariantes(this.type(), groupe.variantes.map((v) => v.valeur)).subscribe({
+      next: (res) => {
+        this.ignorance.set(null);
+        this.toast.succes(res.message);
+        const restants = this.groupes().filter((_, i) => i !== index);
+        this.groupes.set(restants);
+        this.ciblesGroupes = Object.fromEntries(restants.map((g, i) => [i, this.ciblesGroupes[i >= index ? i + 1 : i] ?? g.cible]));
+      },
+      error: (err) => {
+        this.ignorance.set(null);
+        this.toast.erreur(err.error?.message || "L'enregistrement a échoué.");
+      }
+    });
   }
 
   private nbFiches(valeurs: string[]) {

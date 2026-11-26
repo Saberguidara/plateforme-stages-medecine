@@ -48,7 +48,7 @@
 
 .parcours-surtitre {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: var(--fms-taille-petit);
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--fms-orange);
@@ -74,7 +74,7 @@
 }
 
 .parcours-statut-libelle {
-    font-size: 0.8rem;
+    font-size: var(--fms-taille-petit);
     color: rgba(245, 240, 230, 0.7);
 }
 
@@ -154,7 +154,7 @@
 }
 
 .parcours-etape-libelle {
-    font-size: 0.85rem;
+    font-size: var(--fms-taille-petit);
     color: rgba(245, 240, 230, 0.75);
 }
 
@@ -178,7 +178,7 @@
 .section-titre small {
     font-family: Arial, Helvetica, sans-serif;
     font-weight: 400;
-    font-size: 0.9rem;
+    font-size: var(--fms-taille-texte);
     color: var(--fms-gris);
 }
 
@@ -238,7 +238,7 @@
 /* Signalement d'une erreur */
 .lien-signaler {
     color: var(--fms-orange-fonce);
-    font-size: 0.9rem;
+    font-size: var(--fms-taille-texte);
     padding: 4px 0;
 }
 
@@ -272,7 +272,7 @@
     display: flex;
     gap: 8px;
     align-items: flex-start;
-    font-size: 0.9rem;
+    font-size: var(--fms-taille-texte);
     background: rgba(31, 122, 77, 0.08);
     border-radius: 12px;
     padding: 8px 12px;
@@ -337,7 +337,7 @@
     }
 
     .semestre-actions .btn-lg {
-        font-size: 0.95rem;
+        font-size: var(--fms-taille-texte);
         letter-spacing: 0;
         padding-inline: 12px;
     }

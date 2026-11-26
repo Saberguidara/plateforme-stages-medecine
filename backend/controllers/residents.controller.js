@@ -1,8 +1,9 @@
 const db = require('../config/db');
+const { construireParcours } = require('../services/statistiques/parcours');
 const logger = require('../utils/logger');
 const { validateResidentPayload, validateCin, normalizeString, validatePagination } = require('../utils/validation');
 const {
-    SPECIALITES, SPECIALITE_PAR_DEFAUT, PERIODES_DU_SEMESTRE, semestreCourant, etatResidanat, specialiteDe, libellePeriode
+    SPECIALITES, SPECIALITE_PAR_DEFAUT, PERIODES_DU_SEMESTRE, ORDRE_PERIODES_SQL, semestreCourant, etatResidanat, specialiteDe, libellePeriode
 } = require('../config/specialites');
 const { NIVEAU_COURANT, construireFiltres } = require('../services/filtres-residents');
 const { journaliser, extraire, CHAMPS_RESIDENT } = require('../utils/journal');
@@ -10,7 +11,7 @@ const { journaliser, extraire, CHAMPS_RESIDENT } = require('../utils/journal');
 // Remplace le niveau brut par l'année de résidanat en cours, ou « parcours terminé ».
 const avecEtat = (r) => ({ ...r, ...etatResidanat(r.specialite, r.niveau) });
 
-const ORDRE_FICHES_F = "ORDER BY f.annee ASC, FIELD(f.periode,'T1','T2','S1','T3','T4','S2','R1','R2',f.periode)";
+const ORDRE_FICHES_F = `ORDER BY f.annee ASC, FIELD(f.periode,${ORDRE_PERIODES_SQL})`;
 
 exports.getResidentByCin = async (req, res) => {
     const cinValidation = validateCin(req.params.cin);
@@ -55,7 +56,12 @@ exports.getResidentByCin = async (req, res) => {
         const fiches = lignes.map((f) => ({ ...f, dates: libellePeriode(specialite, f.periode, f.annee) }));
         const { semestre, annee } = semestreCourant();
 
-        res.json({ ...resident, fiches, semestreCourant: { semestre, annee, periodes: PERIODES_DU_SEMESTRE[semestre] } });
+        // Semestres du résidanat, pour la frise de l'espace résident
+        const parcours = construireParcours(resident, lignes, { semestre, annee });
+        res.json({
+            ...resident, fiches, semestreCourant: { semestre, annee, periodes: PERIODES_DU_SEMESTRE[semestre] },
+            parcours: parcours && { semestres: parcours.semestres, faits: parcours.faits, total: parcours.total, incomplets: parcours.incomplets }
+        });
     } catch (error) {
         logger.error('Erreur lors de la recherche : ' + error);
         res.status(500).json({ error: 'Erreur serveur lors de la recherche' });
@@ -141,6 +147,35 @@ async function listerResidents(query, { pagination = true, page = 1, limit = 20 
 }
 exports.listerResidents = listerResidents;
 
+// Onglets de la liste : chacun remplace actifs / alerte / email, les autres filtres (recherche, promotion…) restent.
+const ONGLETS = {
+    actifs: { actifs: '1' },
+    'sans-fiche-semestre': { alerte: 'sans-fiche-semestre' },
+    'a-relancer': { alerte: 'a-relancer' },
+    email: { email: 'sans' }
+};
+
+// Nombre de résidents derrière chaque onglet, en une seule requête.
+async function compterOnglets(query) {
+    const { actifs, alerte, email, ids, ...base } = query;
+    const { where, params } = await construireFiltres(base);
+    const colonnes = [];
+    const valeurs = [];
+    for (const [cle, filtre] of Object.entries(ONGLETS)) {
+        const condition = await construireFiltres(filtre);
+        colonnes.push(`SUM(CASE WHEN ${condition.where.replace(/^WHERE /, '')} THEN 1 ELSE 0 END) AS \`${cle}\``);
+        valeurs.push(...condition.params);
+    }
+    const [resultat] = await db.query(
+        `SELECT COUNT(*) AS onglet_tous, ${colonnes.join(', ')} FROM residents r ${where}`,
+        [...valeurs, ...params]
+    );
+    const ligne = resultat?.[0] ?? {};
+    const compteurs = { tous: Number(ligne.onglet_tous) || 0 };
+    for (const cle of Object.keys(ONGLETS)) compteurs[cle] = Number(ligne[cle]) || 0;
+    return compteurs;
+}
+
 exports.getAllResidents = async (req, res) => {
     const pagination = validatePagination(req.query, { limitDefaut: 20, limitMax: 200 });
     if (!pagination.valid) return res.status(400).json({ error: pagination.message });
@@ -149,7 +184,8 @@ exports.getAllResidents = async (req, res) => {
         const { rows, total, page, limit } = await listerResidents(req.query, { page: pagination.page, limit: pagination.limit });
         // Résidents qui ne peuvent pas se connecter, sur toute la base (indépendant des filtres)
         const [sansEmailResult] = await db.query("SELECT COUNT(*) AS n FROM residents WHERE email IS NULL OR email = ''");
-        res.json({ data: rows, total, page, limit, sansEmail: sansEmailResult[0].n });
+        const compteurs = await compterOnglets(req.query);
+        res.json({ data: rows, total, page, limit, sansEmail: sansEmailResult[0]?.n ?? 0, compteurs });
     } catch (error) {
         logger.error('Get all residents error: ' + error);
         res.status(500).json({ error: 'Erreur lors de la récupération des résidents' });
@@ -261,7 +297,11 @@ exports.deleteResident = async (req, res) => {
     try {
         const [avant] = await db.query('SELECT * FROM residents WHERE id = ?', [residentId]);
         if (avant.length === 0) return res.status(404).json({ message: 'Résident introuvable.' });
-        const [fiches] = await db.query('SELECT periode, annee, service, hopital FROM formulaires_stage WHERE resident_id = ?', [residentId]);
+        // Tout ce qu'il faut pour rétablir le dossier et ses fiches depuis le journal (annulation).
+        const [fiches] = await db.query(
+            'SELECT id, periode, annee, service, hopital, url_pdf, import_id FROM formulaires_stage WHERE resident_id = ?',
+            [residentId]
+        );
 
         // Les fiches et leurs téléchargements suivent par clé étrangère (ON DELETE CASCADE).
         await db.query('DELETE FROM residents WHERE id = ?', [residentId]);

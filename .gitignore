@@ -1,6 +1,9 @@
 node_modules/
 google-apps-script/
 .env
+.env.*
+!.env.example
+!.env.production.example
 *.xlsx
 uploads/
 .vscode/
@@ -25,3 +28,7 @@ docs/*.pdf
 
 # Configuration locale de Claude Code
 .claude/
+
+# Rapports Playwright
+test-results/
+playwright-report/

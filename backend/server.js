@@ -52,6 +52,9 @@ app.use(cors((req, cb) => {
 
 app.use(express.json({ limit: '100kb' }));
 
+// Les statistiques mises en cache sont recalculées après toute modification
+app.use('/api', require('./services/statistiques/cache').viderApresEcriture);
+
 const authRoutes = require('./routes/auth.routes');
 const importRoutes = require('./routes/import.routes');
 const residentsRoutes = require('./routes/residents.routes');

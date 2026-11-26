@@ -30,6 +30,32 @@
       </li>
       }
     </ol>
+
+    <!-- Mes semestres : chacun avec son état et ses services -->
+    @if (d.parcours; as p) {
+    <div class="mes-semestres">
+      <div class="mes-semestres-titre">
+        <span>Mes semestres</span>
+        <span class="chiffres">{{ p.faits }} / {{ p.total }} validés</span>
+      </div>
+      <div class="progression" role="img" [attr.aria-label]="p.faits + ' semestres validés sur ' + p.total">
+        <span [style.width.%]="(p.faits / p.total) * 100"></span></div>
+      <ol class="mes-semestres-liste">
+        @for (s of p.semestres; track s.niveau + s.semestre) {
+        <li class="parcours-case" [attr.data-etat]="s.etat">
+          <small class="mes-semestres-quand">Année {{ s.niveau }} · {{ s.semestre }} {{ s.annee }}</small>
+          <strong>{{ etatsResident[s.etat] }}</strong>
+          @for (st of s.stages; track st.periode + st.service) { <small class="d-block">{{ st.periode }} · {{ st.service || 'Service non renseigné' }}</small> }
+        </li>
+        }
+      </ol>
+      @if (p.incomplets > 0) {
+      <p class="mes-semestres-alerte"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        {{ p.incomplets }} semestre(s) passé(s) sans stage complet sur la plateforme. Si vous l'avez effectué, contactez le service des stages
+        (<a routerLink="/aide">aide et contact</a>).</p>
+      }
+    </div>
+    }
   </section>
 
   <!-- La fiche du semestre en cours, mise en avant -->

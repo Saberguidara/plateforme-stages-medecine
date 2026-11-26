@@ -118,6 +118,22 @@ describe("Routes de l'administration", () => {
             expect(sql).toContain('r.id NOT IN (?)');
             expect(params).toEqual(expect.arrayContaining([[5, 6], [2]]));
         });
+
+        it("compte les résidents de chaque onglet en gardant la recherche mais pas l'onglet choisi", async () => {
+            repondre([
+                [/AS onglet_tous/, [[{ onglet_tous: 40, actifs: '35', 'sans-fiche-semestre': '6', 'a-relancer': '2', email: '3' }]]],
+                [/SELECT COUNT\(\*\) as total/, [[{ total: 3 }]]],
+                [/SELECT COUNT\(\*\) AS n FROM residents WHERE email/, [[{ n: 3 }]]]
+            ]);
+
+            const res = await request(app).get('/api/admin/residents?email=sans&search=ben').set('Authorization', jeton(LECTEUR));
+
+            expect(res.status).toBe(200);
+            expect(res.body.compteurs).toEqual({ tous: 40, actifs: 35, 'sans-fiche-semestre': 6, 'a-relancer': 2, email: 3 });
+            const [sql, params] = db.query.mock.calls.find(([s]) => /AS onglet_tous/.test(s));
+            expect(sql).toMatch(/WHERE 1=1 AND \(r\.cin LIKE \? OR r\.nom_prenom LIKE \?\)$/);
+            expect(params.slice(-2)).toEqual(['%ben%', '%ben%']);
+        });
     });
 
     describe('GET /api/admin/recherche', () => {
@@ -158,7 +174,7 @@ describe("Routes de l'administration", () => {
             expect(res.body.fiches[0].dates).toMatch(/^Du .+\/2025 au .+\/2025$/);
             expect(res.body.fiches[0].dernier_telechargement).toBe('2025-02-01 10:00:00');
             expect(['S1', 'S2']).toContain(res.body.semestreCourant.semestre);
-            expect(res.body.semestreCourant.periodes.length).toBe(4);
+            expect(res.body.semestreCourant.periodes.length).toBe(8);
         });
 
         it("refuse le dossier d'un autre résident", async () => {
@@ -395,6 +411,7 @@ describe("Routes de l'administration", () => {
 
         it("refuse l'annulation quand une fiche de l'import a été modifiée depuis", async () => {
             connexion.query
+                .mockResolvedValueOnce([[]]) // import antérieur au journal
                 .mockResolvedValueOnce([[{ filename: 'x.xlsx', undo_data: '{}', undone: 0 }]])
                 .mockResolvedValueOnce([[{ n: 2 }]]);
 
@@ -408,6 +425,7 @@ describe("Routes de l'administration", () => {
 
         it('annule un import intact et le journalise', async () => {
             connexion.query
+                .mockResolvedValueOnce([[]]) // import antérieur au journal
                 .mockResolvedValueOnce([[{ filename: 'x.xlsx', undo_data: '{"residentIds":[4]}', undone: 0 }]])
                 .mockResolvedValueOnce([[{ n: 0 }]])
                 .mockResolvedValueOnce([{ affectedRows: 5 }])
@@ -420,6 +438,32 @@ describe("Routes de l'administration", () => {
             expect(res.body.message).toBe('Import annulé : 5 fiches et 1 résidents supprimés.');
             expect(connexion.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO journal_actions'), expect.arrayContaining(['annulation', 'import', 3]));
             expect(connexion.commit).toHaveBeenCalled();
+        });
+
+        it("passe par le journal quand l'import y figure et marque l'action comme annulée", async () => {
+            connexion.query.mockImplementation(async (sql) => {
+                if (/^SELECT id FROM journal_actions/.test(sql)) return [[{ id: 50 }]];
+                if (/^SELECT \* FROM journal_actions/.test(sql)) return [[{ id: 50, action: 'import', entite: 'import', entite_id: 3, resident_id: null, avant: null, apres: '{}', annule_le: null }]];
+                if (/FROM historique_imports/.test(sql)) return [[{ filename: 'x.xlsx', undo_data: '{}', undone: 0 }]];
+                if (/COUNT/.test(sql)) return [[{ n: 0 }]];
+                if (/^DELETE FROM formulaires_stage/.test(sql)) return [{ affectedRows: 2 }];
+                return [{ affectedRows: 1 }];
+            });
+
+            const res = await request(app).post('/api/admin/import/undo').set('Authorization', jeton(ADMIN)).send({ importId: 3 });
+
+            expect(res.status).toBe(200);
+            expect(connexion.query).toHaveBeenCalledWith(expect.stringContaining('SET annule_le = NOW()'), ['admin', 50]);
+            expect(connexion.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO journal_actions'), expect.arrayContaining(['annulation', 'import', 3, 50]));
+        });
+
+        it("refuse d'annuler un rechargement complet des fiches", async () => {
+            connexion.query
+                .mockResolvedValueOnce([[]])
+                .mockResolvedValueOnce([[{ filename: 'registre.xlsx', undo_data: '{"rechargement":true}', undone: 0 }]]);
+            const res = await request(app).post('/api/admin/import/undo').set('Authorization', jeton(ADMIN)).send({ importId: 9 });
+            expect(res.status).toBe(409);
+            expect(connexion.query).not.toHaveBeenCalledWith(expect.stringContaining('DELETE'), expect.anything());
         });
     });
 
@@ -497,7 +541,7 @@ describe("Routes de l'administration", () => {
             expect(Object.keys(zip.files)).toEqual(['2A/Fiche_12345678_T3_2026.pdf']);
             const pdf = await zip.file('2A/Fiche_12345678_T3_2026.pdf').async('nodebuffer');
             expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
-            expect(db.query.mock.calls[0][1]).toEqual([['S2', 'T3', 'T4', 'R2'], 2026, 2025]);
+            expect(db.query.mock.calls[0][1]).toEqual([['S2', 'T3', 'T4', 'T3A', 'T3B', 'T4A', 'T4B', 'R2'], 2026, 2025]);
         });
 
         it('répond 404 quand aucune fiche ne correspond', async () => {
@@ -519,6 +563,68 @@ describe("Routes de l'administration", () => {
                 cible: 'HOP REG KERKENNAH',
                 variantes: [{ valeur: 'HOP REG KERKENNAH', nb_fiches: 8 }, { valeur: 'HOP REG KERKERNNAH', nb_fiches: 4 }]
             }]);
+        });
+
+        it('ne propose plus une paire marquée « ne pas fusionner »', () => {
+            const { variantesProbables, clePaire } = require('../controllers/referentiels.controller');
+            const valeurs = [{ valeur: 'HOP MIL SFAX', nb_fiches: 7 }, { valeur: 'Hop mil Gafsa', nb_fiches: 2 }, { valeur: 'HOP MIL SFAX.', nb_fiches: 1 }];
+            expect(variantesProbables(valeurs, new Set([clePaire('HOP MIL SFAX', 'HOP MIL GAFSA')]))).toEqual([{
+                cible: 'HOP MIL SFAX',
+                variantes: [{ valeur: 'HOP MIL SFAX', nb_fiches: 7 }, { valeur: 'HOP MIL SFAX.', nb_fiches: 1 }]
+            }]);
+        });
+
+        it('lit les paires ignorées et tolère une base sans la table', async () => {
+            const absente = Object.assign(new Error('absente'), { code: 'ER_NO_SUCH_TABLE' });
+            db.query.mockImplementation(async (sql) => {
+                if (/variantes_ignorees/.test(sql)) throw absente;
+                return [[{ valeur: 'HOP REG JERBA', nb_fiches: 4 }, { valeur: 'HOP REG DJERBA', nb_fiches: 2 }]];
+            });
+            const res = await request(app).get('/api/admin/referentiels/hopital').set('Authorization', jeton(LECTEUR));
+            expect(res.status).toBe(200);
+            expect(res.body.groupes).toHaveLength(1);
+        });
+
+        it('enregistre chaque paire d\'un groupe ignoré, sous forme normalisée', async () => {
+            repondre([[/INSERT IGNORE INTO variantes_ignorees/, [{ affectedRows: 3 }]], [/INSERT INTO journal_actions/, [{}]]]);
+            const res = await request(app).post('/api/admin/referentiels/ignorer').set('Authorization', jeton(ADMIN))
+                .send({ type: 'service', valeurs: ['Réa', 'REA B', 'Rea C'] });
+            expect(res.status).toBe(200);
+            const [, [paires]] = db.query.mock.calls.find(([s]) => /INSERT IGNORE INTO variantes_ignorees/.test(s));
+            expect(paires.map((p) => p.slice(0, 3))).toEqual([
+                ['service', 'REA', 'REA B'], ['service', 'REA', 'REA C'], ['service', 'REA B', 'REA C']
+            ]);
+        });
+
+        it('refuse « ne pas fusionner » en lecture seule ou avec une seule écriture', async () => {
+            expect((await request(app).post('/api/admin/referentiels/ignorer').set('Authorization', jeton(LECTEUR))
+                .send({ type: 'hopital', valeurs: ['A', 'B'] })).status).toBe(403);
+            expect((await request(app).post('/api/admin/referentiels/ignorer').set('Authorization', jeton(ADMIN))
+                .send({ type: 'hopital', valeurs: ['A'] })).status).toBe(400);
+        });
+    });
+
+    describe('GET /api/admin/exports/fiches/compte', () => {
+        it('filtre par hôpital puis service, et liste les lieux du semestre', async () => {
+            repondre([
+                [/GROUP BY f.hopital, f.service/, [[
+                    { hopital: 'HEDI CHAKER', service: 'PSYCHIATRIE', n: 3 },
+                    { hopital: 'HEDI CHAKER', service: 'REA', n: 2 },
+                    { hopital: 'HABIB BOURGUIBA', service: null, n: 1 }
+                ]]],
+                [/SELECT COUNT\(\*\) AS n FROM formulaires_stage/, [[{ n: 3 }]]]
+            ]);
+            const res = await request(app).get('/api/admin/exports/fiches/compte?semestre=S2&annee=2026&hopital=HEDI%20CHAKER&service=PSYCHIATRIE')
+                .set('Authorization', jeton(LECTEUR));
+            expect(res.status).toBe(200);
+            expect(res.body.total).toBe(3);
+            expect(res.body.hopitaux).toEqual([
+                { hopital: 'HEDI CHAKER', fiches: 5, services: [{ service: 'PSYCHIATRIE', fiches: 3 }, { service: 'REA', fiches: 2 }] },
+                { hopital: 'HABIB BOURGUIBA', fiches: 1, services: [] }
+            ]);
+            const [sql, params] = db.query.mock.calls.find(([s]) => /SELECT COUNT\(\*\) AS n FROM formulaires_stage/.test(s));
+            expect(sql).toContain('f.hopital = ? AND f.service = ?');
+            expect(params.slice(-2)).toEqual(['HEDI CHAKER', 'PSYCHIATRIE']);
         });
     });
 });
