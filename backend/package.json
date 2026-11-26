@@ -9,6 +9,7 @@
     "db:init": "node scripts/db.js init",
     "db:migrate": "node scripts/db.js migrate",
     "db:etat": "node scripts/db.js etat",
+    "db:sauvegarder": "node scripts/db.js sauvegarder",
     "admin:create": "node scripts/db.js admin:create",
     "fiche:template": "node scripts/build-fiche-template.js"
   },

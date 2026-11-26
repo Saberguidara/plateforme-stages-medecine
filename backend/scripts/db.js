@@ -2,10 +2,15 @@
 //   npm run db:init                     crée les tables d'une base vide (db/schema.sql)
 //   npm run db:migrate -- <fichier.sql> applique une migration de db/migrations/
 //   npm run db:etat                     affiche la base visée et les migrations appliquées (lecture seule)
+//   npm run db:sauvegarder              sauvegarde complète (mysqldump) dans Documents
+// Pour viser la base de Render : FICHIER_ENV=.env.production devant la commande (voir .env.production.example).
 //   npm run admin:create                crée ou met à jour un administrateur
 //                                       (ADMIN_LOGIN et ADMIN_PASSWORD dans l'environnement,
 //                                       ADMIN_NOM facultatif) ; le compte est réactivé avec le rôle admin
-require('dotenv').config({ quiet: true });
+// backend/.env, ou le fichier désigné par FICHIER_ENV (ex. FICHIER_ENV=.env.production pour la base de Render)
+require('./env').chargerEnv();
+const os = require('os');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
@@ -74,6 +79,38 @@ const SIGNES_MIGRATIONS = [
     ['010-vues-enregistrees.sql', "SELECT COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'vues_enregistrees'"]
 ];
 
+// Sauvegarde complète avec mysqldump, dans Documents (ou le chemin donné).
+// Le mot de passe passe par un fichier d'options temporaire, jamais par la ligne de commande.
+function sauvegarder() {
+    const mysqldump = process.env.MYSQLDUMP || String.raw`C:\wamp64\bin\mysql\mysql8.4.7\bin\mysqldump.exe`;
+    const horodatage = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    const sortie = path.resolve(argument || path.join(os.homedir(), 'Documents', `sauvegarde-${process.env.DB_NAME || 'base'}-${horodatage}.sql`));
+    const options = path.join(os.tmpdir(), `mysqldump-${process.pid}.cnf`);
+    fs.writeFileSync(options, [
+        '[client]',
+        `host=${process.env.DB_HOST || 'localhost'}`,
+        `port=${parseInt(process.env.DB_PORT, 10) || 3306}`,
+        `user=${process.env.DB_USER || 'root'}`,
+        // Guillemets et barres obliques inverses échappés pour le fichier d'options MySQL
+        `password="${String(process.env.DB_PASS || '').replace(/(["\\])/g, '\\$1')}"`,
+        process.env.DB_SSL === 'true' ? 'ssl-mode=REQUIRED' : ''
+    ].join('\n'), { mode: 0o600 });
+    try {
+        console.log(`Base visée : ${cible()}`);
+        const resultat = spawnSync(mysqldump, [
+            `--defaults-extra-file=${options}`, '--single-transaction', '--no-tablespaces', '--set-gtid-purged=OFF',
+            '--routines', `--result-file=${sortie}`, process.env.DB_NAME || 'gestion_stages'
+        ], { encoding: 'utf8' });
+        if (resultat.error) throw resultat.error;
+        if (resultat.status !== 0) throw new Error(resultat.stderr.trim() || `mysqldump a échoué (code ${resultat.status}).`);
+        const taille = fs.statSync(sortie).size;
+        if (taille < 1024) throw new Error(`Sauvegarde suspecte : ${taille} octets.`);
+        console.log(`✅ Sauvegarde : ${sortie} (${Math.round(taille / 1024)} Ko)`);
+    } finally {
+        fs.rmSync(options, { force: true });
+    }
+}
+
 // Lecture seule : base visée, volumes et migrations appliquées ou restantes.
 async function etat() {
     const conn = await connexion();
@@ -108,6 +145,7 @@ const actions = {
         return executerFichier(path.resolve(path.join(__dirname, '..', 'db', 'migrations'), argument));
     },
     etat,
+    sauvegarder: async () => sauvegarder(),
     'admin:create': creerAdmin
 };
 

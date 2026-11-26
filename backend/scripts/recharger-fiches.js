@@ -12,7 +12,8 @@
 // Les téléchargements, e-mails « nouvelle fiche » et signalements sont rattachés à la nouvelle fiche
 // de même période (même service si possible) ; sans correspondance, ils sont perdus et listés.
 // Les corrections manuelles des fiches sont remplacées par le registre : elles sont listées avant.
-require('dotenv').config({ quiet: true, path: require('path').join(__dirname, '..', '.env') });
+// Base visée : backend/.env, ou le fichier désigné par FICHIER_ENV (ex. .env.production)
+require('./env').chargerEnv();
 const path = require('path');
 const db = require('../config/db');
 const { SPECIALITES, SPECIALITE_PAR_DEFAUT } = require('../config/specialites');
