@@ -8,6 +8,7 @@
     "test": "jest --testPathPatterns=__tests__ --forceExit --verbose",
     "db:init": "node scripts/db.js init",
     "db:migrate": "node scripts/db.js migrate",
+    "db:etat": "node scripts/db.js etat",
     "admin:create": "node scripts/db.js admin:create",
     "fiche:template": "node scripts/build-fiche-template.js"
   },
