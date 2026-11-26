@@ -47,40 +47,26 @@ git push -u origin claude/admin-dashboard-redesign-298257
 ```
 Puis sur GitHub, **[manuel]** : *Compare & pull request*, base `master`, comparer `claude/admin-dashboard-redesign-298257`. Ne pas fusionner tout de suite.
 
-### 0.3 Mettre le dossier principal à jour
-Les scripts de la phase 1 et 3 se lancent depuis le dossier principal ; il doit contenir les migrations 008 à 010 et `db:etat` :
+### 0.3 Dossier de travail
+Les commandes se lancent depuis le dossier de la branche, qui contient les migrations 008 à 010 et les scripts :
+`C:\wamp64\www\plateforme-stages-medecine\.claude\worktrees\admin-dashboard-redesign-298257\backend`.
+Le dossier principal ne peut pas ouvrir cette branche (Git refuse une branche ouverte dans deux dossiers) : il reste tel quel jusqu'à la phase 5.
+
+### 0.4 Donner l'accès à la base de production **[manuel pour les valeurs]**
+1. Ouvrir `backend\.env.production` (copie de `.env.production.example`, ignorée par Git).
+2. Render → service web → **Environment** : recopier `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME` dans ce fichier, puis l'enregistrer.
+3. Vérifier :
 ```powershell
-cd C:\wamp64\www\plateforme-stages-medecine
-git fetch origin
-git checkout claude/admin-dashboard-redesign-298257
-npm ci --prefix backend
+$env:FICHIER_ENV = ".env.production"; npm run db:etat
 ```
-(Après la phase 2, revenir sur `master` : `git checkout master` puis `git pull`.)
-
-### 0.4 Préparer un terminal « production » **[manuel pour les valeurs]**
-Les scripts lisent `backend/.env` (la base locale), **sauf** pour les variables déjà définies dans le terminal, qui priment. On ouvre donc un terminal dédié à la production :
-
-1. Render → service web → **Environment** : copier `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`.
-2. Ouvrir un **nouveau** terminal PowerShell, réservé à la production, et y coller :
-```powershell
-cd C:\wamp64\www\plateforme-stages-medecine\backend
-$env:DB_HOST = "…"; $env:DB_PORT = "…"; $env:DB_USER = "…"; $env:DB_PASS = "…"; $env:DB_NAME = "…"; $env:DB_SSL = "true"
-npm run db:etat
-```
-3. Vérifier que la première ligne affiche bien l'hôte de production, et que 005 à 010 sont marquées ⏳.
-
-Les cinq variables doivent toutes être définies : une variable oubliée serait reprise du `.env` local.
-Fermer ce terminal à la fin pour effacer les valeurs.
+La première ligne doit afficher l'hôte de production. Si une valeur manque, le script s'arrête au lieu de viser la base locale.
 
 ### 0.5 Sauvegarder la base de production
-Dans le terminal « production » :
 ```powershell
-& "C:\wamp64\bin\mysql\mysql8.4.7\bin\mysqldump.exe" --host=$env:DB_HOST --port=$env:DB_PORT --user=$env:DB_USER --password `
-  --ssl-mode=REQUIRED --single-transaction --no-tablespaces --set-gtid-purged=OFF `
-  --result-file="$HOME\Documents\sauvegarde-stages-prod-2026-11-26.sql" $env:DB_NAME
+$env:FICHIER_ENV = ".env.production"; npm run db:sauvegarder
 ```
-Le mot de passe est demandé (celui de `DB_PASS`). Vérifier que le fichier fait plus de quelques centaines de Ko.
-Garder ce fichier hors du dépôt Git. Si l'hébergeur de la base propose aussi une sauvegarde (Aiven : *Backups*), en lancer une.
+Le fichier `sauvegarde-<base>-<date>.sql` est écrit dans Documents ; le mot de passe ne passe jamais par la ligne de commande.
+Si l'hébergeur de la base propose aussi une sauvegarde (Aiven : *Backups*), en lancer une.
 
 ---
 
@@ -88,8 +74,9 @@ Garder ce fichier hors du dépôt Git. Si l'hébergeur de la base propose aussi 
 
 Ne pas lancer d'import ni de modification de fiche pendant cette phase : l'ancien code tourne encore sur le nouveau schéma.
 
-Dans le terminal « production », une commande à la fois, en vérifiant le ✅ :
+Une commande à la fois, en vérifiant le ✅ :
 ```powershell
+$env:FICHIER_ENV = ".env.production"
 npm run db:migrate -- 005-variantes-ignorees.sql
 npm run db:migrate -- 006-stages-paralleles-45-jours.sql
 npm run db:migrate -- 007-journal-annulation.sql
@@ -111,7 +98,7 @@ Si une migration échoue, s'arrêter et ne pas passer à la phase 2.
 
 ## Phase 3 · Données
 
-Toujours dans le terminal « production », sauf mention **[manuel]**.
+Avec `$env:FICHIER_ENV = ".env.production"` défini, sauf mention **[manuel]**.
 
 ### 3.1 Recharger les fiches depuis le registre complet
 D'abord la simulation, qui n'écrit rien :
@@ -153,15 +140,11 @@ $env:BASE_URL = "https://<adresse-render>"; npm run test:e2e
 ## Phase 5 · Après
 
 1. **[manuel]** Annoncer les fiches du semestre : Tableau de bord → « Prévenir par e-mail ». Le forfait gratuit Brevo permet 300 e-mails par jour, codes de connexion compris : 185 résidents passent en une fois.
-2. Fermer le terminal « production ».
-3. Remettre le dossier principal sur `master` à jour : `git checkout master` puis `git pull`.
+2. Vider ou supprimer `backend\.env.production` : il contient le mot de passe de la base.
+3. Dossier principal : `git checkout master` puis `git pull`.
 
 ## Retour arrière
 
 - **Code** : Render → **Events** → déploiement précédent → **Rollback**.
-- **Base** : restaurer la sauvegarde de l'étape 0.5 (efface tout ce qui a été fait depuis) :
-```powershell
-& "C:\wamp64\bin\mysql\mysql8.4.7\bin\mysql.exe" --host=$env:DB_HOST --port=$env:DB_PORT --user=$env:DB_USER --password `
-  --ssl-mode=REQUIRED $env:DB_NAME -e "source $HOME\Documents\sauvegarde-stages-prod-2026-11-26.sql"
-```
+- **Base** : restaurer la sauvegarde de l'étape 0.5 (efface tout ce qui a été fait depuis), avec MySQL Workbench (*Server → Data Import*) ou en ligne de commande avec les valeurs de `.env.production`.
 L'ancien code (`4e8db97`) ne fonctionne pas avec le registre rechargé (périodes T1A–T4B) : revenir en arrière sur le code impose de restaurer aussi la base.
