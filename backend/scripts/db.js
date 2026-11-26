@@ -99,7 +99,7 @@ function sauvegarder() {
         console.log(`Base visée : ${cible()}`);
         const resultat = spawnSync(mysqldump, [
             `--defaults-extra-file=${options}`, '--single-transaction', '--no-tablespaces', '--set-gtid-purged=OFF',
-            '--routines', `--result-file=${sortie}`, process.env.DB_NAME || 'gestion_stages'
+            `--result-file=${sortie}`, process.env.DB_NAME || 'gestion_stages'
         ], { encoding: 'utf8' });
         if (resultat.error) throw resultat.error;
         if (resultat.status !== 0) throw new Error(resultat.stderr.trim() || `mysqldump a échoué (code ${resultat.status}).`);
