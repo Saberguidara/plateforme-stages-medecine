@@ -97,8 +97,12 @@ function sauvegarder() {
     ].join('\n'), { mode: 0o600 });
     try {
         console.log(`Base visée : ${cible()}`);
+        // TiDB Cloud refuse les points de sauvegarde de --single-transaction et les LOCK TABLES :
+        // la sauvegarde se fait alors table par table, sans verrou (à lancer sans activité d'écriture).
+        const tidb = /tidb/i.test(process.env.DB_HOST || '');
+        const coherence = tidb ? ['--skip-lock-tables', '--skip-add-locks'] : ['--single-transaction'];
         const resultat = spawnSync(mysqldump, [
-            `--defaults-extra-file=${options}`, '--single-transaction', '--no-tablespaces', '--set-gtid-purged=OFF',
+            `--defaults-extra-file=${options}`, ...coherence, '--no-tablespaces', '--set-gtid-purged=OFF',
             `--result-file=${sortie}`, process.env.DB_NAME || 'gestion_stages'
         ], { encoding: 'utf8' });
         if (resultat.error) throw resultat.error;
